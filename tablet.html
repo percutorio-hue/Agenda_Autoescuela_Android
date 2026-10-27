@@ -91,6 +91,10 @@ tr:hover td{background:#f8fafd}
 .kpi span{font-size:12px;color:var(--muted)}
 #printArea{display:none}
 .btn.wa{background:#25d366;color:#fff}
+header{position:relative;padding-right:120px}
+.firma-app{position:absolute;top:9px;right:16px;color:#dbe6f5;font-size:12px;text-align:right;line-height:1.25;white-space:nowrap}
+.firma-app b{color:#fff;font-size:13px;letter-spacing:.02em}
+.firma-app small{opacity:.75;font-size:10px}
 .medios{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
 .checks{display:flex;gap:16px;padding-top:6px}
 .checks label,label.chk{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--ink);margin:0}
@@ -131,11 +135,12 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
   </nav>
   <span class="badge hidden" id="badgeEj" title="Datos inventados para probar. Al dar de alta un alumno real te ofrecerá borrarlos.">DATOS DE EJEMPLO</span>
   <div class="spacer"></div>
-  <button class="hdrbtn" id="btnEjemplos" title="Carga 5 alumnos inventados con clases y exámenes">🧪 Ejemplos</button>
   <button class="hdrbtn" id="btnConfig" title="Nombre y teléfono de la autoescuela para la firma de los WhatsApp">⚙️ Autoescuela</button>
   <button class="hdrbtn" id="btnGuardar" title="Descarga un fichero .json con toda la base de datos">💾 Guardar base de datos</button>
   <button class="hdrbtn" id="btnAbrir" title="Carga un fichero .json guardado anteriormente">📂 Abrir</button>
-  <input type="file" id="fileDB" accept=".json,application/json" class="hidden">
+  <button class="hdrbtn" id="btnEnviar" title="Envía la copia a Google Drive, correo, WhatsApp…">📤 Enviar copia</button>
+  <input type="file" id="fileDB" accept=".json,.txt,application/json,text/plain" class="hidden">
+  <span class="firma-app">Creado por <b>AML</b><br><small id="verApp"></small></span>
 </header>
 
 <main>
@@ -354,12 +359,25 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
   </div>
 </div>
 
+<div class="modal hidden" id="mPend">
+  <div class="box" style="width:min(460px,100%)">
+    <h3>⚠️ Cambios sin guardar</h3>
+    <p id="mPendTxt" style="margin:0 0 6px"></p>
+    <p style="margin:0;color:var(--muted);font-size:13px">Si sales sin guardar, se perderán.</p>
+    <div class="row" style="justify-content:flex-end;margin-top:16px">
+      <button class="btn sec" id="mPendSeguir">Seguir editando</button>
+      <button class="btn del" id="mPendDescartar">Salir sin guardar</button>
+      <button class="btn" id="mPendGuardar">Guardar y salir</button>
+    </div>
+  </div>
+</div>
 <div id="printArea"></div>
 
 <script>
 "use strict";
 /* ================== DATOS ================== */
 const LS_KEY = "agendaAutoescuela_v1";
+const VERSION = "v4";
 const HORAS = []; for (let h = 8; h < 20; h++) HORAS.push(String(h).padStart(2,"0")+":00");
 const EXAMENES = {
   B:  [["teorico","Teórico"],["practico","Práctico"]],
@@ -404,11 +422,20 @@ function descargar(nombre, contenido, tipo){
   a.href=URL.createObjectURL(b); a.download=nombre; document.body.appendChild(a); a.click();
   setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();},500);
 }
+function selloFecha(){ const f=new Date(); return iso(f)+"_"+String(f.getHours()).padStart(2,"0")+String(f.getMinutes()).padStart(2,"0"); }
 $("btnGuardar").onclick=()=>{
-  const f=new Date(); const sello=iso(f)+"_"+String(f.getHours()).padStart(2,"0")+String(f.getMinutes()).padStart(2,"0");
-  descargar("Autoescuela_BD_"+sello+".json", JSON.stringify(db,null,1), "application/json");
-  sinGuardar=false; toast("Base de datos descargada. Guárdala en tu carpeta de trabajo.");
+  descargar("Autoescuela_BD_"+selloFecha()+".json", JSON.stringify(db,null,1), "application/json");
+  sinGuardar=false; toast("Copia guardada en la carpeta «Descargas» de este dispositivo.");
 };
+/* Enviar copia (tablet/móvil): abre el menú «Compartir» de Android para mandarla a Drive, correo, WhatsApp…
+   Android no deja compartir ficheros .json, así que se envía como .txt (el botón «Abrir» acepta los dos). */
+function ficheroCopia(){ return new File([JSON.stringify(db,null,1)],"Autoescuela_copia_"+selloFecha()+".txt",{type:"text/plain"}); }
+$("btnEnviar").onclick=async()=>{
+  try{ await navigator.share({files:[ficheroCopia()],title:"Copia Agenda Autoescuela",text:"Copia de seguridad de la Agenda Autoescuela"}); sinGuardar=false; toast("Copia enviada."); }
+  catch(e){ if(e&&e.name!=="AbortError") alert("No se ha podido compartir la copia: "+e.message+"\nUsa «Guardar base de datos»."); }
+};
+try{ if(!(navigator.canShare&&navigator.canShare({files:[ficheroCopia()]}))) $("btnEnviar").classList.add("hidden"); }
+catch(e){ $("btnEnviar").classList.add("hidden"); }
 $("btnAbrir").onclick=()=>$("fileDB").click();
 $("fileDB").onchange=e=>{
   const f=e.target.files[0]; if(!f) return;
@@ -418,16 +445,35 @@ $("fileDB").onchange=e=>{
       const o=JSON.parse(r.result);
       if(!o||!Array.isArray(o.alumnos)||!Array.isArray(o.clases)) throw 0;
       if(db.alumnos.length && !db.ejemplo && !confirm("Se sustituirán los datos actuales por los del fichero. ¿Continuar?")) return;
-      db=o; normalizar(); persistir(); sinGuardar=false; nuevaFicha(); refrescarTodo(); toast("Cargados "+db.alumnos.length+" alumnos y "+db.clases.length+" clases.");
+      db=o; normalizar(); purgarEjemplos(); persistir(); sinGuardar=false; nuevaFicha(); refrescarTodo(); toast("Cargados "+db.alumnos.length+" alumnos y "+db.clases.length+" clases.");
     }catch(x){ alert("El fichero no es una base de datos válida de la agenda."); }
   };
   r.readAsText(f); e.target.value="";
 };
-window.addEventListener("beforeunload",e=>{ if(sinGuardar){ e.preventDefault(); e.returnValue=""; } });
+window.addEventListener("beforeunload",e=>{ if(cambiosFicha||cambiosProf||cambiosVeh){ e.preventDefault(); e.returnValue=""; } });
 
 /* ================== NAVEGACIÓN ================== */
 $("nav").onclick=e=>{ const v=e.target.dataset.v; if(v) ver(v); };
-function ver(v){
+let vista="ficha", cambiosFicha=false, cambiosProf=false, cambiosVeh=false;
+/* Qué hay sin guardar en la pestaña actual y cómo guardarlo o descartarlo */
+function pendientesDe(v){
+  if(v==="ficha"&&cambiosFicha) return {texto:"la ficha del alumno",
+    guardar:()=>guardarAlumno(), descartar:()=>{ if(actual&&alumno(actual)) cargarFicha(actual); else nuevaFicha(); }};
+  if(v==="medios"&&(cambiosProf||cambiosVeh)) return {texto:cambiosProf&&cambiosVeh?"el profesor y el vehículo":cambiosProf?"el profesor":"el vehículo",
+    guardar:()=>(!cambiosProf||guardarProf())&&(!cambiosVeh||guardarVeh()), descartar:()=>{ nuevoProf(); nuevoVeh(); }};
+  return null;
+}
+function pedirGuardar(p,luego){
+  $("mPendTxt").innerHTML="Has modificado <b>"+esc(p.texto)+"</b> y no lo has guardado.";
+  $("mPend").classList.remove("hidden");
+  const cerrar=()=>$("mPend").classList.add("hidden");
+  $("mPendSeguir").onclick=cerrar;
+  $("mPendDescartar").onclick=()=>{ cerrar(); p.descartar(); luego(); };
+  $("mPendGuardar").onclick=()=>{ cerrar(); if(p.guardar()) luego(); };
+}
+function ver(v,forzar){
+  if(!forzar&&v!==vista){ const p=pendientesDe(vista); if(p){ pedirGuardar(p,()=>ver(v,true)); return; } }
+  vista=v;
   document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
   ["ficha","lista","agenda","examenes","medios","avisos"].forEach(x=>$("v-"+x).classList.toggle("hidden",x!==v));
   if(v==="medios") pintarMedios();
@@ -453,8 +499,8 @@ function mostrarBloqueExamen(){
   $("exB").classList.toggle("hidden",esA); $("exA").classList.toggle("hidden",!esA);
   $("legExam").textContent="Fechas de examen – Permiso "+p+(esA?" (motocicleta)":" (coche)");
 }
-F.addEventListener("input",e=>{ if(e.target.name&&e.target.name.startsWith("ex_")) validarFicha(); });
-F.addEventListener("change",e=>{ if(e.target.name&&e.target.name.startsWith("ex_")) validarFicha(); });
+F.addEventListener("input",e=>{ cambiosFicha=true; if(e.target.name&&e.target.name.startsWith("ex_")) validarFicha(); });
+F.addEventListener("change",e=>{ cambiosFicha=true; if(e.target.name&&e.target.name.startsWith("ex_")) validarFicha(); });
 
 function leerExamenes(){
   const o={}; EXAMENES[F.permiso.value].forEach(([k])=>{ o[k]=F["ex_"+k].value||""; }); return o;
@@ -493,7 +539,7 @@ function validarFicha(){
 /* Foto */
 $("fotoBox").onclick=()=>$("fileFoto").click();
 $("btnFoto").onclick=()=>$("fileFoto").click();
-$("btnQuitarFoto").onclick=()=>{ fotoData=""; pintarFoto(); };
+$("btnQuitarFoto").onclick=()=>{ fotoData=""; pintarFoto(); cambiosFicha=true; };
 $("fileFoto").onchange=e=>{
   const f=e.target.files[0]; if(!f) return;
   const r=new FileReader();
@@ -503,7 +549,7 @@ $("fileFoto").onchange=e=>{
       const max=400, k=Math.min(1,max/Math.max(img.width,img.height));
       const c=document.createElement("canvas"); c.width=Math.round(img.width*k); c.height=Math.round(img.height*k);
       c.getContext("2d").drawImage(img,0,0,c.width,c.height);
-      fotoData=c.toDataURL("image/jpeg",0.82); pintarFoto();
+      fotoData=c.toDataURL("image/jpeg",0.82); pintarFoto(); cambiosFicha=true;
     };
     img.src=r.result;
   };
@@ -517,22 +563,27 @@ function pintarFoto(){
 function nuevaFicha(){
   actual=null; F.reset(); fotoData=""; pintarFoto();
   F.alta.value=hoy(); rellenarSelectsFicha("",""); mostrarBloqueExamen(); $("exMsgs").innerHTML="";
-  $("fichaTitulo").textContent="Nuevo alumno"; pintarClasesAlumno();
+  $("fichaTitulo").textContent="Nuevo alumno"; pintarClasesAlumno(); cambiosFicha=false;
 }
-function abrirFicha(id){
+function cargarFicha(id){
   const a=alumno(id); if(!a) return;
   actual=id; F.reset();
   ["nombre","apellidos","dni","fnac","tel","email","dir","permiso","alta","profesor","vehiculo","obs"].forEach(k=>{ F[k].value=a[k]||""; });
   rellenarSelectsFicha(a.profesor,a.vehiculo);
   Object.keys(NOMBRE_EX).forEach(k=>{ F["ex_"+k].value=(a.examenes&&a.examenes[k])||""; });
   fotoData=a.foto||""; pintarFoto(); mostrarBloqueExamen(); validarFicha();
-  $("fichaTitulo").textContent=nombreCompleto(a); pintarClasesAlumno(); ver("ficha");
+  $("fichaTitulo").textContent=nombreCompleto(a); pintarClasesAlumno(); cambiosFicha=false;
 }
-$("btnNuevo").onclick=nuevaFicha;
+function abrirFicha(id){
+  if(!alumno(id)) return;
+  const ir=()=>{ cargarFicha(id); ver("ficha",true); };
+  const p=pendientesDe(vista); if(p) pedirGuardar(p,ir); else ir();
+}
+$("btnNuevo").onclick=()=>{ const p=pendientesDe("ficha"); if(p) pedirGuardar(p,nuevaFicha); else nuevaFicha(); };
 $("btnGuardarAlumno").onclick=guardarAlumno;
 
 function guardarAlumno(){
-  const req=["nombre","apellidos","dni"]; for(const k of req) if(!F[k].value.trim()){ F[k].focus(); alert("Rellena los campos obligatorios (*)."); return; }
+  const req=["nombre","apellidos","dni"]; for(const k of req) if(!F[k].value.trim()){ F[k].focus(); alert("Rellena los campos obligatorios (*)."); return false; }
   if(db.ejemplo && !actual){
     if(confirm("Están cargados los datos de EJEMPLO.\n\n¿Quieres borrarlos antes de dar de alta este alumno real?")){
       db=sinEjemplos();
@@ -542,10 +593,10 @@ function guardarAlumno(){
   }
   const dni=F.dni.value.trim().toUpperCase();
   const dup=db.alumnos.find(a=>a.dni===dni&&a.id!==actual);
-  if(dup){ alert("Ya existe un alumno con el DNI/NIE "+dni+": "+nombreCompleto(dup)); return; }
+  if(dup){ alert("Ya existe un alumno con el DNI/NIE "+dni+": "+nombreCompleto(dup)); return false; }
   const r=validarFicha();
-  if(r.err.length){ alert("No se puede guardar: hay fechas de examen que coinciden o están desordenadas.\n\n• "+r.err.join("\n• ")); return; }
-  if(r.warn.length && !confirm("Avisos:\n\n• "+r.warn.join("\n• ")+"\n\n¿Guardar igualmente?")) return;
+  if(r.err.length){ alert("No se puede guardar: hay fechas de examen que coinciden o están desordenadas.\n\n• "+r.err.join("\n• ")); return false; }
+  if(r.warn.length && !confirm("Avisos:\n\n• "+r.warn.join("\n• ")+"\n\n¿Guardar igualmente?")) return false;
   const o={ id:actual||uid(), nombre:F.nombre.value.trim(), apellidos:F.apellidos.value.trim(), dni,
     fnac:F.fnac.value, tel:F.tel.value.trim(), email:F.email.value.trim(), dir:F.dir.value.trim(),
     permiso:F.permiso.value, alta:F.alta.value, profesor:F.profesor.value.trim(), vehiculo:F.vehiculo.value.trim(),
@@ -554,7 +605,8 @@ function guardarAlumno(){
   if(i>=0) db.alumnos[i]=o; else db.alumnos.push(o);
   actual=o.id; persistir(); refrescarListas();
   $("fichaTitulo").textContent=nombreCompleto(o); pintarClasesAlumno();
-  toast("Alumno guardado. Recuerda «Guardar base de datos» al terminar.");
+  cambiosFicha=false; toast("Alumno guardado.");
+  return true;
 }
 function borrarAlumno(id){
   const a=alumno(id); const nc=db.clases.filter(c=>c.alumnoId===id).length;
@@ -831,37 +883,43 @@ function itvTxt(v){
 }
 let profEdit=null, vehEdit=null;
 function nuevoProf(){ profEdit=null; $("pfTit").textContent="Nuevo profesor"; $("pfNombre").value=""; $("pfTel").value="";
-  ["B","A1","A2"].forEach(p=>$("pf"+p).checked=false); $("pfActivo").checked=true; }
+  ["B","A1","A2"].forEach(p=>$("pf"+p).checked=false); $("pfActivo").checked=true; cambiosProf=false; }
 function nuevoVeh(){ vehEdit=null; $("vhTit").textContent="Nuevo vehículo"; $("vhPermiso").value="B"; $("vhModelo").value=""; $("vhMatricula").value="";
-  $("vhItv").value=""; $("vhObs").value=""; $("vhActivo").checked=true; }
-$("pfNuevo").onclick=nuevoProf; $("vhNuevo").onclick=nuevoVeh;
+  $("vhItv").value=""; $("vhObs").value=""; $("vhActivo").checked=true; cambiosVeh=false; }
+$("pfNuevo").onclick=()=>{ nuevoProf(); }; $("vhNuevo").onclick=()=>{ nuevoVeh(); };
+["pfNombre","pfTel","pfB","pfA1","pfA2","pfActivo"].forEach(i=>["input","change"].forEach(ev=>$(i).addEventListener(ev,()=>cambiosProf=true)));
+["vhPermiso","vhModelo","vhMatricula","vhItv","vhObs","vhActivo"].forEach(i=>["input","change"].forEach(ev=>$(i).addEventListener(ev,()=>cambiosVeh=true)));
 window.editarProf=id=>{ const p=db.profesores.find(x=>x.id===id); if(!p) return; profEdit=id; $("pfTit").textContent="Editar profesor";
-  $("pfNombre").value=p.nombre; $("pfTel").value=p.tel||""; ["B","A1","A2"].forEach(k=>$("pf"+k).checked=p.permisos.includes(k)); $("pfActivo").checked=p.activo!==false; $("pfNombre").focus(); };
+  $("pfNombre").value=p.nombre; $("pfTel").value=p.tel||""; ["B","A1","A2"].forEach(k=>$("pf"+k).checked=p.permisos.includes(k)); $("pfActivo").checked=p.activo!==false; cambiosProf=false; $("pfNombre").focus(); };
 window.editarVeh=id=>{ const v=db.vehiculos.find(x=>x.id===id); if(!v) return; vehEdit=id; $("vhTit").textContent="Editar vehículo";
-  $("vhPermiso").value=v.permiso; $("vhModelo").value=v.modelo; $("vhMatricula").value=v.matricula; $("vhItv").value=v.itv||""; $("vhObs").value=v.obs||""; $("vhActivo").checked=v.activo!==false; $("vhModelo").focus(); };
-$("pfGuardar").onclick=()=>{
-  const nombre=$("pfNombre").value.trim().replace(/\s+/g," "); if(!nombre){ alert("Escribe el nombre del profesor."); return; }
-  const permisos=["B","A1","A2"].filter(k=>$("pf"+k).checked); if(!permisos.length){ alert("Marca al menos un permiso que imparta."); return; }
-  if(db.profesores.some(p=>p.id!==profEdit&&p.nombre.toLowerCase()===nombre.toLowerCase())){ alert("Ya existe un profesor con ese nombre."); return; }
+  $("vhPermiso").value=v.permiso; $("vhModelo").value=v.modelo; $("vhMatricula").value=v.matricula; $("vhItv").value=v.itv||""; $("vhObs").value=v.obs||""; $("vhActivo").checked=v.activo!==false; cambiosVeh=false; $("vhModelo").focus(); };
+function guardarProf(){
+  const nombre=$("pfNombre").value.trim().replace(/\s+/g," "); if(!nombre){ alert("Escribe el nombre del profesor."); return false; }
+  const permisos=["B","A1","A2"].filter(k=>$("pf"+k).checked); if(!permisos.length){ alert("Marca al menos un permiso que imparta."); return false; }
+  if(db.profesores.some(p=>p.id!==profEdit&&p.nombre.toLowerCase()===nombre.toLowerCase())){ alert("Ya existe un profesor con ese nombre."); return false; }
   const prev=db.profesores.find(p=>p.id===profEdit);
   if(prev&&prev.nombre!==nombre){ // si se corrige el nombre, se actualiza en alumnos y clases
     db.alumnos.forEach(a=>{ if(a.profesor===prev.nombre) a.profesor=nombre; }); db.clases.forEach(c=>{ if(c.profesor===prev.nombre) c.profesor=nombre; }); }
   const o={id:profEdit||uid(),nombre,tel:$("pfTel").value.trim(),permisos,activo:$("pfActivo").checked};
   if(prev) Object.assign(prev,o); else db.profesores.push(o);
   persistir(); nuevoProf(); refrescarTodo(); pintarMedios(); toast("Profesor guardado.");
-};
-$("vhGuardar").onclick=()=>{
+  return true;
+}
+$("pfGuardar").onclick=()=>guardarProf();
+function guardarVeh(){
   const modelo=$("vhModelo").value.trim(), matricula=$("vhMatricula").value.trim().toUpperCase().replace(/\s+/g," ");
-  if(!modelo||!matricula){ alert("Indica marca/modelo y matrícula."); return; }
+  if(!modelo||!matricula){ alert("Indica marca/modelo y matrícula."); return false; }
   const norm=s=>s.replace(/[\s-]/g,"");
-  if(db.vehiculos.some(v=>v.id!==vehEdit&&norm(v.matricula)===norm(matricula))){ alert("Ya existe un vehículo con la matrícula "+matricula+"."); return; }
+  if(db.vehiculos.some(v=>v.id!==vehEdit&&norm(v.matricula)===norm(matricula))){ alert("Ya existe un vehículo con la matrícula "+matricula+"."); return false; }
   const prev=db.vehiculos.find(v=>v.id===vehEdit);
   const o={id:vehEdit||uid(),permiso:$("vhPermiso").value,modelo,matricula,itv:$("vhItv").value,obs:$("vhObs").value.trim(),activo:$("vhActivo").checked};
   if(prev){ const viejo=etiquetaVeh(prev), nuevo=etiquetaVeh(o);
     if(viejo!==nuevo){ db.alumnos.forEach(a=>{ if(a.vehiculo===viejo) a.vehiculo=nuevo; }); db.clases.forEach(c=>{ if(c.vehiculo===viejo) c.vehiculo=nuevo; }); }
     Object.assign(prev,o); } else db.vehiculos.push(o);
   persistir(); nuevoVeh(); refrescarTodo(); pintarMedios(); toast("Vehículo guardado.");
-};
+  return true;
+}
+$("vhGuardar").onclick=()=>guardarVeh();
 window.borrarProf=id=>{
   const p=db.profesores.find(x=>x.id===id), n=db.clases.filter(c=>c.profesor===p.nombre&&c.fecha>=hoy()).length;
   if(!confirm(`¿Borrar a ${p.nombre}?`+(n?`\n\nTiene ${n} clase(s) pendiente(s). Si ya no trabaja, es mejor desmarcar «En activo» para conservar el historial.`:""))) return;
@@ -975,67 +1033,20 @@ function sinEjemplos(){
     profesores:db.profesores.filter(p=>!(ej&&EJ_PROF.includes(p.nombre))),
     vehiculos:db.vehiculos.filter(v=>!(ej&&EJ_MAT.includes(v.matricula)))};
 }
-function dniEj(n){ return n+"TRWAGMYFPDXBNJZSQVHLCKE"[n%23]; }
-function avatar(nombre,apellidos,color){
-  try{
-    const c=document.createElement("canvas"); c.width=300; c.height=400; const g=c.getContext("2d");
-    g.fillStyle=color; g.fillRect(0,0,300,400);
-    g.fillStyle="rgba(255,255,255,.22)"; g.beginPath(); g.arc(150,150,85,0,7); g.fill();
-    g.beginPath(); g.ellipse(150,400,135,125,0,0,7); g.fill();
-    g.fillStyle="#fff"; g.font="bold 68px Segoe UI, Arial"; g.textAlign="center"; g.textBaseline="middle";
-    g.fillText((nombre[0]+apellidos[0]).toUpperCase(),150,152);
-    return c.toDataURL("image/jpeg",0.85);
-  }catch(e){ return ""; }
+/* Elimina los alumnos de ejemplo de versiones anteriores (y sus clases), y los profesores/vehículos de ejemplo
+   que no use ningún alumno real. Se ejecuta al arrancar y al abrir una copia. */
+const EJ_DNI=[51234567,48765432,53456789,54987123,50321654].map(n=>n+"TRWAGMYFPDXBNJZSQVHLCKE"[n%23]);
+function purgarEjemplos(){
+  const ids=new Set(db.alumnos.filter(a=>EJ_DNI.includes(a.dni)).map(a=>a.id));
+  if(!ids.size&&!db.ejemplo) return false;
+  db.alumnos=db.alumnos.filter(a=>!ids.has(a.id));
+  db.clases=db.clases.filter(c=>!ids.has(c.alumnoId));
+  const usP=new Set([...db.alumnos.map(a=>a.profesor),...db.clases.map(c=>c.profesor)]);
+  const usV=new Set([...db.alumnos.map(a=>a.vehiculo),...db.clases.map(c=>c.vehiculo)]);
+  db.profesores=db.profesores.filter(p=>!EJ_PROF.includes(p.nombre)||usP.has(p.nombre));
+  db.vehiculos=db.vehiculos.filter(v=>!EJ_MAT.includes(v.matricula)||usV.has(etiquetaVeh(v)));
+  db.ejemplo=false; return true;
 }
-function cargarEjemplos(silencio){
-  if(!silencio && db.alumnos.length && !db.ejemplo && !confirm("Se sustituirán los datos actuales por los de ejemplo. ¿Continuar?")) return;
-  const L=lunesDe(hoy()), d=n=>addDias(L,n);   // fechas relativas al lunes de esta semana, siempre de lunes a sábado
-  const color={B:"#2f6fc0",A1:"#7a3fb0",A2:"#c0392b"};
-  const base=[
-    {nombre:"Lucía",apellidos:"Fernández Ruiz",dni:dniEj(51234567),fnac:"2006-03-12",tel:"600 000 001",email:"lucia.fernandez@ejemplo.es",dir:"C/ Mayor 12, 3º B, Getafe",
-     permiso:"B",alta:d(-45),profesor:"Carlos Martín",vehiculo:"Seat Ibiza · 1234 LMN",obs:"Teórico aprobado. Prefiere clases por la mañana.",ex:{teorico:-12,practico:24}},
-    {nombre:"Miguel Ángel",apellidos:"Herrera Díaz",dni:dniEj(48765432),fnac:"1998-11-02",tel:"600 000 002",email:"mangel.herrera@ejemplo.es",dir:"Av. de España 45, 1º A, Getafe",
-     permiso:"B",alta:d(-70),profesor:"Pedro Sanz",vehiculo:"Renault Clio · 5678 KJH",obs:"Trabaja de mañana: solo clases por la tarde. Práctico próximo.",ex:{teorico:-20,practico:9}},
-    {nombre:"Javier",apellidos:"Moreno Castillo",dni:dniEj(53456789),fnac:"2001-07-21",tel:"600 000 003",email:"javier.moreno@ejemplo.es",dir:"C/ Toledo 8, Leganés",
-     permiso:"A2",alta:d(-50),profesor:"Ana López",vehiculo:"Yamaha MT-07 · 3456 NBC",obs:"Teóricos aprobados. Preparando circuito cerrado.",ex:{comun:-25,especifico:-11,circuito:4,via:18}},
-    {nombre:"Sara",apellidos:"Gómez Ortega",dni:dniEj(54987123),fnac:"2009-05-14",tel:"600 000 004",email:"sara.gomez@ejemplo.es",dir:"C/ Madrid 30, 2º C, Getafe",
-     permiso:"A1",alta:d(-15),profesor:"Ana López",vehiculo:"Honda CB125F · 9012 MPR",obs:"Menor de edad: autorización firmada por madre/padre entregada. En fase teórica.",ex:{comun:3,especifico:10,circuito:17,via:31}},
-    {nombre:"Elena",apellidos:"Ruiz Navarro",dni:dniEj(50321654),fnac:"1990-02-08",tel:"600 000 005",email:"elena.ruiz@ejemplo.es",dir:"Pza. de la Constitución 3, Pinto",
-     permiso:"A2",alta:d(-30),profesor:"Ana López",vehiculo:"Yamaha MT-07 · 3456 NBC",obs:"Ya tiene permiso B: exenta del teórico común.",ex:{especifico:-6,circuito:8,via:22}}
-  ];
-  db={alumnos:[],clases:[],avisos:{},config:db.config||{nombre:"Autoescuela",tel:""},version:1,ejemplo:true,
-    profesores:[
-      {id:uid(),nombre:"Carlos Martín",tel:"600 000 101",permisos:["B"],activo:true},
-      {id:uid(),nombre:"Pedro Sanz",tel:"600 000 102",permisos:["B"],activo:true},
-      {id:uid(),nombre:"Ana López",tel:"600 000 103",permisos:["A1","A2","B"],activo:true},
-      {id:uid(),nombre:"Rosa Iglesias",tel:"600 000 104",permisos:["B"],activo:false}],
-    vehiculos:[
-      {id:uid(),permiso:"B",modelo:"Seat Ibiza",matricula:"1234 LMN",itv:d(210),obs:"Doble mando",activo:true},
-      {id:uid(),permiso:"B",modelo:"Renault Clio",matricula:"5678 KJH",itv:d(20),obs:"Doble mando",activo:true},
-      {id:uid(),permiso:"B",modelo:"Toyota Yaris",matricula:"2468 HGT",itv:d(-10),obs:"En taller",activo:false},
-      {id:uid(),permiso:"A1",modelo:"Honda CB125F",matricula:"9012 MPR",itv:d(300),obs:"",activo:true},
-      {id:uid(),permiso:"A2",modelo:"Yamaha MT-07",matricula:"3456 NBC",itv:d(150),obs:"Limitada a 35 kW",activo:true}]};
-  base.forEach(b=>{
-    const examenes={}; Object.keys(b.ex).forEach(k=>examenes[k]=d(b.ex[k]));
-    db.alumnos.push({id:uid(),nombre:b.nombre,apellidos:b.apellidos,dni:b.dni,fnac:b.fnac,tel:b.tel,email:b.email,dir:b.dir,permiso:b.permiso,
-      alta:b.alta,profesor:b.profesor,vehiculo:b.vehiculo,obs:b.obs,foto:avatar(b.nombre,b.apellidos,color[b.permiso]),examenes});
-  });
-  // [alumno, día desde el lunes, hora, minutos, tipo]  — sin solapes de alumno, profesor ni vehículo, y nunca en día de examen
-  const cl=[
-    [0,-5,"09:00",45,"Vía pública"],[0,0,"09:00",45,"Vía pública"],[0,2,"09:00",90,"Vía pública"],[0,4,"10:00",45,"Maniobras"],[0,8,"09:00",60,"Vía pública"],[0,9,"16:00",45,"Simulacro examen"],
-    [1,-4,"17:00",60,"Vía pública"],[1,1,"17:00",45,"Vía pública"],[1,2,"18:00",90,"Vía pública"],[1,3,"17:00",45,"Maniobras"],[1,7,"17:00",60,"Simulacro examen"],[1,8,"17:00",45,"Vía pública"],
-    [2,1,"10:00",120,"Circuito cerrado"],[2,2,"10:00",90,"Circuito cerrado"],[2,3,"10:00",45,"Simulacro examen"],[2,8,"10:00",90,"Vía pública"],[2,10,"10:00",120,"Vía pública"],
-    [3,11,"16:00",90,"Circuito cerrado"],[3,12,"16:00",45,"Circuito cerrado"],[3,15,"16:00",90,"Circuito cerrado"],
-    [4,1,"12:00",45,"Circuito cerrado"],[4,2,"11:30",45,"Circuito cerrado"],[4,3,"12:00",90,"Circuito cerrado"],[4,5,"10:00",60,"Simulacro examen"],[4,9,"10:00",45,"Vía pública"],[4,11,"10:00",45,"Vía pública"]
-  ];
-  cl.forEach(([i,o,h,durMin,tipo])=>{ const a=db.alumnos[i];
-    const c={id:uid(),alumnoId:a.id,fecha:d(o),hora:h,durMin,tipo,profesor:a.profesor,vehiculo:a.vehiculo,obs:""};
-    db.clases.push(c); if(c.fecha<=hoy()) db.avisos[keyClase(c)]=fmt(addDias(c.fecha,-1))+" 18:00";
-  });
-  persistir(); sinGuardar=false; lunes=lunesDe(hoy()); nuevaFicha(); refrescarTodo();
-  if(!silencio) toast("Cargados 5 alumnos de ejemplo con sus clases y exámenes.");
-}
-$("btnEjemplos").onclick=()=>cargarEjemplos(false);
 
 /* Versión instalable (Android): solo se activa cuando la app se sirve desde una web https */
 if("serviceWorker" in navigator && (location.protocol==="https:"||location.hostname==="localhost")){
@@ -1043,8 +1054,9 @@ if("serviceWorker" in navigator && (location.protocol==="https:"||location.hostn
   try{ navigator.storage&&navigator.storage.persist&&navigator.storage.persist(); }catch(e){}  // pide a Android que no borre los datos
 }
 
-const habiaDatos=cargarLocal(); normalizar();
-if(!habiaDatos) cargarEjemplos(true);   // solo la primera vez (o si el navegador borra sus datos)
+cargarLocal(); normalizar();
+if(purgarEjemplos()) persistir();
+$("verApp").textContent=VERSION;
 sinGuardar=false; nuevaFicha(); refrescarTodo();
 </script>
 </body>
