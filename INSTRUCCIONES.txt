@@ -1,0 +1,61 @@
+AGENDA AUTOESCUELA – INSTALAR EN TABLET / MÓVIL ANDROID (PWA)
+================================================================
+
+Esta carpeta contiene la app lista para instalarse en Android como una
+aplicación más (icono en la pantalla de inicio, pantalla completa y
+funcionamiento sin Internet).
+
+Ficheros (subirlos TODOS juntos, sin cambiar los nombres):
+  index.html               la aplicación
+  manifest.webmanifest     nombre, colores e icono de la app
+  sw.js                    permite usarla sin conexión
+  icon-192.png / icon-512.png / icon-maskable-512.png   iconos
+
+Para instalarla, Android exige que la app esté en una dirección web
+segura (https). Lo más sencillo y gratuito es GitHub Pages.
+
+
+PASO 1 – Publicarla (una sola vez, desde el PC de casa)
+-------------------------------------------------------
+ 1. Entra en https://github.com y crea una cuenta gratuita.
+ 2. Pulsa «+» (arriba a la derecha) → «New repository».
+    Nombre: agenda-autoescuela · marca «Public» · «Create repository».
+ 3. Pulsa «uploading an existing file», arrastra los 6 ficheros de
+    esta carpeta (no este .txt si no quieres) y pulsa «Commit changes».
+ 4. Ve a «Settings» → «Pages». En «Branch» elige «main» y «/ (root)»
+    y pulsa «Save».
+ 5. Espera 1–2 minutos. La dirección será:
+        https://TU-USUARIO.github.io/agenda-autoescuela/
+
+ Importante: en la web solo se publica el PROGRAMA. Los datos de los
+ alumnos NO se suben a Internet: se quedan guardados dentro de la tablet.
+
+
+PASO 2 – Instalarla en la tablet
+--------------------------------
+ 1. Abre Google Chrome en la tablet y entra en la dirección anterior.
+ 2. Menú ⋮ (arriba a la derecha) → «Instalar aplicación»
+    (o «Añadir a pantalla de inicio»).
+ 3. Aparece el icono del volante «Autoescuela». A partir de aquí se
+    abre como cualquier app, también sin Internet.
+
+
+DATOS Y COPIAS DE SEGURIDAD
+---------------------------
+ - En la tablet los datos se guardan solos en la propia app.
+ - Aun así, pulsa «💾 Guardar base de datos» de vez en cuando: el fichero
+   .json se guarda en la carpeta «Descargas». Si desinstalas la app o
+   borras los datos de Chrome, se pierden los datos que no tengan copia.
+ - Para pasar los datos entre el PC y la tablet: «Guardar base de datos»
+   en uno, se copia el .json (correo, Drive, cable USB…) y «📂 Abrir» en
+   el otro. No se sincronizan solos.
+ - Los avisos de WhatsApp abren directamente la app de WhatsApp de la
+   tablet (la tablet necesita tener WhatsApp instalado y con sesión).
+
+
+ACTUALIZAR LA APP
+-----------------
+ Cuando haya una versión nueva de index.html, súbela al mismo repositorio
+ de GitHub sustituyendo la anterior («Add file» → «Upload files»). La
+ tablet la descargará sola la próxima vez que abra la app con Internet.
+ Los datos guardados no se pierden al actualizar.
