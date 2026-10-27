@@ -396,7 +396,8 @@ function persistir(){
   try{ localStorage.setItem(LS_KEY, JSON.stringify(db)); }catch(e){}
 }
 function cargarLocal(){
-  try{ const t=localStorage.getItem(LS_KEY); if(t){ const o=JSON.parse(t); if(o&&o.alumnos) db=o; } }catch(e){}
+  try{ const t=localStorage.getItem(LS_KEY); if(t){ const o=JSON.parse(t); if(o&&o.alumnos){ db=o; return true; } } }catch(e){}
+  return false;
 }
 function descargar(nombre, contenido, tipo){
   const b=new Blob([contenido],{type:tipo}); const a=document.createElement("a");
@@ -430,6 +431,7 @@ function ver(v){
   document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
   ["ficha","lista","agenda","examenes","medios","avisos"].forEach(x=>$("v-"+x).classList.toggle("hidden",x!==v));
   if(v==="medios") pintarMedios();
+  if(v==="ficha") rellenarSelectsFicha(F.profesor.value,F.vehiculo.value);   // recoge profesores/vehículos dados de alta después
   if(v==="lista") pintarLista(); if(v==="agenda") pintarAgenda(); if(v==="examenes") pintarExamenes(); if(v==="avisos") pintarAvisos();
 }
 
@@ -533,7 +535,7 @@ function guardarAlumno(){
   const req=["nombre","apellidos","dni"]; for(const k of req) if(!F[k].value.trim()){ F[k].focus(); alert("Rellena los campos obligatorios (*)."); return; }
   if(db.ejemplo && !actual){
     if(confirm("Están cargados los datos de EJEMPLO.\n\n¿Quieres borrarlos antes de dar de alta este alumno real?")){
-      db={alumnos:[],clases:[],avisos:{},config:db.config,profesores:[],vehiculos:[],version:1};
+      db=sinEjemplos();
       rellenarSelectsFicha("","");
     }
     db.ejemplo=false; actualizarBadge();
@@ -783,7 +785,7 @@ function refrescarListas(){
   fp.innerHTML='<option value="">Todos los profesores</option>'+P.map(p=>`<option value="${esc(p.toLowerCase())}">${esc(p)}</option>`).join("");
   fp.value=cur;
 }
-function refrescarTodo(){ refrescarListas(); pintarLista(); pintarAgenda(); pintarExamenes(); pintarAvisos(); actualizarBadge(); }
+function refrescarTodo(){ refrescarListas(); rellenarSelectsFicha(F.profesor.value,F.vehiculo.value); pintarLista(); pintarAgenda(); pintarExamenes(); pintarAvisos(); actualizarBadge(); }
 function refrescarVistas(){ pintarClasesAlumno(); pintarExamenes(); pintarAvisos(); }
 window.abrirFicha=abrirFicha; window.borrarAlumno=borrarAlumno;
 function normalizar(){
@@ -960,11 +962,19 @@ $("btnConfig").onclick=()=>{
   db.config={nombre:n.trim()||"Autoescuela",tel:t.trim()}; persistir(); toast("Datos de la autoescuela guardados.");
 };
 $("btnVaciar").onclick=()=>{
-  if(!confirm("¿Borrar TODOS los alumnos, clases y avisos?\n(Se conservan los profesores y vehículos.)\n\nConsejo: antes pulsa «Guardar base de datos» para tener copia.")) return;
-  db={alumnos:[],clases:[],avisos:{},config:db.config,profesores:db.profesores,vehiculos:db.vehiculos,version:1}; persistir(); nuevaFicha(); refrescarTodo(); toast("Base de datos vacía.");
+  if(!confirm((db.ejemplo?"¿Quitar todos los DATOS DE EJEMPLO?\n(Se conservan los profesores y vehículos que hayas dado de alta tú.)":"¿Borrar TODOS los alumnos, clases y avisos?\n(Se conservan los profesores y vehículos.)")+"\n\nConsejo: antes pulsa «Guardar base de datos» para tener copia.")) return;
+  db=sinEjemplos(); persistir(); nuevaFicha(); refrescarTodo(); toast("Base de datos vacía.");
 };
 
 /* ================== DATOS DE EJEMPLO ================== */
+const EJ_PROF=["Carlos Martín","Pedro Sanz","Ana López","Rosa Iglesias"], EJ_MAT=["1234 LMN","5678 KJH","2468 HGT","9012 MPR","3456 NBC"];
+/* Base vacía: quita alumnos, clases y avisos, y los profesores/vehículos de ejemplo; conserva los dados de alta por el usuario */
+function sinEjemplos(){
+  const ej=!!db.ejemplo;
+  return {alumnos:[],clases:[],avisos:{},config:db.config,version:1,ejemplo:false,
+    profesores:db.profesores.filter(p=>!(ej&&EJ_PROF.includes(p.nombre))),
+    vehiculos:db.vehiculos.filter(v=>!(ej&&EJ_MAT.includes(v.matricula)))};
+}
 function dniEj(n){ return n+"TRWAGMYFPDXBNJZSQVHLCKE"[n%23]; }
 function avatar(nombre,apellidos,color){
   try{
@@ -1033,8 +1043,8 @@ if("serviceWorker" in navigator && (location.protocol==="https:"||location.hostn
   try{ navigator.storage&&navigator.storage.persist&&navigator.storage.persist(); }catch(e){}  // pide a Android que no borre los datos
 }
 
-cargarLocal(); normalizar();
-if(!db.alumnos.length) cargarEjemplos(true);
+const habiaDatos=cargarLocal(); normalizar();
+if(!habiaDatos) cargarEjemplos(true);   // solo la primera vez (o si el navegador borra sus datos)
 sinGuardar=false; nuevaFicha(); refrescarTodo();
 </script>
 </body>
