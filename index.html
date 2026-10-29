@@ -73,6 +73,8 @@ tr:hover td{background:#f8fafd}
 .agenda td.h{width:70px;background:#f0f3f8;font-weight:600;text-align:center;vertical-align:middle;color:var(--muted)}
 .agenda td.cell{height:40px;cursor:pointer}
 .agenda tr.enpunto td{border-top:2px solid #c3ccd9}
+.agenda tr.tgl td{background:#fff8e6;color:#7a5600;font-size:13px;font-weight:600;text-align:left;padding:7px 10px;cursor:pointer;border:1px solid var(--line)}
+.agenda tr.manana.oculta{display:none}
 .agenda td.h.media{font-weight:400;font-size:11px;color:#9aa3b2}
 .agenda td.cell:hover{background:#eef4fc}
 .agenda th.today{background:#dce8f8;color:var(--pri)}
@@ -93,7 +95,7 @@ tr:hover td{background:#f8fafd}
 .kpi b{display:block;font-size:20px;color:var(--pri)}
 .kpi span{font-size:12px;color:var(--muted)}
 #printArea{display:none}
-/* Plan motos */
+/* Plan semanal */
 .plt td,.plt th{padding:5px 6px;font-size:13px;white-space:nowrap}
 .plt input[type=number]{width:58px;padding:5px}
 .plt select{padding:5px;width:auto}
@@ -226,7 +228,7 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
     <button data-v="agenda">Clases prácticas</button>
     <button data-v="examenes">Exámenes</button>
     <button data-v="medios">Profesores y vehículos</button>
-    <button data-v="plan">🏍️ Plan motos</button>
+    <button data-v="plan">📅 Plan semanal</button>
     <button data-v="avisos">📲 Avisos WhatsApp</button>
   </nav>
   <span class="badge hidden" id="badgeEj" title="Datos inventados para probar. Al dar de alta un alumno real te ofrecerá borrarlos.">DATOS DE EJEMPLO</span>
@@ -240,7 +242,7 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
 </header>
 <div class="banner hidden" id="avisoMier" style="background:#e8f4fb;border-color:#9cc8e6;color:#123c5c">
   <span id="avisoMierTxt"></span><span class="spacer"></span>
-  <button class="btn sm" id="amIr">🏍️ Ir a Plan motos</button><button class="btn sm sec" id="amLuego">Más tarde</button>
+  <button class="btn sm" id="amIr">📅 Ir al Plan semanal</button><button class="btn sm sec" id="amLuego">Más tarde</button>
 </div>
 <div class="banner hidden" id="avisoCopia">
   <span id="avisoCopiaTxt"></span><span class="spacer"></span>
@@ -257,6 +259,8 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
       <h2 id="fichaTitulo" style="margin:0">Nuevo alumno</h2>
       <div class="row">
         <button class="btn sec" id="btnNuevo">➕ Nuevo</button>
+        <span id="bienvOk" class="sent hidden"></span>
+        <button class="btn wa hidden" id="btnBienvenida" title="Mensaje de bienvenida al alumno (solo se envía una vez)">👋 Enviar bienvenida</button>
         <button class="btn sec" id="btnImprimir">🖨️ Imprimir ficha</button>
         <button class="btn" id="btnGuardarAlumno">Guardar alumno</button>
       </div>
@@ -445,14 +449,15 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
 <section id="v-plan" class="hidden">
   <div class="panel">
     <div class="row" style="justify-content:space-between;margin-bottom:6px">
-      <h2 style="margin:0">🏍️ Planificación semanal de motos (AM · A1 · A2)</h2>
+      <h2 style="margin:0">📅 Planificación semanal (coche y motos)</h2>
       <div class="row">
+        <select id="plFiltro" style="width:170px"><option value="todos">🚗+🏍️ Coche y motos</option><option value="moto">🏍️ Solo motos</option><option value="B">🚗 Solo coche (B)</option></select>
         <span style="font-size:13px">Semana del lunes</span><input type="date" id="plSemana" style="width:160px">
         <select id="plProf" style="width:190px"></select>
         <span style="font-size:13px">desde</span><input type="time" id="plDesde" value="15:30" step="900" style="width:110px">
       </div>
     </div>
-    <p style="color:var(--muted);font-size:13px;margin:0">Clases de 30 min (o dobles de 1 h) de lunes a viernes, hasta las 21:00. 📌 = solo podía ese día y hora (se coloca primero). Las de <b>circuito cerrado / maniobras</b> se comparten hasta 3 alumnos; las de <b>vía pública</b> y los alumnos <b>🆕 nuevos</b> van solos.</p>
+    <p style="color:var(--muted);font-size:13px;margin:0">De lunes a viernes, hasta las 21:00. <b>Moto:</b> clases de 30 min (doble 1 h); las de circuito cerrado / maniobras se comparten hasta 3 alumnos; vía pública y alumnos 🆕 nuevos van solos. <b>Coche:</b> clases de 45 min (doble 1 h 30), siempre individuales. 📌 = solo podía ese día y hora (se coloca primero).</p>
 
     <div class="plpaso"><span>1</span> Elige los alumnos y pregúntales su disponibilidad (los miércoles)</div>
     <div class="row" style="margin-bottom:6px">
@@ -466,6 +471,8 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
     <div class="plpaso"><span>3</span> Genera la propuesta (empieza el lunes a la hora indicada, por orden de prioridad)</div>
     <div class="row"><button class="btn" id="plGenerar">⚙️ Generar propuesta</button></div>
     <div id="plPropuesta" style="margin-top:10px"></div>
+    <div class="plpaso"><span>4</span> Avisos de la semana: cada alumno recibe sus clases; si algo cambia, vuelve a quedar pendiente</div>
+    <div id="plAvisos"></div>
   </div>
 </section>
 
@@ -621,7 +628,7 @@ window.alert=function(msg){
 };
 /* ================== DATOS ================== */
 const LS_KEY = "agendaAutoescuela_v1";
-const VERSION = "v9.6 NOV27";
+const VERSION = "v9.8 NOV27";
 const HORAS = []; for (let m = 8*60; m < 21*60; m += 30) HORAS.push(String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"));   // filas de 30 min: 08:00 … 20:30 (la última termina a las 21:00)
 const EXAMENES = {
   B:  [["teorico","Teórico"],["practico","Práctico"]],
@@ -824,6 +831,9 @@ function comprobarExamenes(permiso, ex, idAlumno, res, horas, prof){
     EX_MOTO_PRACT.forEach(k=>{ const f=ex[k]; if(!f||f<hoy()||!EXAMENES[permiso].some(x=>x[0]===k)) return;
       const otros=[]; db.alumnos.forEach(b=>{ if(b.id===idAlumno||!esMoto(b.permiso)) return;
         EX_MOTO_PRACT.forEach(k2=>{ if(b.examenes&&b.examenes[k2]===f&&!(b.resultados&&b.resultados[k2])) otros.push({b,k2}); }); });
+      // Examen de circulación (vía pública): un solo profesor → un único examen de vía pública de moto por día (A1 o A2)
+      if(k==="via"){ const v=otros.find(o=>o.k2==="via"&&o.b.permiso!==permiso);
+        if(v) err.push(`El ${fmt(f)} ya tiene examen de vía pública ${nombreCompleto(v.b)} (${v.b.permiso}): solo puede haber un examen de circulación de moto por día. Los de circuito cerrado sí pueden coincidir.`); }
       const mismo=otros.find(o=>o.b.permiso===permiso);
       if(mismo) err.push(`El ${fmt(f)} ya va ${nombreCompleto(mismo.b)} al ${TXT_EXAMEN[mismo.k2].toLowerCase()} con la moto de ${permiso}: solo puede ir un alumno de ${permiso} por día.`);
       const h=horas[k];
@@ -889,7 +899,7 @@ function pintarFoto(){
 function nuevaFicha(){
   actual=null; F.reset(); fotoData=""; pintarFoto();
   F.alta.value=hoy(); rellenarSelectsFicha("",""); mostrarBloqueExamen(); $("exMsgs").innerHTML=""; pintarSelRes(); pintarHistorial();
-  $("fichaTitulo").textContent="Nuevo alumno"; pintarClasesAlumno(); pintarPagos(); cambiosFicha=false;
+  $("fichaTitulo").textContent="Nuevo alumno"; pintarClasesAlumno(); pintarPagos(); pintarBienvenida(); cambiosFicha=false;
 }
 function cargarFicha(id){
   const a=alumno(id); if(!a) return;
@@ -899,7 +909,7 @@ function cargarFicha(id){
   Object.keys(NOMBRE_EX).forEach(k=>{ F["ex_"+k].value=(a.examenes&&a.examenes[k])||""; F["res_"+k].value=(a.resultados&&a.resultados[k])||""; F["hora_"+k].value=horaEx(a,k); });
   F.nuevo.checked=!!a.nuevo;
   fotoData=a.foto||""; pintarFoto(); mostrarBloqueExamen(); pintarSelRes(); pintarHistorial(); validarFicha();
-  $("fichaTitulo").textContent=nombreCompleto(a); pintarClasesAlumno(); pintarPagos(); cambiosFicha=false;
+  $("fichaTitulo").textContent=nombreCompleto(a); pintarClasesAlumno(); pintarPagos(); pintarBienvenida(); cambiosFicha=false;
 }
 function abrirFicha(id){
   if(!alumno(id)) return;
@@ -929,7 +939,8 @@ function guardarAlumno(){
     permiso:F.permiso.value, alta:F.alta.value, profesor:F.profesor.value.trim(), vehiculo:F.vehiculo.value.trim(),
     obs:F.obs.value, foto:fotoData, examenes:leerExamenes(), horasEx:leerHoras(), resultados:leerResultados(),
     nuevo:F.nuevo.checked };
-  const prev=actual&&alumno(actual);
+  const prev=actual&&alumno(actual); const esNuevo=!prev;
+  if(prev&&prev.bienvenida) o.bienvenida=prev.bienvenida;
   o.historial=(prev&&prev.historial||[]).slice(); o.cargos=prev&&prev.cargos||[]; o.pagos=prev&&prev.pagos||[];
   // Intento suspendido / no presentado al que se le pone fecha nueva → pasa al historial
   if(prev) EXAMENES[o.permiso].forEach(([k])=>{
@@ -940,7 +951,7 @@ function guardarAlumno(){
   if(i>=0) db.alumnos[i]=o; else db.alumnos.push(o);
   actual=o.id; persistir(); refrescarListas();
   $("fichaTitulo").textContent=nombreCompleto(o); pintarClasesAlumno(); pintarPagos(); pintarHistorial();
-  cambiosFicha=false; toast("Alumno guardado.");
+  cambiosFicha=false; pintarBienvenida(); toast(esNuevo?"Alumno guardado. Puedes enviarle la bienvenida 👋":"Alumno guardado.");
   anularBloqueadas(Object.values(o.examenes).filter(f=>f&&f>=hoy()));
   return true;
 }
@@ -1169,6 +1180,7 @@ function abrirClase(id, pre){
   $("cRepBox").classList.toggle("hidden",!!id); $("cRepetir").checked=false; $("cRepOpts").classList.add("hidden");
   $("mClaseTit").textContent=id?"Editar clase práctica":"Programar clase práctica";
   $("cAvisar").checked=!id;
+  claseOriginal=id?JSON.stringify([c.fecha,c.hora,durDe(c)]):null;
   $("cBorrar").classList.toggle("hidden",!id); $("mClase").classList.remove("hidden"); comprobarClase();
 }
 window.editarClase=id=>abrirClase(id);
@@ -1179,6 +1191,9 @@ $("cAlumno").onchange=()=>{
   comprobarClase();
 };
 ["cFecha","cHora","cDur","cProf","cVeh","cEstado"].forEach(i=>$(i).addEventListener("input",comprobarClase));
+let claseOriginal=null;
+// al cambiar día, hora o duración de una clase existente, se marca para avisar al alumno del cambio
+["cFecha","cHora","cDur"].forEach(i=>$(i).addEventListener("change",()=>{ if(claseEdit&&JSON.stringify([$("cFecha").value,$("cHora").value,Number($("cDur").value)])!==claseOriginal) $("cAvisar").checked=true; }));
 $("cCancelar").onclick=()=>$("mClase").classList.add("hidden");
 $("mClase").onclick=e=>{ if(e.target.id==="mClase") $("mClase").classList.add("hidden"); };
 
@@ -1268,7 +1283,9 @@ $("cGuardar").onclick=()=>{
   const r=comprobarClase();
   if(r.err.length){ alert("No se puede guardar la clase:\n\n• "+r.err.join("\n• ")); return; }
   if(r.warn.length&&!confirm("Avisos:\n\n• "+r.warn.join("\n• ")+"\n\n¿Guardar igualmente?")) return;
-  const i=db.clases.findIndex(x=>x.id===c.id); if(i>=0) db.clases[i]=c; else db.clases.push(c);
+  const i=db.clases.findIndex(x=>x.id===c.id);
+  if(i>=0){ const old=db.clases[i]; c.plan=old.plan; if((db.avisos[keyClase(old)]||old.cambio)&&keyClase(old)!==keyClase(c)) c.cambio=true; db.clases[i]=c; }
+  else db.clases.push(c);
   persistir(); $("mClase").classList.add("hidden"); refrescarListas(); pintarAgenda(); pintarClasesAlumno(); pintarPagos(); toast("Clase guardada.");
   if($("cAvisar").checked&&c.estado!=="anulada"&&c.fecha>=hoy()) waClase(c.id);
 };
@@ -1304,10 +1321,14 @@ function pintarAgenda(){
     const ex=examenesDelDia(x.f);
     return `<th class="${x.f===h0?"today":""}">${x.d} ${fmt(x.f).slice(0,5)}${cabeceraBloqueo(x.f)}${cabeceraExamenes(ex)}</th>`;
   }).join("")+"</tr>";
+  // La mañana (antes de las 15:30) va plegada: las clases son por la tarde y los exámenes se ven en la cabecera
+  let verManana=verMananaMem; if(verManana==null){ verManana=false; try{ verManana=localStorage.getItem("agendaVerManana")==="1"; }catch(e){} }
+  const nMan=db.clases.filter(c=>c.estado!=="anulada"&&dias.some(x=>x.f===c.fecha)&&minutos(c.hora)<INICIO_TARDE).length;
+  html+=`<tr class="tgl" id="tglManana"><td colspan="${dias.length+1}">${verManana?"▾":"▸"} ☀️ Mañana (08:00 – 15:30)${nMan?` · ${nMan} clase(s) esta semana`:""} — pulsa para ${verManana?"ocultar":"mostrar"}</td></tr>`;
   HORAS.forEach(h=>{
-    const media=h.endsWith(":30"); html+=`<tr class="${media?"":"enpunto"}"><td class="h ${media?"media":""}">${h}</td>`;
+    const media=h.endsWith(":30"), man=minutos(h)<INICIO_TARDE; html+=`<tr class="${media?"":"enpunto"} ${man?"manana"+(verManana?"":" oculta"):""}"><td class="h ${media?"media":""}">${h}</td>`;
     dias.forEach(x=>{
-      const cl=db.clases.filter(c=>c.fecha===x.f&&ocupaHora(c,h)&&(!fp||(c.profesor||"").toLowerCase()===fp));
+      const cl=db.clases.filter(c=>c.fecha===x.f&&ocupaHora(c,h)&&(!fp||(c.profesor||"").toLowerCase()===fp)).sort((p,q)=>minutos(p.hora)-minutos(q.hora));
       html+=`<td class="cell" data-f="${x.f}" data-h="${h}">`+cl.map(c=>{ const a=alumno(c.alumnoId); if(!a) return "";
         const cont=minutos(c.hora)<minutos(h);
         const est=c.estado?"est-"+c.estado:(c.fecha<hoy()?"est-sinmarcar":""), gr=c.estado!=="anulada"&&compartible(c)?grupoDe(c).length:0;
@@ -1318,7 +1339,10 @@ function pintarAgenda(){
   });
   $("agenda").innerHTML=html+"</table>";
 }
+const INICIO_TARDE=15*60+30; let verMananaMem=null;
 $("agenda").onclick=e=>{
+  if(e.target.closest("#tglManana")){ const v=!$("agenda").querySelector("tr.manana:not(.oculta)"); verMananaMem=v;
+    try{ localStorage.setItem("agendaVerManana",v?"1":"0"); }catch(x){} pintarAgenda(); return; }
   const exc=e.target.closest(".exchip"); if(exc){ abrirFicha(exc.dataset.al); return; }
   const chip=e.target.closest(".chip"); if(chip){ abrirClase(chip.dataset.id); return; }
   const td=e.target.closest("td.cell"); if(!td) return;
@@ -1442,7 +1466,12 @@ const DIAS_PL=["L","M","X","J","V"];
 function proximoLunes(){ return addDias(lunesDe(hoy()),7); }
 function planDe(lun){ db.planes[lun]=db.planes[lun]||{preg:{},resp:{}}; return db.planes[lun]; }
 function alumnosMoto(){ return db.alumnos.filter(a=>esMoto(a.permiso)).sort((a,b)=>nombreCompleto(a).localeCompare(nombreCompleto(b),"es")); }
-function tipoPorDefecto(a){ return (a.resultados||{}).circuito==="apto"?"Vía pública":"Circuito cerrado"; }
+/* Alumnos que entran en el plan según el filtro (coche y motos, solo motos o solo coche) */
+function alumnosPlan(){ const f=($("plFiltro")&&$("plFiltro").value)||"todos";
+  return db.alumnos.filter(a=>f==="todos"||(f==="moto"?esMoto(a.permiso):a.permiso==="B"))
+    .sort((a,b)=>(a.permiso==="B")-(b.permiso==="B")||nombreCompleto(a).localeCompare(nombreCompleto(b),"es")); }
+function tipoPorDefecto(a){ return a.permiso==="B"?"Vía pública":(a.resultados||{}).circuito==="apto"?"Vía pública":"Circuito cerrado"; }
+function durPlan(a,r){ return esMoto(a.permiso)?(r.doble?60:30):(r.doble?90:45); }
 function respDe(P,a){ P.resp[a.id]=P.resp[a.id]||{inc:false,prio:"",n:1,tipo:tipoPorDefecto(a),doble:false,dias:{}};
   const r=P.resp[a.id]; r.modo=r.modo||{}; r.hasta=r.hasta||{}; return r; }
 const TXT_MODO={desde:"desde",exacta:"a las",entre:"entre"};
@@ -1455,11 +1484,11 @@ let plProp=null, plCreadas=null;
 function pintarPlan(){
   if(!$("plSemana").value) $("plSemana").value=proximoLunes();
   const lun=lunesDe($("plSemana").value); $("plSemana").value=lun;
-  const ps=db.profesores.filter(p=>p.activo!==false&&p.permisos.some(esMoto)).map(p=>p.nombre).sort((a,b)=>a.localeCompare(b,"es"));
+  const ps=db.profesores.filter(p=>p.activo!==false).map(p=>p.nombre).sort((a,b)=>a.localeCompare(b,"es"));
   const cur=$("plProf").value;
-  $("plProf").innerHTML=(ps.length?"":'<option value="">— Da de alta un profesor de moto —</option>')+ps.map(n=>`<option>${esc(n)}</option>`).join("");
+  $("plProf").innerHTML=(ps.length?"":'<option value="">— Da de alta un profesor —</option>')+ps.map(n=>`<option>${esc(n)}</option>`).join("");
   if(ps.includes(cur)) $("plProf").value=cur;
-  const P=planDe(lun), L=alumnosMoto(), desde=$("plDesde").value||"15:30";
+  const P=planDe(lun), L=alumnosPlan(), desde=$("plDesde").value||"15:30";
   const inc=L.filter(a=>respDe(P,a).inc), preg=inc.filter(a=>P.preg[a.id]).length;
   $("plResumen").textContent=L.length?`${inc.length} elegido(s) · ${preg} preguntado(s) · semana del ${fmt(lun)} al ${fmt(addDias(lun,4))}`:"";
   $("plTabla").innerHTML=L.length?`<tr><th>Incluir</th><th>Alumno</th><th>Pregunta</th><th>Prioridad</th><th>Clases</th><th>Tipo</th><th>Doble</th><th>Días y horas</th></tr>`+
@@ -1469,20 +1498,23 @@ function pintarPlan(){
         <td><a href="#" onclick="abrirFicha('${a.id}');return false">${esc(nombreCompleto(a))}</a> <span class="tag t-${a.permiso}">${a.permiso}</span>${a.nuevo?' <span title="Alumno nuevo: va solo">🆕</span>':""}</td>
         <td>${P.preg[a.id]?`<span class="sent" title="${esc(P.preg[a.id])}">✔ preguntado</span>`:""} <button class="btn wa sm" onclick="plPreguntar('${a.id}')" ${a.tel?"":"disabled title=\"Sin teléfono\""}>📲</button>
           <button class="btn sm" onclick="plPegar('${a.id}')" title="Pegar su respuesta de WhatsApp">📋 Respuesta</button>
+          ${clasesSemana(a.id,lun).length?`<button class="btn sec sm" onclick="plRecolocar('${a.id}')" title="Quitar sus clases de esta semana para volver a colocarlas">🔄 Recolocar</button> <small style="color:var(--ok)">${clasesSemana(a.id,lun).length} clase(s) creadas</small>`:""}
           ${r.texto?`<span class="plres ${r.dudosa?"dud":""}" title="${esc(r.texto)}">${r.dudosa?"⚠ Revisar: ":"✔ "}${esc(resumenResp(r))}</span>`:""}</td>
         <td><input type="number" min="1" step="1" data-f="prio" value="${r.prio}" placeholder="—"></td>
         <td><input type="number" min="0" max="10" step="1" data-f="n" value="${r.n}"></td>
-        <td><select data-f="tipo"><option ${r.tipo==="Circuito cerrado"?"selected":""}>Circuito cerrado</option><option ${r.tipo==="Vía pública"?"selected":""}>Vía pública</option></select></td>
-        <td><input type="checkbox" data-f="doble" ${r.doble?"checked":""} style="width:auto" title="Clase doble de 1 hora (30+30)"></td>
+        <td><select data-f="tipo">${(esMoto(a.permiso)?["Circuito cerrado","Vía pública"]:["Vía pública","Maniobras","Simulacro examen"]).map(t=>`<option ${r.tipo===t?"selected":""}>${t}</option>`).join("")}</select></td>
+        <td><label class="chk" style="font-size:11px" title="${esMoto(a.permiso)?"Clase doble de 1 hora (30+30)":"Clase doble de 1 h 30 (45+45)"}"><input type="checkbox" data-f="doble" ${r.doble?"checked":""} style="width:auto"> ${esMoto(a.permiso)?"1 h":"1 h 30"}</label></td>
         <td>${DIAS_PL.map((d,i)=>{ const on=r.dias[i]!=null, m=r.modo[i]||"desde";
           return `<span class="pld"><label><input type="checkbox" data-d="${i}" ${on?"checked":""}> ${d}</label>
             <select data-m="${i}" ${on?"":"disabled"}><option value="desde" ${m==="desde"?"selected":""}>desde</option><option value="exacta" ${m==="exacta"?"selected":""}>a las</option><option value="entre" ${m==="entre"?"selected":""}>entre</option></select>
             <input type="time" step="900" data-h="${i}" value="${r.dias[i]||desde}" ${on?"":"disabled"}>
             <input type="time" step="900" class="hh ${m==="entre"&&on?"":"hidden"}" data-hh="${i}" value="${r.hasta[i]||hhmm(FIN_DIA)}"></span>`; }).join("")}</td></tr>`; }).join("")
-    :`<tr><td style="color:var(--muted);padding:16px">No hay alumnos de moto (AM, A1, A2).</td></tr>`;
+    :`<tr><td style="color:var(--muted);padding:16px">No hay alumnos con ese filtro.</td></tr>`;
+  pintarAvisosPlan();
 }
 $("plSemana").onchange=()=>{ plProp=null; $("plPropuesta").innerHTML=""; pintarPlan(); };
 $("plDesde").onchange=pintarPlan;
+$("plFiltro").onchange=()=>{ plProp=null; $("plPropuesta").innerHTML=""; pintarPlan(); };
 $("plTabla").addEventListener("change",e=>{
   const tr=e.target.closest("tr[data-al]"); if(!tr) return;
   const a=alumno(tr.dataset.al), r=respDe(planDe(lunesDe($("plSemana").value)),a), t=e.target;
@@ -1502,15 +1534,15 @@ $("plTabla").addEventListener("change",e=>{
   persistir(); pintarResumenPlan();
 });
 function pintarResumenPlan(){
-  const lun=lunesDe($("plSemana").value), P=planDe(lun), L=alumnosMoto(), inc=L.filter(a=>respDe(P,a).inc);
+  const lun=lunesDe($("plSemana").value), P=planDe(lun), L=alumnosPlan(), inc=L.filter(a=>respDe(P,a).inc);
   $("plResumen").textContent=L.length?`${inc.length} elegido(s) · ${inc.filter(a=>P.preg[a.id]).length} preguntado(s) · semana del ${fmt(lun)} al ${fmt(addDias(lun,4))}`:"";
 }
-$("plTodos").onclick=()=>{ const P=planDe(lunesDe($("plSemana").value)); alumnosMoto().forEach(a=>respDe(P,a).inc=true); persistir(); pintarPlan(); };
-$("plNinguno").onclick=()=>{ const P=planDe(lunesDe($("plSemana").value)); alumnosMoto().forEach(a=>respDe(P,a).inc=false); persistir(); pintarPlan(); };
+$("plTodos").onclick=()=>{ const P=planDe(lunesDe($("plSemana").value)); alumnosPlan().forEach(a=>respDe(P,a).inc=true); persistir(); pintarPlan(); };
+$("plNinguno").onclick=()=>{ const P=planDe(lunesDe($("plSemana").value)); alumnosPlan().forEach(a=>respDe(P,a).inc=false); persistir(); pintarPlan(); };
 function txtPregunta(a,lun){
-  return `Hola ${a.nombre} 👋\nEstamos organizando las clases de moto de la semana del lunes ${fmt(lun)} al viernes ${fmt(addDias(lun,4))}.\n\n`
+  return `Hola ${a.nombre} 👋\nEstamos organizando las clases prácticas de la semana del lunes ${fmt(lun)} al viernes ${fmt(addDias(lun,4))}.\n\n`
     +`📅 ¿Qué días puedes venir y a qué hora? Las clases son por la tarde, de ${$("plDesde").value||"15:30"} a ${hhmm(FIN_DIA)}.\n`
-    +`🏍️ ¿Cuántas clases quieres hacer esa semana?\n\n`
+    +`${esMoto(a.permiso)?"🏍️":"🚗"} ¿Cuántas clases quieres hacer esa semana?\n\n`
     +`✍️ Contesta así, por favor:\n«lunes desde las 17, jueves a las 18:30, 2 clases»\n\n¡Gracias!`+firma();
 }
 window.plPreguntar=id=>{
@@ -1521,7 +1553,7 @@ window.plPreguntar=id=>{
   respDe(P,a).inc=true; persistir(); pintarPlan(); comprobarMiercoles();
 };
 $("plPreguntar").onclick=()=>{
-  const P=planDe(lunesDe($("plSemana").value)), sig=alumnosMoto().find(a=>respDe(P,a).inc&&!P.preg[a.id]&&a.tel);
+  const P=planDe(lunesDe($("plSemana").value)), sig=alumnosPlan().find(a=>respDe(P,a).inc&&!P.preg[a.id]&&a.tel);
   if(sig) plPreguntar(sig.id); else alert("No queda ningún alumno elegido sin preguntar.");
 };
 /* ---------- Lector de respuestas de WhatsApp (sin Internet, por reglas) ----------
@@ -1627,7 +1659,7 @@ function huecosDia(r,d,desde,dur){
   const m=r.modo[d]||"desde", ini=minutos(r.dias[d]);
   if(m==="exacta") return ini+dur<=FIN_DIA?[ini]:[];
   const fin=m==="entre"?minutos(r.hasta[d]||hhmm(FIN_DIA)):FIN_DIA, l=[];
-  for(let t=Math.max(desde,ini);t+dur<=Math.min(fin,FIN_DIA);t+=30) l.push(t);
+  for(let t=Math.max(desde,ini);t+dur<=Math.min(fin,FIN_DIA);t+=15) l.push(t);
   return l;
 }
 /* Una sola opción: un único día y a una hora concreta */
@@ -1636,29 +1668,35 @@ $("plGenerar").onclick=()=>{
   const lun=lunesDe($("plSemana").value), P=planDe(lun), prof=$("plProf").value, desde=minutos($("plDesde").value||"15:30");
   if(!prof){ alert("Elige el profesor."); return; }
   const porPrio=(x,y)=>(Number(x.r.prio)||999)-(Number(y.r.prio)||999)||nombreCompleto(x.a).localeCompare(nombreCompleto(y.a),"es");
-  const lista=alumnosMoto().map(a=>({a,r:respDe(P,a)})).filter(x=>x.r.inc&&x.r.n>0&&Object.keys(x.r.dias).length).sort(porPrio);
+  const lista=alumnosPlan().map(a=>({a,r:respDe(P,a)})).filter(x=>x.r.inc&&x.r.n>0&&Object.keys(x.r.dias).length).sort(porPrio);
   if(!lista.length){ alert("No hay alumnos con respuesta anotada (incluidos, con clases y algún día marcado)."); return; }
   const nuevas=[], citadas={};
+  // clases ya creadas esa semana (por el plan o a mano): cuentan para lo que pidió cada alumno y no se tocan
+  const semana=c=>c.fecha>=lun&&c.fecha<=addDias(lun,4)&&c.estado!=="anulada";
+  const ya={}; db.clases.filter(semana).forEach(c=>ya[c.alumnoId]=(ya[c.alumnoId]||0)+1);
+  lista.forEach(x=>{ x.falta=Math.max(0,x.r.n-(ya[x.a.id]||0)); });
   const colocar=({a,r})=>{
-    const dur=r.doble?60:30;
+    const dur=durPlan(a,r);
     for(let d=0;d<5;d++){
       if(r.dias[d]==null) continue;
       const f=addDias(lun,d);
-      if(nuevas.some(c=>c.alumnoId===a.id&&c.fecha===f)) continue;                                   // una clase al día por alumno
+      if(nuevas.concat(db.clases.filter(semana)).some(c=>c.alumnoId===a.id&&c.fecha===f)) continue;   // una clase al día por alumno
       for(const t of huecosDia(r,d,desde,dur)){
-        const c={id:uid(),alumnoId:a.id,fecha:f,hora:hhmm(t),durMin:dur,tipo:r.tipo,profesor:prof,vehiculo:a.vehiculo||"",obs:"",estado:""};
+        const c={id:uid(),alumnoId:a.id,fecha:f,hora:hhmm(t),durMin:dur,tipo:r.tipo,profesor:prof,vehiculo:a.vehiculo||"",obs:"",estado:"",plan:lun};
         if(!validarClase(c,nuevas).err.length){ nuevas.push(c); citadas[a.id]=(citadas[a.id]||0)+1; return true; }
       }
     }
     return false;
   };
   // 1º) los que solo pueden en un día y hora concretos; 2º) el resto por rondas y prioridad (del lunes 15:30 al viernes 21:00)
-  const unicos=lista.filter(x=>opcionUnica(x.r)), resto=lista.filter(x=>!opcionUnica(x.r));
+  const pend=lista.filter(x=>x.falta>0);
+  if(!pend.length){ plProp=null; pintarPropuesta(); alert("Todos los alumnos elegidos ya tienen sus clases de esa semana.\nSi has cambiado la respuesta de alguno, pulsa «🔄 Recolocar» en su fila y vuelve a generar."); return; }
+  const unicos=pend.filter(x=>opcionUnica(x.r)), resto=pend.filter(x=>!opcionUnica(x.r));
   unicos.forEach(x=>colocar(x));
-  const maxN=Math.max(0,...resto.map(x=>x.r.n));
-  for(let ronda=0;ronda<maxN;ronda++) for(const x of resto){ if(x.r.n>ronda) colocar(x); }
+  const maxN=Math.max(0,...resto.map(x=>x.falta));
+  for(let ronda=0;ronda<maxN;ronda++) for(const x of resto){ if(x.falta>ronda) colocar(x); }
   plProp={lun,prof,nuevas,unicos:unicos.map(x=>x.a.id),
-    faltan:lista.filter(x=>(citadas[x.a.id]||0)<Math.min(x.r.n,opcionUnica(x.r)?1:x.r.n)).map(x=>({a:x.a,pide:opcionUnica(x.r)?1:x.r.n,citadas:citadas[x.a.id]||0,unica:opcionUnica(x.r)}))};
+    faltan:pend.filter(x=>(citadas[x.a.id]||0)<(opcionUnica(x.r)?1:x.falta)).map(x=>({a:x.a,pide:opcionUnica(x.r)?1:x.r.n,citadas:(citadas[x.a.id]||0)+(ya[x.a.id]||0),unica:opcionUnica(x.r)}))};
   plCreadas=null; pintarPropuesta();
 };
 function filasPorHueco(cl){
@@ -1676,35 +1714,63 @@ function pintarPropuesta(){
       <td>${gr.map(x=>{ const a=alumno(x.alumnoId); return `${esc(nombreCompleto(a))} <span class="tag t-${a.permiso}">${a.permiso}</span>${a.nuevo?" 🆕":""}${(plProp.unicos||[]).includes(a.id)?' <span title="Solo podía este día y hora">📌</span>':""}`; }).join("<br>")}</td></tr>`; }).join("")
       ||`<tr><td colspan="4" style="color:var(--muted)">No se ha podido citar a nadie con esa disponibilidad.</td></tr>`)+`</table>`
     +(faltan.length?`<div class="msgs"><div class="m-warn">⚠️ Sin hueco suficiente: ${faltan.map(x=>`<b>${esc(nombreCompleto(x.a))}</b> (${x.unica?"solo podía a una hora concreta y ya está ocupada":"pidió "+x.pide+", citadas "+x.citadas})`).join(" · ")}. Revisa su disponibilidad o prográmalas a mano.</div></div>`:"")
-    +(plCreadas?`<div class="plpaso"><span>4</span> Avisa a cada alumno de sus clases</div>
-        <table><tr><th>Alumno</th><th>Clases</th><th>Aviso</th><th></th></tr>${Object.keys(plCreadas).map(id=>{ const a=alumno(id), cl=plCreadas[id];
-          const env=cl.every(c=>db.avisos[keyClase(c)]);
-          return `<tr><td>${esc(nombreCompleto(a))}</td><td>${cl.map(c=>`${diaSem(c.fecha)} ${fmt(c.fecha).slice(0,5)} ${c.hora}`).join(" · ")}</td>
-            <td>${env?'<span class="sent">✔ avisado</span>':'<span class="pend">pendiente</span>'}</td>
-            <td><button class="btn wa sm" onclick="plAvisar('${id}')">📲 WhatsApp</button></td></tr>`; }).join("")}</table>`
+    +(plCreadas?`<p style="color:var(--ok);margin:8px 0 0">✔ Clases creadas. Avísalas en el paso 4.</p>`
       :nuevas.length?`<div class="row" style="margin-top:10px"><button class="btn" id="plCrear">✅ Crear estas clases</button><button class="btn sec" id="plDescartar">Descartar</button></div>`:"");
   if($("plCrear")) $("plCrear").onclick=()=>{
     const bad=nuevas.filter(c=>validarClase(c,nuevas.filter(x=>x!==c)).err.length);
     if(bad.length&&!confirm(bad.length+" clase(s) ya no encajan (alguien ha programado algo mientras tanto). ¿Crear el resto?")) return;
     const ok=nuevas.filter(c=>!bad.includes(c)); db.clases.push(...ok); persistir();
     plCreadas={}; ok.forEach(c=>(plCreadas[c.alumnoId]=plCreadas[c.alumnoId]||[]).push(c));
-    refrescarListas(); pintarAgenda(); pintarLista(); pintarPropuesta(); toast(ok.length+" clases creadas.");
+    refrescarListas(); pintarAgenda(); pintarLista(); pintarPropuesta(); pintarAvisosPlan(); pintarPlan(); toast(ok.length+" clases creadas.");
   };
   if($("plDescartar")) $("plDescartar").onclick=()=>{ plProp=null; pintarPropuesta(); };
 }
+/* Clases de moto de la semana (lunes–viernes) de un alumno, sin anuladas */
+function clasesSemana(id,lun){ return db.clases.filter(c=>c.alumnoId===id&&c.fecha>=lun&&c.fecha<=addDias(lun,4)&&c.estado!=="anulada").sort((x,y)=>(x.fecha+x.hora).localeCompare(y.fecha+y.hora)); }
+function pintarAvisosPlan(){
+  const lun=lunesDe($("plSemana").value||proximoLunes()), P=planDe(lun); P.avisados=P.avisados||{};
+  const ids=[...new Set(db.clases.filter(c=>c.fecha>=lun&&c.fecha<=addDias(lun,4)&&c.estado!=="anulada").map(c=>c.alumnoId))].filter(id=>!!alumno(id))
+    .sort((x,y)=>nombreCompleto(alumno(x)).localeCompare(nombreCompleto(alumno(y)),"es"));
+  const borradas=Object.keys(P.avisados).filter(id=>!ids.includes(id)&&alumno(id)&&P.avisados[id]!=="sin clases");
+  $("plAvisos").innerHTML=(ids.length||borradas.length)?`<table><tr><th>Alumno</th><th>Clases de la semana</th><th>Aviso</th><th></th></tr>`+
+    ids.map(id=>{ const a=alumno(id), cl=clasesSemana(id,lun), ok=cl.every(c=>db.avisos[keyClase(c)]), cambio=!ok&&!!P.avisados[id];
+      return `<tr><td>${esc(nombreCompleto(a))} <span class="tag t-${a.permiso}">${a.permiso}</span></td>
+        <td>${cl.map(c=>`${diaSem(c.fecha)} ${fmt(c.fecha).slice(0,5)} ${c.hora}${compartible(c)&&grupoDe(c).length>1?" 👥":""}`).join(" · ")}</td>
+        <td>${ok?'<span class="sent">✔ avisado</span>':cambio?'<span class="pend">🔁 cambio pendiente de avisar</span>':'<span class="pend">pendiente</span>'}</td>
+        <td><button class="btn wa sm" onclick="plAvisar('${id}')">📲 WhatsApp</button></td></tr>`; }).join("")
+    +borradas.map(id=>{ const a=alumno(id); return `<tr><td>${esc(nombreCompleto(a))} <span class="tag t-${a.permiso}">${a.permiso}</span></td><td style="color:var(--err)">Ya no tiene clases esta semana</td>
+        <td><span class="pend">🔁 cambio pendiente de avisar</span></td><td><button class="btn wa sm" onclick="plAvisar('${id}')">📲 WhatsApp</button></td></tr>`; }).join("")+`</table>`
+    :'<p style="color:var(--muted);margin:0">Todavía no hay clases creadas esa semana.</p>';
+}
 window.plAvisar=id=>{
-  const a=alumno(id), cl=(plCreadas[id]||[]).slice().sort((x,y)=>(x.fecha+x.hora).localeCompare(y.fecha+y.hora));
+  const lun=lunesDe($("plSemana").value||proximoLunes()), P=planDe(lun); P.avisados=P.avisados||{};
+  const a=alumno(id), cl=clasesSemana(id,lun), cambio=!!P.avisados[id];
   const l=cl.map(c=>`• ${fechaLarga(c.fecha)}, de ${c.hora} a ${finClase(c)} · ${TXT_TIPO_CLASE[c.tipo]||c.tipo}${compartible(c)&&grupoDe(c).length>1?" (compartida)":""}`).join("\n");
-  waAbrir(a,`Hola ${a.nombre} 👋\nEstas son tus clases de moto de la semana que viene:\n\n${l}\n\n👤 Profesor: ${plProp.prof}\n\nSi no puedes asistir a alguna, avísanos con antelación, por favor.`+firma(), cl.map(keyClase));
-  pintarPropuesta();
+  const prof=[...new Set(cl.map(c=>c.profesor).filter(Boolean))].join(", ");
+  const t=cl.length
+    ?`Hola ${a.nombre} 👋\n`+(cambio?`⚠️ *Ha habido un cambio* en tus clases prácticas de la semana del ${fmt(lun)}. Quedan así:`:`Estas son tus clases prácticas de la semana del ${fmt(lun)}:`)
+      +`\n\n${l}`+(prof?`\n\n👤 Profesor: ${prof}`:"")+`\n\nSi no puedes asistir a alguna, avísanos con antelación, por favor.`+firma()
+    :`Hola ${a.nombre} 👋\n⚠️ Ha habido un cambio: finalmente no tienes clases prácticas la semana del ${fmt(lun)}. Te escribiremos el miércoles para la siguiente.`+firma();
+  waAbrir(a,t,cl.map(keyClase)); cl.forEach(c=>c.cambio=false);
+  const d=new Date(); P.avisados[id]=cl.length?fmt(iso(d))+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"):"sin clases";
+  persistir(); pintarAvisosPlan();
 };
+/* Recolocar: borra las clases aún no dadas de ese alumno en esa semana para volver a generarlas con su nueva respuesta */
+window.plRecolocar=id=>{
+  const lun=lunesDe($("plSemana").value), a=alumno(id), cl=clasesSemana(id,lun).filter(c=>!c.estado&&c.fecha>=hoy());
+  if(!cl.length){ alert("Ese alumno no tiene clases pendientes esa semana."); return; }
+  if(!confirm(`¿Quitar las ${cl.length} clase(s) de ${nombreCompleto(a)} de esa semana para volver a colocarlas con su nueva respuesta?\n\nDespués pulsa «Generar propuesta». Al avisarle, el WhatsApp indicará que ha habido un cambio.`)) return;
+  const ids=new Set(cl.map(c=>c.id)); db.clases=db.clases.filter(c=>!ids.has(c.id));
+  persistir(); pintarPlan(); pintarAgenda(); toast("Clases quitadas. Pulsa «Generar propuesta».");
+};
+
 /* Recordatorio de los miércoles */
 let miercolesPospuesto=false;
 function comprobarMiercoles(){
   const lun=proximoLunes(), P=db.planes&&db.planes[lun];
-  const ver=parse(hoy()).getDay()===3&&!miercolesPospuesto&&alumnosMoto().length>0&&!(P&&Object.keys(P.preg||{}).length);
+  const ver=parse(hoy()).getDay()===3&&!miercolesPospuesto&&db.alumnos.length>0&&!(P&&Object.keys(P.preg||{}).length);
   $("avisoMier").classList.toggle("hidden",!ver);
-  if(ver) $("avisoMierTxt").innerHTML=`📅 <b>Hoy es miércoles:</b> pregunta a los alumnos de moto su disponibilidad para la semana del lunes ${fmt(lun)}.`;
+  if(ver) $("avisoMierTxt").innerHTML=`📅 <b>Hoy es miércoles:</b> pregunta a los alumnos su disponibilidad para la semana del lunes ${fmt(lun)}.`;
 }
 $("amIr").onclick=()=>{ $("plSemana").value=proximoLunes(); ver("plan"); };
 $("amLuego").onclick=()=>{ miercolesPospuesto=true; comprobarMiercoles(); };
@@ -1843,9 +1909,30 @@ function telWa(t){ let n=String(t||"").replace(/\D/g,""); if(n.startsWith("00"))
 function firma(){ const c=db.config; return "\n\n"+(c.nombre||"Autoescuela")+(c.tel?" · Tel. "+c.tel:""); }
 const TXT_TIPO_CLASE={"Vía pública":"Clase en vía pública","Circuito cerrado":"Clase en circuito cerrado","Maniobras":"Clase de maniobras","Simulacro examen":"Clase de simulacro de examen"};
 const TXT_EXAMEN={teorico:"Examen teórico",practico:"Examen práctico",comun:"Examen de teórico común",especifico:"Examen de teórico específico",circuito:"Examen en circuito cerrado",via:"Examen en vía pública"};
+function txtBienvenida(a){
+  const c=db.config;
+  return `Hola ${a.nombre} 👋\n¡Te damos la bienvenida a ${c.nombre||"la autoescuela"}! Ya estás dado de alta como alumno para el permiso ${a.permiso}.\n\n`
+    +(true?`📅 Cada miércoles te escribiremos por WhatsApp para preguntarte qué días y a qué hora puedes venir la semana siguiente, y cuántas clases quieres hacer. Contesta así, por favor:\n«lunes desde las 17, jueves a las 18:30, 2 clases»\n\n`:"")
+    +`🕒 Las clases prácticas son por la tarde, de 15:30 a ${hhmm(FIN_DIA)}.\n`
+    +`🎫 Cada clase que hagas se descuenta de tu bono. Si no te presentas a una clase reservada, también se descontará de tu bono, así que si no puedes venir avísanos con antelación.\n\n`
+    +`Te avisaremos por aquí de tus clases y exámenes. ¡Mucha suerte! 🍀`+firma();
+}
+function pintarBienvenida(){
+  const a=actual&&alumno(actual);
+  $("btnBienvenida").classList.toggle("hidden",!a||!!a.bienvenida);
+  $("bienvOk").classList.toggle("hidden",!(a&&a.bienvenida));
+  if(a&&a.bienvenida) $("bienvOk").textContent="✔ Bienvenida enviada "+a.bienvenida.slice(0,10);
+}
+$("btnBienvenida").onclick=()=>{
+  const a=alumno(actual); if(!a) return;
+  if(!telWa(a.tel)){ alert("El alumno no tiene un teléfono móvil válido en su ficha."); return; }
+  waAbrir(a,txtBienvenida(a),null);
+  const d=new Date(); a.bienvenida=fmt(iso(d))+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
+  persistir(); pintarBienvenida();
+};
 function txtClase(c){
   const a=alumno(c.alumnoId);
-  return `Hola ${a.nombre} 👋\nTe confirmamos tu clase práctica de conducción:\n📅 ${fechaLarga(c.fecha)}\n🕗 De ${c.hora} a ${finClase(c)}\n🚦 ${TXT_TIPO_CLASE[c.tipo]||("Clase de "+String(c.tipo||"").toLowerCase())}`+(compartible(c)&&grupoDe(c).length>1?" (compartida)":"")
+  return `Hola ${a.nombre} 👋\n`+(c.cambio?`⚠️ *CAMBIO DE CLASE.* Tu clase queda así:`:`Te confirmamos tu clase práctica de conducción:`)+`\n📅 ${fechaLarga(c.fecha)}\n🕗 De ${c.hora} a ${finClase(c)}\n🚦 ${TXT_TIPO_CLASE[c.tipo]||("Clase de "+String(c.tipo||"").toLowerCase())}`+(compartible(c)&&grupoDe(c).length>1?" (compartida)":"")
     +(c.profesor?`\n👤 Profesor: ${c.profesor}`:"")+(c.vehiculo?`\n🔑 Vehículo: ${c.vehiculo}`:"")
     +`\n\nSi no puedes asistir, avísanos con antelación, por favor.`+firma();
 }
@@ -1865,7 +1952,7 @@ function waAbrir(a,texto,key){
     [].concat(key).forEach(k=>db.avisos[k]=t); persistir(); }
   refrescarVistas();
 }
-window.waClase=id=>{ const c=db.clases.find(x=>x.id===id); if(c) waAbrir(alumno(c.alumnoId),txtClase(c),keyClase(c)); };
+window.waClase=id=>{ const c=db.clases.find(x=>x.id===id); if(!c) return; waAbrir(alumno(c.alumnoId),txtClase(c),keyClase(c)); if(c.cambio){ c.cambio=false; persistir(); } };
 window.waExamen=(id,k)=>{ const a=alumno(id); if(a) waAbrir(a,txtExamen(a,k),keyEx(a,k)); };
 
 /* Pestaña de avisos: por defecto TODAS las clases y exámenes pendientes de avisar (de hoy en adelante);
