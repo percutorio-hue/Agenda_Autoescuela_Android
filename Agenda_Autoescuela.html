@@ -1,0 +1,1982 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Agenda Autoescuela</title>
+<meta name="theme-color" content="#1f4e8c">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{
+  --bg:#f3f5f8;--panel:#fff;--ink:#1d2433;--muted:#667085;--line:#d9dee7;
+  --pri:#1f4e8c;--pri2:#2f6fc0;--ok:#1d7a46;--warn:#b26b00;--err:#b42318;
+  --b:#2f6fc0;--am:#0f7b6c;--a1:#7a3fb0;--a2:#c0392b;--exam:#fff4d6;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Segoe UI,Arial,sans-serif;background:var(--bg);color:var(--ink);font-size:14px}
+header{background:var(--pri);color:#fff;padding:10px 16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+header h1{font-size:18px;margin:0;font-weight:600}
+nav{display:flex;gap:4px;flex-wrap:wrap}
+nav button{background:transparent;color:#dbe6f5;border:1px solid transparent;padding:7px 12px;border-radius:6px;cursor:pointer;font-size:14px}
+nav button.on{background:#fff;color:var(--pri);font-weight:600}
+.spacer{flex:1}
+.hdrbtn{background:#2f6fc0;color:#fff;border:1px solid #6d9bd6;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:13px}
+main{padding:16px;max-width:1400px;margin:0 auto}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px}
+.panel h2{margin:0 0 12px;font-size:16px;color:var(--pri)}
+.hidden{display:none!important}
+label{display:block;font-size:12px;color:var(--muted);margin-bottom:3px}
+input,select,textarea{width:100%;padding:7px 8px;border:1px solid var(--line);border-radius:6px;font:inherit;background:#fff;color:var(--ink)}
+textarea{resize:vertical;min-height:54px}
+input:focus,select:focus,textarea:focus{outline:2px solid #9cc0ee;border-color:var(--pri2)}
+.btn{background:var(--pri);color:#fff;border:0;border-radius:6px;padding:8px 14px;cursor:pointer;font:inherit}
+.btn.sec{background:#e8edf5;color:var(--ink)}
+.btn.del{background:#fde8e6;color:var(--err)}
+.btn.sm{padding:4px 9px;font-size:12px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+/* Ficha */
+.ficha{display:grid;grid-template-columns:1fr 170px;gap:16px}
+.campos{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.c2{grid-column:span 2}.c4{grid-column:span 4}
+.foto{border:2px dashed var(--line);border-radius:8px;height:210px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background-image:linear-gradient(var(--line) 1px,transparent 1px),linear-gradient(90deg,var(--line) 1px,transparent 1px);background-size:20px 20px;
+  cursor:pointer;overflow:hidden;position:relative;text-align:center;color:var(--muted);font-size:12px}
+.foto img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}
+.fotobtns{display:flex;gap:6px;margin-top:6px}
+.fotobtns .btn{flex:1}
+fieldset{border:1px solid var(--line);border-radius:8px;padding:10px 12px 12px;margin:14px 0 0}
+legend{font-weight:600;color:var(--pri);padding:0 6px;font-size:13px}
+.exgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.exgroup{border-radius:6px;padding:8px;background:#f7f9fc;border:1px solid var(--line)}
+.exgroup h4{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+.msgs{margin-top:10px;font-size:13px}
+.msgs div{padding:6px 10px;border-radius:6px;margin-top:4px}
+.m-err{background:#fde8e6;color:var(--err)}
+.m-warn{background:#fff3e0;color:var(--warn)}
+.m-ok{background:#e6f4ec;color:var(--ok)}
+/* Tablas */
+table{width:100%;border-collapse:collapse}
+th,td{border-bottom:1px solid var(--line);padding:7px 8px;text-align:left;vertical-align:middle}
+th{background:#f0f3f8;font-size:12px;color:var(--muted);font-weight:600;position:sticky;top:0}
+tr:hover td{background:#f8fafd}
+.mini{width:34px;height:42px;object-fit:cover;border-radius:4px;border:1px solid var(--line);background:#eef1f6;display:block}
+.tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600;color:#fff}
+.t-B{background:var(--b)}.t-AM{background:var(--am)}.t-A1{background:var(--a1)}.t-A2{background:var(--a2)}
+.scroll{overflow:auto;max-height:65vh}
+/* Agenda */
+.agenda{overflow:auto}
+.agenda table{min-width:900px;table-layout:fixed}
+.agenda th,.agenda td{border:1px solid var(--line);padding:3px;vertical-align:top}
+.agenda td.h{width:70px;background:#f0f3f8;font-weight:600;text-align:center;vertical-align:middle;color:var(--muted)}
+.agenda td.cell{height:40px;cursor:pointer}
+.agenda tr.enpunto td{border-top:2px solid #c3ccd9}
+.agenda td.h.media{font-weight:400;font-size:11px;color:#9aa3b2}
+.agenda td.cell:hover{background:#eef4fc}
+.agenda th.today{background:#dce8f8;color:var(--pri)}
+.agenda th .exday{display:block;font-size:11px;font-weight:600;color:var(--warn);margin-top:2px}
+.chip{display:block;border-radius:5px;padding:3px 5px;margin-bottom:2px;font-size:11px;color:#fff;line-height:1.25;cursor:pointer;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.chip.B{background:var(--b)}.chip.AM{background:var(--am)}.chip.A1{background:var(--a1)}.chip.A2{background:var(--a2)}
+.chip.ex{background:var(--exam);color:var(--warn);border:1px solid #f0c36d}
+/* Modal */
+.modal{position:fixed;inset:0;background:rgba(20,30,50,.45);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
+.modal .box{background:#fff;border-radius:10px;padding:18px;width:min(520px,100%);max-height:90vh;overflow:auto}
+.modal h3{margin:0 0 12px;color:var(--pri)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:8px}
+.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px;background:var(--c)}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d2433;color:#fff;padding:10px 16px;border-radius:8px;z-index:60;font-size:13px}
+.kpis{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.kpi{background:#f7f9fc;border:1px solid var(--line);border-radius:8px;padding:8px 14px}
+.kpi b{display:block;font-size:20px;color:var(--pri)}
+.kpi span{font-size:12px;color:var(--muted)}
+#printArea{display:none}
+/* Plan motos */
+.plt td,.plt th{padding:5px 6px;font-size:13px;white-space:nowrap}
+.plt input[type=number]{width:58px;padding:5px}
+.plt select{padding:5px;width:auto}
+.pld{display:inline-flex;flex-direction:column;align-items:center;gap:2px;margin-right:4px}
+.pld label{display:flex;gap:3px;align-items:center;font-size:12px;margin:0;color:var(--ink)}
+.pld input[type=checkbox]{width:auto}
+.pld input[type=time]{width:80px;padding:3px;font-size:12px}
+.plt td:last-child{white-space:normal;min-width:230px}
+.pld{margin-bottom:3px}
+.pld input[type=time]:disabled{opacity:.35}
+.plpaso{display:flex;gap:8px;align-items:baseline;margin:14px 0 6px;color:var(--pri);font-weight:600}
+.plpaso span{background:var(--pri);color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;flex:none}
+.plgrupo td{vertical-align:top}
+.pld select{padding:2px;font-size:11px;width:auto}
+.pld .hh{width:74px}
+.plres{font-size:11px;color:var(--muted);max-width:220px;white-space:normal;display:block;margin-top:2px}
+.plres.dud{color:var(--warn);font-weight:600}
+#pgTexto{min-height:120px;font-size:14px}
+.pgvista{background:#f7f9fc;border:1px solid var(--line);border-radius:8px;padding:10px;margin-top:10px;font-size:14px}
+.pgvista ul{margin:4px 0 0;padding-left:18px}
+/* v7 */
+.exres{margin-top:6px;font-size:13px;padding:6px}
+.exfh{display:grid;grid-template-columns:minmax(0,1fr) 104px;gap:6px}
+.exfh input{min-width:0}
+.exgrid{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media (max-width:1180px){#exA{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.exres.r-apto{background:#e6f4ec;color:var(--ok);font-weight:600}
+.exres.r-noapto{background:#fde8e6;color:var(--err);font-weight:600}
+.exres.r-nopres{background:#eef0f4;color:#555;font-weight:600}
+.exhist{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.35}
+.rt{display:inline-block;padding:2px 7px;border-radius:9px;font-size:11px;font-weight:700;white-space:nowrap}
+.rt-apto{background:#e6f4ec;color:var(--ok)}.rt-noapto{background:#fde8e6;color:var(--err)}.rt-nopres{background:#eef0f4;color:#555}
+.rt-falta{background:#fff3e0;color:var(--warn)}.rt-prog{background:#e8eef8;color:var(--pri)}.rt-anul{background:#eef0f4;color:#777}
+.selmini{padding:4px 6px;font-size:12px;width:auto}
+.chip.est-realizada::before{content:"✔ "}
+.chip.est-falta{background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.25) 0 5px,transparent 5px 10px)}
+.chip.est-falta::before{content:"✖ "}
+.chip.est-anulada{opacity:.45;text-decoration:line-through}
+.chip.est-sinmarcar::before{content:"❔ "}
+.boxchk{display:flex;gap:12px;align-items:center;flex-wrap:wrap;background:#f7f9fc;border:1px solid var(--line);border-radius:6px;padding:8px 10px}
+.boxchk input[type=date]{width:170px}
+.tag-warn{display:inline-block;background:#fff3e0;color:var(--warn);border:1px solid #f0c36d;border-radius:8px;font-size:10px;font-weight:700;padding:1px 6px;margin-left:4px}
+.banner{background:#fff3e0;border-bottom:1px solid #f0c36d;color:#5a3d00;padding:10px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:14px}
+.banner .spacer{flex:1}
+.pagos2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.pagos2 h4{margin:0 0 8px;color:var(--pri);font-size:14px}
+.gpago{display:grid;gap:6px;margin-bottom:8px}
+.gpago.c{grid-template-columns:130px 1fr 90px 70px auto}
+.gpago.p{grid-template-columns:130px 90px 1fr 1fr auto}
+.kpi.mal b{color:var(--err)}.kpi.bien b{color:var(--ok)}
+@media (max-width:900px){.pagos2{grid-template-columns:1fr}.gpago.c,.gpago.p{grid-template-columns:1fr 1fr}}
+/* Pantalla de PIN */
+#pinGate{position:fixed;inset:0;z-index:100;background:linear-gradient(160deg,#1f4e8c,#163a69);display:flex;align-items:center;justify-content:center;padding:16px}
+#pinGate .pbox{background:#fff;border-radius:16px;padding:26px 22px;width:min(340px,100%);text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.3)}
+#pinGate h2{margin:6px 0 2px;color:var(--pri);font-size:20px}
+#pinGate p{margin:0 0 16px;color:var(--muted);font-size:13px}
+.pindots{display:flex;gap:14px;justify-content:center;margin-bottom:18px}
+.pindots span{width:16px;height:16px;border-radius:50%;border:2px solid var(--pri);transition:background .1s}
+.pindots span.on{background:var(--pri)}
+.pindots.mal{animation:temblor .35s}.pindots.mal span{border-color:var(--err)}
+@keyframes temblor{20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+.pinpad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.pinpad button{font:600 22px Segoe UI,Arial,sans-serif;padding:14px 0;border-radius:12px;border:1px solid var(--line);background:#f3f6fb;color:var(--ink);cursor:pointer}
+.pinpad button:active{background:#dce8f8}
+.pinpad button.pk-x{font-size:16px;color:var(--muted);background:#fff}
+#pinMsg{min-height:18px;margin-top:12px;font-size:13px;color:var(--err)}
+#pinGate .pfirma{margin-top:14px;font-size:11px;color:var(--muted)}
+@media print{#pinGate{display:none!important}}
+/* Exámenes en la cabecera del calendario */
+.exlist{display:flex;flex-direction:column;gap:2px;margin-top:4px}
+.exchip{display:block;font-size:11px;font-weight:600;line-height:1.25;padding:2px 5px;border-radius:4px;background:var(--exam);color:#5a3d00;
+  border:1px solid #f0c36d;border-left:4px solid var(--c);cursor:pointer;text-align:left;overflow-wrap:anywhere}
+.exchip small{display:block;font-weight:500;font-size:10.5px;color:#7a5600}
+.exchip:hover{filter:brightness(.95)}
+.exmas{font-size:11px;color:var(--warn);font-weight:600}
+.btn.wa{background:#25d366;color:#fff}
+header{position:relative;padding-right:120px}
+.firma-app{position:absolute;top:9px;right:16px;color:#dbe6f5;font-size:12px;text-align:right;line-height:1.25;white-space:nowrap}
+.firma-app b{color:#fff;font-size:13px;letter-spacing:.02em}
+.firma-app small{opacity:.75;font-size:10px}
+.medios{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start}
+.checks{display:flex;gap:16px;padding-top:6px}
+.checks label,label.chk{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--ink);margin:0}
+.checks input,label.chk input{width:auto}
+.itv-ko{color:var(--err);font-weight:600}.itv-av{color:var(--warn);font-weight:600}
+tr.inactivo td{color:var(--muted);background:#fafafa}
+@media (max-width:900px){.medios{grid-template-columns:1fr}}
+.sent{color:var(--ok);font-size:11px;font-weight:600;white-space:nowrap}
+.pend{color:var(--warn);font-size:11px;font-weight:600;white-space:nowrap}
+.badge{background:#ffd166;color:#5a3d00;border-radius:12px;padding:3px 10px;font-size:12px;font-weight:700}
+@media (pointer:coarse){
+  .btn{padding:10px 16px}.btn.sm{padding:8px 12px;font-size:13px}
+  nav button,.hdrbtn{padding:10px 14px}
+  input,select{padding:10px}
+  .agenda td.cell{height:46px}.chip{padding:5px;font-size:12px}
+}
+@media (max-width:900px){.ficha{grid-template-columns:1fr}.foto{height:180px;max-width:160px}.campos,.exgrid{grid-template-columns:1fr 1fr}.c4{grid-column:span 2}}
+@media print{
+  body{background:#fff}
+  header,main,.modal,.toast{display:none!important}
+  #printArea{display:block;padding:10mm;font-size:12px}
+  #printArea h2{margin:0 0 8px}
+  #printArea table td,#printArea table th{border:1px solid #999;padding:5px}
+  .pfoto{float:right;width:35mm;height:45mm;border:1px solid #999;object-fit:cover}
+}
+</style>
+</head>
+<body>
+<div id="pinGate">
+  <div class="pbox">
+    <div style="font-size:34px">🚗</div>
+    <h2>Agenda Autoescuela</h2>
+    <p>Introduce el PIN de acceso</p>
+    <div class="pindots" id="pinDots"><span></span><span></span><span></span><span></span></div>
+    <div class="pinpad" id="pinPad">
+      <button>1</button><button>2</button><button>3</button>
+      <button>4</button><button>5</button><button>6</button>
+      <button>7</button><button>8</button><button>9</button>
+      <button class="pk-x" data-k="borrar">⌫</button><button>0</button><button class="pk-x" data-k="limpiar">C</button>
+    </div>
+    <div id="pinMsg"></div>
+    <div class="pfirma">Creado por AML</div>
+  </div>
+</div>
+<header>
+  <h1>🚗 Agenda Autoescuela</h1>
+  <nav id="nav">
+    <button data-v="ficha" class="on">Ficha alumno</button>
+    <button data-v="lista">Listado</button>
+    <button data-v="agenda">Clases prácticas</button>
+    <button data-v="examenes">Exámenes</button>
+    <button data-v="medios">Profesores y vehículos</button>
+    <button data-v="plan">🏍️ Plan motos</button>
+    <button data-v="avisos">📲 Avisos WhatsApp</button>
+  </nav>
+  <span class="badge hidden" id="badgeEj" title="Datos inventados para probar. Al dar de alta un alumno real te ofrecerá borrarlos.">DATOS DE EJEMPLO</span>
+  <div class="spacer"></div>
+  <button class="hdrbtn" id="btnConfig" title="Nombre y teléfono de la autoescuela para la firma de los WhatsApp">⚙️ Autoescuela</button>
+  <button class="hdrbtn" id="btnGuardar" title="Descarga un fichero .json con toda la base de datos">💾 Guardar base de datos</button>
+  <button class="hdrbtn" id="btnAbrir" title="Carga un fichero .json guardado anteriormente">📂 Abrir</button>
+  <button class="hdrbtn" id="btnEnviar" title="Envía la copia a Google Drive, correo, WhatsApp…">📤 Enviar copia</button>
+  <input type="file" id="fileDB" accept=".json,.txt,application/json,text/plain" class="hidden">
+  <span class="firma-app">Creado por <b>AML</b><br><small id="verApp"></small></span>
+</header>
+<div class="banner hidden" id="avisoMier" style="background:#e8f4fb;border-color:#9cc8e6;color:#123c5c">
+  <span id="avisoMierTxt"></span><span class="spacer"></span>
+  <button class="btn sm" id="amIr">🏍️ Ir a Plan motos</button><button class="btn sm sec" id="amLuego">Más tarde</button>
+</div>
+<div class="banner hidden" id="avisoCopia">
+  <span id="avisoCopiaTxt"></span><span class="spacer"></span>
+  <button class="btn sm wa" id="acEnviar">📤 Enviar copia</button>
+  <button class="btn sm" id="acGuardar">💾 Guardar copia</button>
+  <button class="btn sm sec" id="acLuego">Más tarde</button>
+</div>
+
+<main>
+<!-- ============ FICHA ============ -->
+<section id="v-ficha">
+  <div class="panel">
+    <div class="row" style="justify-content:space-between;margin-bottom:10px">
+      <h2 id="fichaTitulo" style="margin:0">Nuevo alumno</h2>
+      <div class="row">
+        <button class="btn sec" id="btnNuevo">➕ Nuevo</button>
+        <button class="btn sec" id="btnImprimir">🖨️ Imprimir ficha</button>
+        <button class="btn" id="btnGuardarAlumno">Guardar alumno</button>
+      </div>
+    </div>
+    <form id="fAlumno" autocomplete="off" onsubmit="return false">
+      <div class="ficha">
+        <div class="campos">
+          <div class="c2"><label>Nombre *</label><input name="nombre" required></div>
+          <div class="c2"><label>Apellidos *</label><input name="apellidos" required></div>
+          <div><label>DNI / NIE *</label><input name="dni" required style="text-transform:uppercase"></div>
+          <div><label>Fecha de nacimiento</label><input name="fnac" type="date"></div>
+          <div><label>Teléfono</label><input name="tel" type="tel"></div>
+          <div><label>Correo electrónico</label><input name="email" type="email"></div>
+          <div class="c2"><label>Dirección</label><input name="dir"></div>
+          <div><label>Permiso *</label>
+            <select name="permiso" id="selPermiso">
+              <option value="B">B – Turismo (coche)</option>
+              <option value="AM">AM – Ciclomotor</option>
+              <option value="A1">A1 – Motocicleta</option>
+              <option value="A2">A2 – Motocicleta</option>
+            </select></div>
+          <div><label>Fecha de alta</label><input name="alta" type="date"></div>
+          <div class="c2"><label>Profesor asignado</label><select name="profesor"></select></div>
+          <div class="c2"><label>Vehículo habitual</label><select name="vehiculo"></select></div>
+          <div class="c4"><label>Observaciones</label><textarea name="obs"></textarea></div>
+          <div class="c4 boxchk"><label class="chk"><input type="checkbox" name="nuevo"> 🆕 <b>Alumno nuevo</b>: sus clases de moto serán siempre individuales (no comparte clase de maniobras)</label></div>
+        </div>
+        <div>
+          <div class="foto" id="fotoBox" title="Pulsa para añadir la fotografía">
+            <div id="fotoTxt">📷<br>Fotografía<br><small>Pulsa para añadir</small></div>
+            <img id="fotoImg" class="hidden" alt="Foto del alumno">
+          </div>
+          <div class="fotobtns">
+            <button type="button" class="btn sec sm" id="btnFoto">Cambiar</button>
+            <button type="button" class="btn del sm" id="btnQuitarFoto">Quitar</button>
+          </div>
+          <input type="file" id="fileFoto" accept="image/*" class="hidden">
+        </div>
+      </div>
+
+      <fieldset>
+        <legend id="legExam">Fechas de examen – Permiso B</legend>
+        <div class="exgrid" id="exB">
+          <div class="exgroup c2"><h4>Teórico</h4><label>Fecha examen teórico · fecha y hora</label><div class="exfh"><input type="date" name="ex_teorico"><input type="time" name="hora_teorico" step="300" title="Hora de la cita del examen"></div>
+            <select name="res_teorico" class="exres"><option value="">Resultado: pendiente</option><option value="apto">✔ Apto</option><option value="noapto">✖ No apto</option><option value="nopres">No presentado</option></select>
+            <div class="exhist" id="hist_teorico"></div></div>
+          <div class="exgroup c2"><h4>Práctico</h4><label>Fecha examen práctico · fecha y hora</label><div class="exfh"><input type="date" name="ex_practico"><input type="time" name="hora_practico" step="300" title="Hora de la cita del examen"></div>
+            <select name="res_practico" class="exres"><option value="">Resultado: pendiente</option><option value="apto">✔ Apto</option><option value="noapto">✖ No apto</option><option value="nopres">No presentado</option></select>
+            <div class="exhist" id="hist_practico"></div></div>
+        </div>
+        <div class="exgrid hidden" id="exA">
+          <div class="exgroup"><h4>Teórico</h4><label>Común · fecha y hora</label><div class="exfh"><input type="date" name="ex_comun"><input type="time" name="hora_comun" step="300" title="Hora de la cita del examen"></div>
+            <select name="res_comun" class="exres"><option value="">Resultado: pendiente</option><option value="apto">✔ Apto</option><option value="noapto">✖ No apto</option><option value="nopres">No presentado</option></select>
+            <div class="exhist" id="hist_comun"></div></div>
+          <div class="exgroup"><h4>Teórico</h4><label>Específico · fecha y hora</label><div class="exfh"><input type="date" name="ex_especifico"><input type="time" name="hora_especifico" step="300" title="Hora de la cita del examen"></div>
+            <select name="res_especifico" class="exres"><option value="">Resultado: pendiente</option><option value="apto">✔ Apto</option><option value="noapto">✖ No apto</option><option value="nopres">No presentado</option></select>
+            <div class="exhist" id="hist_especifico"></div></div>
+          <div class="exgroup"><h4>Práctico</h4><label>Circuito cerrado · fecha y hora</label><div class="exfh"><input type="date" name="ex_circuito"><input type="time" name="hora_circuito" step="300" title="Hora de la cita del examen"></div>
+            <select name="res_circuito" class="exres"><option value="">Resultado: pendiente</option><option value="apto">✔ Apto</option><option value="noapto">✖ No apto</option><option value="nopres">No presentado</option></select>
+            <div class="exhist" id="hist_circuito"></div></div>
+          <div class="exgroup"><h4>Práctico</h4><label>Vía pública · fecha y hora</label><div class="exfh"><input type="date" name="ex_via"><input type="time" name="hora_via" step="300" title="Hora de la cita del examen"></div>
+            <select name="res_via" class="exres"><option value="">Resultado: pendiente</option><option value="apto">✔ Apto</option><option value="noapto">✖ No apto</option><option value="nopres">No presentado</option></select>
+            <div class="exhist" id="hist_via"></div></div>
+        </div>
+        <div class="msgs" id="exMsgs"></div>
+      </fieldset>
+    </form>
+  </div>
+
+  <div class="panel" id="panelClasesAlumno">
+    <div class="row" style="justify-content:space-between;margin-bottom:8px">
+      <h2 style="margin:0">Clases prácticas del alumno</h2>
+      <button class="btn sm" id="btnClaseAlumno">➕ Programar clase</button>
+    </div>
+    <div id="clasesAlumno"></div>
+  </div>
+
+  <div class="panel" id="panelPagos">
+    <h2>Bonos y clases</h2>
+    <div id="pagosBox"></div>
+  </div>
+</section>
+
+<!-- ============ LISTADO ============ -->
+<section id="v-lista" class="hidden">
+  <div class="panel">
+    <div class="row" style="justify-content:space-between;margin-bottom:10px">
+      <h2 style="margin:0">Listado de alumnos</h2>
+      <div class="row">
+        <input id="buscar" placeholder="Buscar nombre, DNI, teléfono…" style="width:240px">
+        <select id="filtroPermiso" style="width:130px"><option value="">Todos</option><option>B</option><option>AM</option><option>A1</option><option>A2</option></select>
+        <button class="btn sec" id="btnCSV">⬇️ Exportar CSV</button>
+        <button class="btn del" id="btnVaciar">🗑️ Vaciar todo</button>
+      </div>
+    </div>
+    <div class="kpis" id="kpis"></div>
+    <div class="scroll"><table id="tLista"></table></div>
+  </div>
+</section>
+
+<!-- ============ AGENDA ============ -->
+<section id="v-agenda" class="hidden">
+  <div class="panel">
+    <div class="row" style="justify-content:space-between;margin-bottom:10px">
+      <h2 style="margin:0">Clases prácticas · 08:00 a 21:00</h2>
+      <div class="row">
+        <button class="btn sec" id="semAnt">◀</button>
+        <input type="date" id="semFecha" style="width:150px">
+        <button class="btn sec" id="semSig">▶</button>
+        <button class="btn sec" id="semHoy">Hoy</button>
+        <button class="btn sec" id="btnHoja">📋 Hoja del día</button>
+        <select id="filtroProf" style="width:170px"><option value="">Todos los profesores</option></select>
+      </div>
+    </div>
+    <div class="agenda" id="agenda"></div>
+    <div class="legend">
+      <span style="--c:var(--b)">Permiso B</span>
+      <span style="--c:var(--am)">AM</span>
+      <span style="--c:var(--a1)">A1</span>
+      <span style="--c:var(--a2)">A2</span>
+      <span style="--c:#f0c36d">📝 Examen (arriba, en el día; pulsa para abrir la ficha)</span>
+      <span>✔ realizada · ✖ falta · <s>anulada</s> · ❔ pasada sin marcar asistencia · 👥 clase de maniobras compartida</span>
+      <span>Pulsa una casilla vacía para programar una clase; pulsa una clase para editarla.</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ EXAMENES ============ -->
+<section id="v-examenes" class="hidden">
+  <div class="panel">
+    <div class="row" style="justify-content:space-between;margin-bottom:10px">
+      <h2 style="margin:0">Calendario de exámenes</h2>
+      <div class="row">
+        <select id="exFiltro" style="width:170px">
+          <option value="prox">Próximos</option><option value="todos">Todos</option><option value="pas">Pasados</option>
+        </select>
+        <select id="exTipo" style="width:170px">
+          <option value="">Todos los tipos</option>
+          <option value="teorico">B · Teórico</option><option value="practico">B · Práctico</option>
+          <option value="comun">A · Teórico común</option><option value="especifico">A · Teórico específico</option>
+          <option value="circuito">A · Circuito cerrado</option><option value="via">A · Vía pública</option>
+        </select>
+      </div>
+    </div>
+    <div id="exAvisos"></div>
+    <div class="scroll"><table id="tExam"></table></div>
+  </div>
+</section>
+
+<!-- ============ PROFESORES Y VEHÍCULOS ============ -->
+<section id="v-medios" class="hidden">
+  <div class="medios">
+    <div class="panel">
+      <h2 id="pfTit">Nuevo profesor</h2>
+      <div class="g2">
+        <div style="grid-column:span 2"><label>Nombre y apellidos *</label><input id="pfNombre"></div>
+        <div><label>Teléfono</label><input id="pfTel" type="tel"></div>
+        <div><label>Permisos que imparte</label>
+          <div class="checks"><label><input type="checkbox" id="pfB"> B</label><label><input type="checkbox" id="pfAM"> AM</label><label><input type="checkbox" id="pfA1"> A1</label><label><input type="checkbox" id="pfA2"> A2</label></div></div>
+        <div style="grid-column:span 2"><label class="chk"><input type="checkbox" id="pfActivo" checked> En activo (aparece para asignar a alumnos y clases)</label></div>
+      </div>
+      <div class="row" style="justify-content:flex-end;margin-top:10px">
+        <button class="btn sec" id="pfNuevo">Nuevo</button><button class="btn" id="pfGuardar">Guardar profesor</button></div>
+      <div class="scroll" style="margin-top:14px"><table id="tProf"></table></div>
+    </div>
+
+    <div class="panel">
+      <h2 id="vhTit">Nuevo vehículo</h2>
+      <div class="g2">
+        <div><label>Tipo / permiso *</label>
+          <select id="vhPermiso"><option value="B">🚗 Coche – permiso B</option><option value="AM">🛵 Ciclomotor – permiso AM</option><option value="A1">🏍️ Moto – permiso A1</option><option value="A2">🏍️ Moto – permiso A2</option></select></div>
+        <div><label>Matrícula *</label><input id="vhMatricula" style="text-transform:uppercase"></div>
+        <div><label>Marca y modelo *</label><input id="vhModelo"></div>
+        <div><label>Próxima ITV</label><input id="vhItv" type="date"></div>
+        <div style="grid-column:span 2"><label>Observaciones</label><input id="vhObs"></div>
+        <div style="grid-column:span 2"><label class="chk"><input type="checkbox" id="vhActivo" checked> En servicio (aparece para asignar a alumnos y clases)</label></div>
+      </div>
+      <div class="row" style="justify-content:flex-end;margin-top:10px">
+        <button class="btn sec" id="vhNuevo">Nuevo</button><button class="btn" id="vhGuardar">Guardar vehículo</button></div>
+      <div class="scroll" style="margin-top:14px"><table id="tVeh"></table></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PLAN MOTOS ============ -->
+<section id="v-plan" class="hidden">
+  <div class="panel">
+    <div class="row" style="justify-content:space-between;margin-bottom:6px">
+      <h2 style="margin:0">🏍️ Planificación semanal de motos (AM · A1 · A2)</h2>
+      <div class="row">
+        <span style="font-size:13px">Semana del lunes</span><input type="date" id="plSemana" style="width:160px">
+        <select id="plProf" style="width:190px"></select>
+        <span style="font-size:13px">desde</span><input type="time" id="plDesde" value="15:30" step="900" style="width:110px">
+      </div>
+    </div>
+    <p style="color:var(--muted);font-size:13px;margin:0">Clases de 30 min (o dobles de 1 h) de lunes a viernes, hasta las 21:00. 📌 = solo podía ese día y hora (se coloca primero). Las de <b>circuito cerrado / maniobras</b> se comparten hasta 3 alumnos; las de <b>vía pública</b> y los alumnos <b>🆕 nuevos</b> van solos.</p>
+
+    <div class="plpaso"><span>1</span> Elige los alumnos y pregúntales su disponibilidad (los miércoles)</div>
+    <div class="row" style="margin-bottom:6px">
+      <button class="btn sec sm" id="plTodos">Marcar todos</button><button class="btn sec sm" id="plNinguno">Ninguno</button>
+      <button class="btn wa sm" id="plPreguntar">📲 Preguntar al siguiente</button>
+      <span id="plResumen" style="font-size:13px;color:var(--muted)"></span>
+    </div>
+    <div class="plpaso"><span>2</span> Pega la respuesta de cada uno con «📋 Respuesta» (o márcala a mano) y pon la prioridad (1 = primero)</div>
+    <div class="scroll" style="max-height:none"><table class="plt" id="plTabla"></table></div>
+
+    <div class="plpaso"><span>3</span> Genera la propuesta (empieza el lunes a la hora indicada, por orden de prioridad)</div>
+    <div class="row"><button class="btn" id="plGenerar">⚙️ Generar propuesta</button></div>
+    <div id="plPropuesta" style="margin-top:10px"></div>
+  </div>
+</section>
+
+<!-- ============ AVISOS ============ -->
+<section id="v-avisos" class="hidden">
+  <div class="panel">
+    <div class="row" style="justify-content:space-between;margin-bottom:10px">
+      <h2 style="margin:0">Avisos por WhatsApp</h2>
+      <div class="row">
+        <button class="btn sec" id="avPend">Todos los pendientes</button>
+        <button class="btn sec" id="avHoy">Hoy</button>
+        <button class="btn sec" id="avManana">Mañana</button>
+        <input type="date" id="avFecha" style="width:150px">
+        <button class="btn wa" id="avSig">📲 Enviar siguiente pendiente</button>
+      </div>
+    </div>
+    <p style="color:var(--muted);margin:0 0 10px;font-size:13px" id="avDesc"></p>
+    <p style="color:var(--muted);margin:0 0 10px;font-size:13px"> Cada botón abre WhatsApp con el mensaje ya escrito para ese alumno; solo hay que pulsar <b>Enviar</b>. Queda marcado como «avisado».</p>
+    <div class="scroll"><table id="tAvisos"></table></div>
+  </div>
+</section>
+</main>
+
+<!-- Modal clase -->
+<div class="modal hidden" id="mClase">
+  <div class="box">
+    <h3 id="mClaseTit">Programar clase práctica</h3>
+    <div class="g2">
+      <div style="grid-column:span 2"><label>Alumno *</label><select id="cAlumno"></select></div>
+      <div><label>Fecha *</label><input type="date" id="cFecha"></div>
+      <div><label>Hora *</label><select id="cHora"></select></div>
+      <div><label>Duración</label>
+        <select id="cDur"><option value="45">45 minutos</option><option value="60">1 hora</option><option value="90">1 h 30 min (2 × 45 min)</option>
+          <option value="120">2 horas</option><option value="180">3 horas</option></select></div>
+      <div><label>Tipo de clase</label>
+        <select id="cTipo"><option>Vía pública</option><option>Circuito cerrado</option><option>Maniobras</option><option>Simulacro examen</option></select></div>
+      <div><label>Profesor</label><select id="cProf"></select></div>
+      <div><label>Vehículo</label><select id="cVeh"></select></div>
+      <div><label>Asistencia</label>
+        <select id="cEstado"><option value="">Programada (pendiente)</option><option value="realizada">✔ Realizada</option><option value="falta">✖ Falta del alumno</option><option value="anulada">⊘ Anulada</option></select></div>
+      <div style="font-size:12px;color:var(--muted);align-self:end;padding-bottom:6px">Las anuladas no ocupan hueco ni descuentan del bono.</div>
+      <div style="grid-column:span 2"><label>Observaciones</label><textarea id="cObs"></textarea></div>
+    </div>
+    <div id="cRepBox" style="margin-top:10px;border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#f7f9fc">
+      <label class="chk"><input type="checkbox" id="cRepetir"> Repetir cada semana (programar en bloque)</label>
+      <div id="cRepOpts" class="hidden" style="margin-top:8px">
+        <div class="checks" id="cRepDias" style="flex-wrap:wrap;gap:12px">
+          <label><input type="checkbox" value="0"> Lun</label><label><input type="checkbox" value="1"> Mar</label><label><input type="checkbox" value="2"> Mié</label>
+          <label><input type="checkbox" value="3"> Jue</label><label><input type="checkbox" value="4"> Vie</label><label><input type="checkbox" value="5"> Sáb</label></div>
+        <div class="row" style="margin-top:8px"><span style="font-size:13px">Durante</span>
+          <select id="cRepSem" style="width:auto"></select><span style="font-size:13px">semanas, a partir de la fecha indicada.</span></div>
+      </div>
+    </div>
+    <label style="display:flex;gap:8px;align-items:center;margin-top:12px;font-size:13px;color:var(--ink)">
+      <input type="checkbox" id="cAvisar" style="width:auto"> Enviar aviso por WhatsApp al alumno al guardar</label>
+    <div class="msgs" id="cMsgs"></div>
+    <div class="row" style="justify-content:space-between;margin-top:14px">
+      <button class="btn del" id="cBorrar">Borrar clase</button>
+      <div class="row"><button class="btn sec" id="cCancelar">Cancelar</button><button class="btn" id="cGuardar">Guardar</button></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal hidden" id="mHoja">
+  <div class="box" style="width:min(760px,100%)">
+    <h3>📋 Hoja del día del profesor</h3>
+    <div class="row"><input type="date" id="hjFecha" style="width:170px"><select id="hjProf" style="width:220px"></select></div>
+    <div id="hjVista" style="margin-top:12px"></div>
+    <div class="row" style="justify-content:flex-end;margin-top:14px">
+      <button class="btn sec" id="hjCerrar">Cerrar</button>
+      <button class="btn sec" id="hjImprimir">🖨️ Imprimir</button>
+      <button class="btn wa" id="hjWa">📲 Enviar al profesor</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal hidden" id="mAviso" style="z-index:90">
+  <div class="box" style="width:min(460px,100%)">
+    <h3>ℹ️ Aviso</h3>
+    <p id="mAvisoTxt" style="margin:0;white-space:pre-line"></p>
+    <div class="row" style="justify-content:flex-end;margin-top:16px"><button class="btn" id="mAvisoOk">Entendido</button></div>
+  </div>
+</div>
+
+<div class="modal hidden" id="mPegar">
+  <div class="box" style="width:min(620px,100%)">
+    <h3 id="pgTit">📋 Pegar respuesta</h3>
+    <p style="margin:0 0 6px;font-size:13px;color:var(--muted)">En WhatsApp mantén pulsado el mensaje del alumno → <b>Copiar</b>, y pégalo aquí (mantén pulsado el recuadro → Pegar).</p>
+    <textarea id="pgTexto" placeholder="Ej.: lunes desde las 17, jueves a las 18:30, 2 clases"></textarea>
+    <div class="row" style="margin-top:6px"><button class="btn sec sm" id="pgPortapapeles">📋 Pegar del portapapeles</button></div>
+    <div class="pgvista" id="pgVista"></div>
+    <div class="row" style="justify-content:flex-end;margin-top:14px">
+      <button class="btn sec" id="pgCancelar">Cancelar</button><button class="btn" id="pgAplicar">Aplicar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal hidden" id="mConfig">
+  <div class="box" style="width:min(520px,100%)">
+    <h3>⚙️ Datos de la autoescuela</h3>
+    <div class="g2">
+      <div style="grid-column:span 2"><label>Nombre (firma de los WhatsApp)</label><input id="cfNombre"></div>
+      <div style="grid-column:span 2"><label>Teléfono de contacto (opcional)</label><input id="cfTel" type="tel"></div>
+    </div>
+    <div style="margin-top:14px">
+      <label>Faltas del alumno (no avisadas)</label>
+      <label class="chk"><input type="radio" name="cfFalta" value="si"> Descuentan clases del bono</label>
+      <label class="chk"><input type="radio" name="cfFalta" value="no"> No descuentan</label>
+    </div>
+    <div style="margin-top:12px">
+      <label>Mañana de un examen práctico</label>
+      <label class="chk"><input type="radio" name="cfBloq" value="todos"> No hay clases de mañana para nadie</label>
+      <label class="chk"><input type="radio" name="cfBloq" value="profesor"> Solo no da clases de mañana el profesor de ese alumno</label>
+    </div>
+    <div class="row" style="justify-content:flex-end;margin-top:16px">
+      <button class="btn sec" id="cfCancelar">Cancelar</button><button class="btn" id="cfGuardar">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal hidden" id="mPend">
+  <div class="box" style="width:min(460px,100%)">
+    <h3>⚠️ Cambios sin guardar</h3>
+    <p id="mPendTxt" style="margin:0 0 6px"></p>
+    <p style="margin:0;color:var(--muted);font-size:13px">Si sales sin guardar, se perderán.</p>
+    <div class="row" style="justify-content:flex-end;margin-top:16px">
+      <button class="btn sec" id="mPendSeguir">Seguir editando</button>
+      <button class="btn del" id="mPendDescartar">Salir sin guardar</button>
+      <button class="btn" id="mPendGuardar">Guardar y salir</button>
+    </div>
+  </div>
+</div>
+<div class="modal hidden" id="mExWa">
+  <div class="box" style="width:min(460px,100%)">
+    <h3>📲 Avisar del examen</h3>
+    <p id="mExWaTxt" style="margin:0 0 6px"></p>
+    <p style="margin:0;color:var(--muted);font-size:13px">Se guardará la ficha y se abrirá WhatsApp con el mensaje ya escrito.</p>
+    <div class="row" style="justify-content:flex-end;margin-top:16px">
+      <button class="btn sec" id="mExWaNo">Ahora no</button>
+      <button class="btn wa" id="mExWaSi">Guardar y enviar WhatsApp</button>
+    </div>
+  </div>
+</div>
+<div id="printArea"></div>
+
+<script>
+"use strict";
+/* Los avisos se muestran en una ventana propia de la app: en algunas tablets Chrome bloquea sus ventanitas y parecía que «no pasaba nada» */
+window.alert=function(msg){
+  const m=document.getElementById("mAviso"); if(!m){ return; }
+  document.getElementById("mAvisoTxt").textContent=String(msg);
+  m.classList.remove("hidden"); document.getElementById("mAvisoOk").onclick=()=>m.classList.add("hidden");
+};
+/* ================== DATOS ================== */
+const LS_KEY = "agendaAutoescuela_v1";
+const VERSION = "v9.6 NOV27";
+const HORAS = []; for (let m = 8*60; m < 21*60; m += 30) HORAS.push(String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"));   // filas de 30 min: 08:00 … 20:30 (la última termina a las 21:00)
+const EXAMENES = {
+  B:  [["teorico","Teórico"],["practico","Práctico"]],
+  AM: [["comun","Teórico común"],["especifico","Teórico específico"],["circuito","Circuito cerrado"]],   // el AM no tiene examen de vía pública
+  A1: [["comun","Teórico común"],["especifico","Teórico específico"],["circuito","Circuito cerrado"],["via","Vía pública"]],
+  A2: [["comun","Teórico común"],["especifico","Teórico específico"],["circuito","Circuito cerrado"],["via","Vía pública"]]
+};
+const NOMBRE_EX = {teorico:"Teórico",practico:"Práctico",comun:"Teórico común",especifico:"Teórico específico",circuito:"Circuito cerrado",via:"Vía pública"};
+const DIAS = ["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
+
+let db = {alumnos:[], clases:[], version:1};
+let actual = null;          // id del alumno en la ficha
+let fotoData = "";          // dataURL de la foto en edición
+let claseEdit = null;       // id de clase en edición
+let lunes = lunesDe(hoy());
+let sinGuardar = false;
+
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function hoy(){ const d=new Date(); return iso(d); }
+function iso(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function parse(s){ const [y,m,d]=s.split("-").map(Number); return new Date(y,m-1,d); }
+function addDias(s,n){ const d=parse(s); d.setDate(d.getDate()+n); return iso(d); }
+function lunesDe(s){ const d=parse(s); const w=(d.getDay()+6)%7; d.setDate(d.getDate()-w); return iso(d); }
+function fmt(s){ if(!s) return ""; const [y,m,d]=s.split("-"); return d+"/"+m+"/"+y; }
+function diaSem(s){ return ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"][parse(s).getDay()]; }
+function esc(s){ return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function $(id){ return document.getElementById(id); }
+function nombreCompleto(a){ return (a.apellidos||"")+", "+(a.nombre||""); }
+function alumno(id){ return db.alumnos.find(a=>a.id===id); }
+function toast(t){ const e=document.createElement("div"); e.className="toast"; e.textContent=t; document.body.appendChild(e); setTimeout(()=>e.remove(),2600); }
+
+/* Persistencia: copia automática en el navegador (si la directiva lo permite) + fichero JSON */
+function persistir(){
+  sinGuardar = true;
+  try{ localStorage.setItem(LS_KEY, JSON.stringify(db)); }catch(e){}
+}
+function cargarLocal(){
+  try{ const t=localStorage.getItem(LS_KEY); if(t){ const o=JSON.parse(t); if(o&&o.alumnos){ db=o; return true; } } }catch(e){}
+  return false;
+}
+function descargar(nombre, contenido, tipo){
+  const b=new Blob([contenido],{type:tipo}); const a=document.createElement("a");
+  a.href=URL.createObjectURL(b); a.download=nombre; document.body.appendChild(a); a.click();
+  setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();},500);
+}
+function selloFecha(){ const f=new Date(); return iso(f)+"_"+String(f.getHours()).padStart(2,"0")+String(f.getMinutes()).padStart(2,"0"); }
+$("btnGuardar").onclick=()=>{
+  descargar("Autoescuela_BD_"+selloFecha()+".json", JSON.stringify(db,null,1), "application/json");
+  marcarCopia(); sinGuardar=false; toast("Copia guardada en la carpeta «Descargas» de este dispositivo.");
+};
+/* Enviar copia (tablet/móvil): abre el menú «Compartir» de Android para mandarla a Drive, correo, WhatsApp…
+   Android no deja compartir ficheros .json, así que se envía como .txt (el botón «Abrir» acepta los dos). */
+function ficheroCopia(){ return new File([JSON.stringify(db,null,1)],"Autoescuela_copia_"+selloFecha()+".txt",{type:"text/plain"}); }
+$("btnEnviar").onclick=async()=>{
+  try{ await navigator.share({files:[ficheroCopia()],title:"Copia Agenda Autoescuela",text:"Copia de seguridad de la Agenda Autoescuela"}); marcarCopia(); sinGuardar=false; toast("Copia enviada."); }
+  catch(e){ if(e&&e.name!=="AbortError") alert("No se ha podido compartir la copia: "+e.message+"\nUsa «Guardar base de datos»."); }
+};
+try{ if(!(navigator.canShare&&navigator.canShare({files:[ficheroCopia()]}))) $("btnEnviar").classList.add("hidden"); }
+catch(e){ $("btnEnviar").classList.add("hidden"); }
+$("btnAbrir").onclick=()=>$("fileDB").click();
+$("fileDB").onchange=e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{
+    try{
+      const o=JSON.parse(r.result);
+      if(!o||!Array.isArray(o.alumnos)||!Array.isArray(o.clases)) throw 0;
+      if(db.alumnos.length && !db.ejemplo && !confirm("Se sustituirán los datos actuales por los del fichero. ¿Continuar?")) return;
+      db=o; normalizar(); purgarEjemplos(); copiaPospuesta=false; persistir(); sinGuardar=false; nuevaFicha(); refrescarTodo(); toast("Cargados "+db.alumnos.length+" alumnos y "+db.clases.length+" clases.");
+    }catch(x){ alert("El fichero no es una base de datos válida de la agenda."); }
+  };
+  r.readAsText(f); e.target.value="";
+};
+window.addEventListener("beforeunload",e=>{ if(cambiosFicha||cambiosProf||cambiosVeh){ e.preventDefault(); e.returnValue=""; } });
+
+/* ================== NAVEGACIÓN ================== */
+$("nav").onclick=e=>{ const v=e.target.dataset.v; if(v) ver(v); };
+let vista="ficha", cambiosFicha=false, cambiosProf=false, cambiosVeh=false;
+/* Qué hay sin guardar en la pestaña actual y cómo guardarlo o descartarlo */
+function pendientesDe(v){
+  if(v==="ficha"&&cambiosFicha) return {texto:"la ficha del alumno",
+    guardar:()=>guardarAlumno(), descartar:()=>{ if(actual&&alumno(actual)) cargarFicha(actual); else nuevaFicha(); }};
+  if(v==="medios"&&(cambiosProf||cambiosVeh)) return {texto:cambiosProf&&cambiosVeh?"el profesor y el vehículo":cambiosProf?"el profesor":"el vehículo",
+    guardar:()=>(!cambiosProf||guardarProf())&&(!cambiosVeh||guardarVeh()), descartar:()=>{ nuevoProf(); nuevoVeh(); }};
+  return null;
+}
+function pedirGuardar(p,luego){
+  $("mPendTxt").innerHTML="Has modificado <b>"+esc(p.texto)+"</b> y no lo has guardado.";
+  $("mPend").classList.remove("hidden");
+  const cerrar=()=>$("mPend").classList.add("hidden");
+  $("mPendSeguir").onclick=cerrar;
+  $("mPendDescartar").onclick=()=>{ cerrar(); p.descartar(); luego(); };
+  $("mPendGuardar").onclick=()=>{ cerrar(); if(p.guardar()) luego(); };
+}
+function ver(v,forzar){
+  if(!forzar&&v!==vista){ const p=pendientesDe(vista); if(p){ pedirGuardar(p,()=>ver(v,true)); return; } }
+  vista=v;
+  document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
+  ["ficha","lista","agenda","examenes","medios","plan","avisos"].forEach(x=>$("v-"+x).classList.toggle("hidden",x!==v));
+  if(v==="plan") pintarPlan();
+  if(v==="medios") pintarMedios();
+  if(v==="ficha") rellenarSelectsFicha(F.profesor.value,F.vehiculo.value);   // recoge profesores/vehículos dados de alta después
+  if(v==="lista") pintarLista(); if(v==="agenda") pintarAgenda(); if(v==="examenes") pintarExamenes(); if(v==="avisos") pintarAvisos();
+}
+
+/* ================== FICHA ================== */
+const F=$("fAlumno");
+$("selPermiso").onchange=()=>{
+  // al cambiar de permiso solo se ofrecen profesores y vehículos de ese permiso
+  const p=F.profesor.value, v=F.vehiculo.value; rellenarSelectsFicha("","");
+  if([...F.profesor.options].some(o=>o.value===p)) F.profesor.value=p;
+  if([...F.vehiculo.options].some(o=>o.value===v)) F.vehiculo.value=v;
+  mostrarBloqueExamen(); validarFicha();
+};
+function rellenarSelectsFicha(p,v){
+  F.profesor.innerHTML=opcionesProf(F.permiso.value,p); F.profesor.value=p||"";
+  F.vehiculo.innerHTML=opcionesVeh(F.permiso.value,v); F.vehiculo.value=v||"";
+}
+function mostrarBloqueExamen(){
+  const p=F.permiso.value, esA=p!=="B";
+  $("exB").classList.toggle("hidden",esA); $("exA").classList.toggle("hidden",!esA);
+  F.ex_via.closest(".exgroup").classList.toggle("hidden",p==="AM");
+  $("legExam").textContent="Fechas de examen – Permiso "+p+(p==="AM"?" (ciclomotor)":esA?" (motocicleta)":" (coche)");
+}
+F.addEventListener("input",e=>{ cambiosFicha=true; if(e.target.name&&e.target.name.startsWith("ex_")) validarFicha(); });
+F.addEventListener("change",e=>{
+  cambiosFicha=true; const nm=e.target.name||"";
+  if(nm.startsWith("res_")||nm==="profesor"){ pintarSelRes(); validarFicha(); }
+  if(nm.startsWith("hora_")){ const k=nm.slice(5), r=validarFicha(); ofrecerWaExamen(k,F["ex_"+k].value,r); }
+  if(nm.startsWith("ex_")){
+    const k=nm.slice(3), a=actual&&alumno(actual), pr=a&&a.resultados&&a.resultados[k];
+    // nueva fecha tras un No apto / No presentado: el intento anterior pasará al historial al guardar
+    if(a&&(pr==="noapto"||pr==="nopres")&&a.examenes[k]&&e.target.value!==a.examenes[k]&&F["res_"+k].value===pr){ F["res_"+k].value=""; pintarSelRes(); }
+    pintarHistorial(); const r=validarFicha();
+    if(F["hora_"+k].value) ofrecerWaExamen(k,e.target.value,r);   // sin hora todavía: se ofrecerá al ponerla
+  }
+});
+const TXT_RES={apto:"Apto",noapto:"No apto",nopres:"No presentado"};
+function horaEx(a,k){ return (a&&a.horasEx&&a.horasEx[k])||""; }
+function leerHoras(){ const o={}; EXAMENES[F.permiso.value].forEach(([k])=>{ o[k]=F["hora_"+k].value||""; }); return o; }
+function rtag(r){ return r?`<span class="rt rt-${r}">${r==="apto"?"✔ ":r==="noapto"?"✖ ":""}${TXT_RES[r]}</span>`:""; }
+function pintarSelRes(){ Object.keys(NOMBRE_EX).forEach(k=>{ const el=F["res_"+k]; el.className="exres"+(el.value?" r-"+el.value:""); }); }
+function leerResultados(){ const o={}; EXAMENES[F.permiso.value].forEach(([k])=>{ o[k]=F["res_"+k].value||""; }); return o; }
+/* Intentos anteriores de cada examen (y aviso de lo que pasará al historial al guardar) */
+function pintarHistorial(){
+  const a=actual&&alumno(actual);
+  Object.keys(NOMBRE_EX).forEach(k=>{
+    const l=(a&&a.historial||[]).filter(h=>h.k===k).sort((x,y)=>x.fecha.localeCompare(y.fecha)).map(h=>`${fmt(h.fecha)} ${rtag(h.res)}`);
+    const pr=a&&a.resultados&&a.resultados[k], pf=a&&a.examenes&&a.examenes[k];
+    let txt=l.length?`Intentos anteriores: ${l.join(" · ")}`:"";
+    if(a&&(pr==="noapto"||pr==="nopres")&&pf&&F["ex_"+k].value!==pf) txt+=(txt?"<br>":"")+`Al guardar, el intento del ${fmt(pf)} (${TXT_RES[pr]}) pasará al historial.`;
+    else if(a&&(pr==="noapto"||pr==="nopres")&&pf===F["ex_"+k].value) txt+=(txt?"<br>":"")+`<b style="color:var(--err)">Para repetirlo, cambia la fecha a la nueva convocatoria.</b>`;
+    $("hist_"+k).innerHTML=txt;
+  });
+}
+/* Al fijar una fecha de examen correcta (hoy o futura), ofrece avisar al alumno por WhatsApp */
+let ultimoOfrecido="";
+function ofrecerWaExamen(k,f,r){
+  if(!f||!/^\d{4}-\d{2}-\d{2}$/.test(f)||f<hoy()||r.err.length) return;
+  const hh=F["hora_"+k].value;
+  if(!hh) return;                                                          // primero hay que poner la hora de la cita
+  const clave=(actual||"nuevo")+k+f+hh; if(clave===ultimoOfrecido) return;   // no repetir la pregunta para la misma fecha y hora
+  const a=actual&&alumno(actual);
+  if(a&&a.examenes&&a.examenes[k]===f&&horaEx(a,k)===hh&&db.avisos[keyEx(a,k)]) return;    // ya estaba guardada y avisada
+  ultimoOfrecido=clave;
+  const nom=F.nombre.value.trim()||"el alumno";
+  $("mExWaTxt").innerHTML=`<b>${esc(TXT_EXAMEN[k])}</b> el <b>${esc(fechaLarga(f))}</b> a las <b>${esc(hh)}</b>.<br>¿Quieres enviar ahora el aviso por WhatsApp a ${esc(nom)}?`;
+  $("mExWa").classList.remove("hidden");
+  $("mExWaNo").onclick=()=>$("mExWa").classList.add("hidden");
+  $("mExWaSi").onclick=()=>{
+    $("mExWa").classList.add("hidden");
+    if(!telWa(F.tel.value)){ alert("Para enviar el WhatsApp, escribe primero un teléfono móvil en la ficha del alumno."); ultimoOfrecido=""; F.tel.focus(); return; }
+    if(guardarAlumno()) waExamen(actual,k);
+  };
+}
+
+function leerExamenes(){
+  const o={}; EXAMENES[F.permiso.value].forEach(([k])=>{ o[k]=F["ex_"+k].value||""; }); return o;
+}
+/* Devuelve {err:[], warn:[]} */
+function comprobarExamenes(permiso, ex, idAlumno, res, horas, prof){
+  res=res||{};
+  const err=[], warn=[], lista=EXAMENES[permiso].map(([k,n])=>({k,n,f:ex[k]})).filter(x=>x.f);
+  // 1. Ninguna fecha puede coincidir con otra del mismo alumno
+  for(let i=0;i<lista.length;i++) for(let j=i+1;j<lista.length;j++)
+    if(lista[i].f===lista[j].f) err.push(`«${lista[i].n}» y «${lista[j].n}» coinciden el ${fmt(lista[i].f)}. Deben ir en fechas distintas.`);
+  // 2. Orden lógico: teórico antes que práctico (A: común → específico → circuito → vía pública)
+  const orden=EXAMENES[permiso];
+  for(let i=0;i<orden.length;i++) for(let j=i+1;j<orden.length;j++){
+    const a=ex[orden[i][0]], b=ex[orden[j][0]];
+    if(a&&b&&b<a) err.push(`«${orden[j][1]}» (${fmt(b)}) no puede ser anterior a «${orden[i][1]}» (${fmt(a)}).`);
+  }
+  // 3. Domingos: la DGT no examina en domingo
+  lista.forEach(x=>{ if(parse(x.f).getDay()===0){ if(x.f>=hoy()) err.push(`«${x.n}» cae en domingo (${fmt(x.f)}). La DGT no hace exámenes en domingo.`);
+    else warn.push(`«${x.n}» figura en domingo (${fmt(x.f)}): revisa la fecha.`); } });
+  // 3a. Motos de examen: ese día se lleva como máximo una moto de AM (circuito), una de A1 (circuito o vía) y una de A2 (circuito o vía).
+  //     Es decir, un solo alumno de cada permiso por día; y si van con el mismo profesor, a horas distintas.
+  if(esMoto(permiso)){
+    horas=horas||(alumno(idAlumno)||{}).horasEx||{}; prof=prof!=null?prof:(alumno(idAlumno)||{}).profesor||"";
+    EX_MOTO_PRACT.forEach(k=>{ const f=ex[k]; if(!f||f<hoy()||!EXAMENES[permiso].some(x=>x[0]===k)) return;
+      const otros=[]; db.alumnos.forEach(b=>{ if(b.id===idAlumno||!esMoto(b.permiso)) return;
+        EX_MOTO_PRACT.forEach(k2=>{ if(b.examenes&&b.examenes[k2]===f&&!(b.resultados&&b.resultados[k2])) otros.push({b,k2}); }); });
+      const mismo=otros.find(o=>o.b.permiso===permiso);
+      if(mismo) err.push(`El ${fmt(f)} ya va ${nombreCompleto(mismo.b)} al ${TXT_EXAMEN[mismo.k2].toLowerCase()} con la moto de ${permiso}: solo puede ir un alumno de ${permiso} por día.`);
+      const h=horas[k];
+      otros.filter(o=>o.b.permiso!==permiso).forEach(o=>{ const h2=horaEx(o.b,o.k2), p2=o.b.profesor||"";
+        if(!h||!h2||h!==h2) return;
+        if(prof&&p2&&prof===p2) err.push(`El ${fmt(f)} a las ${h} ya tiene examen ${nombreCompleto(o.b)} (${o.b.permiso}) con el mismo profesor (${prof}): cambia la hora.`);
+        else if(!prof||!p2) warn.push(`El ${fmt(f)} a las ${h} también se examina ${nombreCompleto(o.b)} (${o.b.permiso}); si les acompaña el mismo profesor, no puede ser a la misma hora.`);
+      });
+    });
+  }
+  // 3b. Resultados coherentes con la fecha
+  EXAMENES[permiso].forEach(([k,n])=>{
+    if(res[k]&&!ex[k]) err.push(`«${n}» tiene resultado pero no tiene fecha.`);
+    else if(res[k]&&ex[k]>hoy()) err.push(`«${n}» es el ${fmt(ex[k])}: no se puede poner resultado a un examen que aún no se ha celebrado.`);
+  });
+  // 3c. Fases posteriores con una anterior suspendida y sin nueva fecha
+  for(let i=0;i<orden.length;i++){ const [k,n]=orden[i];
+    if(res[k]==="noapto"||res[k]==="nopres"){
+      const sig=orden.slice(i+1).filter(([k2])=>ex[k2]&&ex[k2]>=ex[k]);
+      if(sig.length) warn.push(`«${n}» está como ${TXT_RES[res[k]]}: revisa «${sig.map(x=>x[1]).join("», «")}» (pon antes la nueva fecha de «${n}»).`);
+    } }
+  // 4. Clases prácticas del alumno el mismo día que un examen
+  if(idAlumno) lista.forEach(x=>{
+    const c=EX_PRACT.includes(x.k)?db.clases.filter(c=>c.alumnoId===idAlumno&&c.fecha===x.f&&c.estado!=="anulada"&&esManana(c.hora)):[];
+    if(c.length&&x.f>=hoy()) warn.push(`El ${fmt(x.f)} (${x.n}) el alumno tiene ${c.length} clase(s) de mañana programada(s): al guardar podrás anularlas.`);
+  });
+  return {err,warn};
+}
+function validarFicha(){
+  const r=comprobarExamenes(F.permiso.value, leerExamenes(), actual, leerResultados(), leerHoras(), F.profesor.value);
+  const box=$("exMsgs");
+  const n=EXAMENES[F.permiso.value].filter(([k])=>F["ex_"+k].value).length;
+  box.innerHTML = r.err.map(t=>`<div class="m-err">⛔ ${esc(t)}</div>`).join("")
+    + r.warn.map(t=>`<div class="m-warn">⚠️ ${esc(t)}</div>`).join("")
+    + (!r.err.length&&!r.warn.length&&n ? `<div class="m-ok">✔ Fechas correctas, sin coincidencias.</div>`:"");
+  return r;
+}
+
+/* Foto */
+$("fotoBox").onclick=()=>$("fileFoto").click();
+$("btnFoto").onclick=()=>$("fileFoto").click();
+$("btnQuitarFoto").onclick=()=>{ fotoData=""; pintarFoto(); cambiosFicha=true; };
+$("fileFoto").onchange=e=>{
+  const f=e.target.files[0]; if(!f) return;
+  const r=new FileReader();
+  r.onload=()=>{
+    const img=new Image();
+    img.onload=()=>{ // se reduce a 300x400 aprox. para que la base de datos no crezca demasiado
+      const max=400, k=Math.min(1,max/Math.max(img.width,img.height));
+      const c=document.createElement("canvas"); c.width=Math.round(img.width*k); c.height=Math.round(img.height*k);
+      c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+      fotoData=c.toDataURL("image/jpeg",0.82); pintarFoto(); cambiosFicha=true;
+    };
+    img.src=r.result;
+  };
+  r.readAsDataURL(f); e.target.value="";
+};
+function pintarFoto(){
+  $("fotoImg").classList.toggle("hidden",!fotoData); $("fotoTxt").classList.toggle("hidden",!!fotoData);
+  if(fotoData) $("fotoImg").src=fotoData; else $("fotoImg").removeAttribute("src");
+}
+
+function nuevaFicha(){
+  actual=null; F.reset(); fotoData=""; pintarFoto();
+  F.alta.value=hoy(); rellenarSelectsFicha("",""); mostrarBloqueExamen(); $("exMsgs").innerHTML=""; pintarSelRes(); pintarHistorial();
+  $("fichaTitulo").textContent="Nuevo alumno"; pintarClasesAlumno(); pintarPagos(); cambiosFicha=false;
+}
+function cargarFicha(id){
+  const a=alumno(id); if(!a) return;
+  actual=id; F.reset();
+  ["nombre","apellidos","dni","fnac","tel","email","dir","permiso","alta","profesor","vehiculo","obs"].forEach(k=>{ F[k].value=a[k]||""; });
+  rellenarSelectsFicha(a.profesor,a.vehiculo);
+  Object.keys(NOMBRE_EX).forEach(k=>{ F["ex_"+k].value=(a.examenes&&a.examenes[k])||""; F["res_"+k].value=(a.resultados&&a.resultados[k])||""; F["hora_"+k].value=horaEx(a,k); });
+  F.nuevo.checked=!!a.nuevo;
+  fotoData=a.foto||""; pintarFoto(); mostrarBloqueExamen(); pintarSelRes(); pintarHistorial(); validarFicha();
+  $("fichaTitulo").textContent=nombreCompleto(a); pintarClasesAlumno(); pintarPagos(); cambiosFicha=false;
+}
+function abrirFicha(id){
+  if(!alumno(id)) return;
+  const ir=()=>{ cargarFicha(id); ver("ficha",true); };
+  const p=pendientesDe(vista); if(p) pedirGuardar(p,ir); else ir();
+}
+$("btnNuevo").onclick=()=>{ const p=pendientesDe("ficha"); if(p) pedirGuardar(p,nuevaFicha); else nuevaFicha(); };
+$("btnGuardarAlumno").onclick=guardarAlumno;
+
+function guardarAlumno(){
+  const req=["nombre","apellidos","dni"]; for(const k of req) if(!F[k].value.trim()){ F[k].focus(); alert("Rellena los campos obligatorios (*)."); return false; }
+  if(db.ejemplo && !actual){
+    if(confirm("Están cargados los datos de EJEMPLO.\n\n¿Quieres borrarlos antes de dar de alta este alumno real?")){
+      db=sinEjemplos();
+      rellenarSelectsFicha("","");
+    }
+    db.ejemplo=false; actualizarBadge();
+  }
+  const dni=F.dni.value.trim().toUpperCase();
+  const dup=db.alumnos.find(a=>a.dni===dni&&a.id!==actual);
+  if(dup){ alert("Ya existe un alumno con el DNI/NIE "+dni+": "+nombreCompleto(dup)); return false; }
+  const r=validarFicha();
+  if(r.err.length){ alert("No se puede guardar, revisa los exámenes:\n\n• "+r.err.join("\n• ")); return false; }
+  if(r.warn.length && !confirm("Avisos:\n\n• "+r.warn.join("\n• ")+"\n\n¿Guardar igualmente?")) return false;
+  const o={ id:actual||uid(), nombre:F.nombre.value.trim(), apellidos:F.apellidos.value.trim(), dni,
+    fnac:F.fnac.value, tel:F.tel.value.trim(), email:F.email.value.trim(), dir:F.dir.value.trim(),
+    permiso:F.permiso.value, alta:F.alta.value, profesor:F.profesor.value.trim(), vehiculo:F.vehiculo.value.trim(),
+    obs:F.obs.value, foto:fotoData, examenes:leerExamenes(), horasEx:leerHoras(), resultados:leerResultados(),
+    nuevo:F.nuevo.checked };
+  const prev=actual&&alumno(actual);
+  o.historial=(prev&&prev.historial||[]).slice(); o.cargos=prev&&prev.cargos||[]; o.pagos=prev&&prev.pagos||[];
+  // Intento suspendido / no presentado al que se le pone fecha nueva → pasa al historial
+  if(prev) EXAMENES[o.permiso].forEach(([k])=>{
+    const pf=prev.examenes&&prev.examenes[k], pr=prev.resultados&&prev.resultados[k];
+    if(pf&&(pr==="noapto"||pr==="nopres")&&o.examenes[k]!==pf) o.historial.push({k,fecha:pf,hora:horaEx(prev,k),res:pr});
+  });
+  const i=db.alumnos.findIndex(a=>a.id===o.id);
+  if(i>=0) db.alumnos[i]=o; else db.alumnos.push(o);
+  actual=o.id; persistir(); refrescarListas();
+  $("fichaTitulo").textContent=nombreCompleto(o); pintarClasesAlumno(); pintarPagos(); pintarHistorial();
+  cambiosFicha=false; toast("Alumno guardado.");
+  anularBloqueadas(Object.values(o.examenes).filter(f=>f&&f>=hoy()));
+  return true;
+}
+/* Clases ya programadas que caen en un día de examen bloqueado → se ofrecen anular */
+function anularBloqueadas(fechas){
+  if(!fechas.length) return;
+  const af=db.clases.filter(c=>fechas.includes(c.fecha)&&!c.estado&&bloqueoDia(c.fecha,c.profesor,c.alumnoId,c.hora));
+  if(!af.length) return;
+  const l=af.sort((x,y)=>(x.fecha+x.hora).localeCompare(y.fecha+y.hora)).slice(0,15).map(c=>{ const a=alumno(c.alumnoId); return `• ${diaSem(c.fecha)} ${fmt(c.fecha)} ${c.hora} – ${a?nombreCompleto(a):"?"}${c.profesor?" ("+c.profesor+")":""}`; }).join("\n");
+  if(confirm(`Hay ${af.length} clase(s) de MAÑANA programada(s) en día de examen (la mañana debe quedar libre; las de la tarde se mantienen):\n\n${l}${af.length>15?"\n…":""}\n\n¿Anularlas ahora? (Después puedes avisar a esos alumnos.)`)){
+    af.forEach(c=>c.estado="anulada"); persistir(); pintarClasesAlumno(); pintarAgenda(); pintarPagos(); toast(af.length+" clase(s) anulada(s).");
+  }
+}
+function borrarAlumno(id){
+  const a=alumno(id); const nc=db.clases.filter(c=>c.alumnoId===id).length;
+  if(!confirm(`¿Borrar a ${nombreCompleto(a)}${nc?` y sus ${nc} clase(s) programada(s)`:""}?`)) return;
+  db.alumnos=db.alumnos.filter(x=>x.id!==id); db.clases=db.clases.filter(c=>c.alumnoId!==id);
+  if(actual===id) nuevaFicha(); persistir(); pintarLista(); refrescarListas();
+}
+const TXT_EST={realizada:"Realizada",falta:"Falta",anulada:"Anulada"};
+function estTag(c){ return c.estado==="realizada"?`<span class="rt rt-apto">✔ Realizada</span>`:c.estado==="falta"?`<span class="rt rt-falta">✖ Falta</span>`
+  :c.estado==="anulada"?`<span class="rt rt-anul">⊘ Anulada</span>`:c.fecha<hoy()?`<span class="rt rt-falta">❔ Sin marcar</span>`:`<span class="rt rt-prog">Programada</span>`; }
+function pintarClasesAlumno(){
+  const box=$("clasesAlumno");
+  $("btnClaseAlumno").disabled=!actual;
+  if(!actual){ box.innerHTML='<p style="color:var(--muted);margin:0">Guarda primero el alumno para programarle clases.</p>'; return; }
+  const h=hoy(), cl=db.clases.filter(c=>c.alumnoId===actual).sort((a,b)=>(a.fecha+a.hora).localeCompare(b.fecha+b.hora));
+  const n=e=>cl.filter(c=>c.estado===e).length, sin=cl.filter(c=>!c.estado&&c.fecha<h).length, prog=cl.filter(c=>!c.estado&&c.fecha>=h).length;
+  box.innerHTML = cl.length ? `<p style="margin:0 0 8px;color:var(--muted)">${cl.length} clase(s): <b style="color:var(--ok)">${n("realizada")} realizada(s)</b> · ${n("falta")} falta(s) · ${n("anulada")} anulada(s) · ${prog} programada(s)${sin?` · <b style="color:var(--warn)">${sin} sin marcar asistencia</b>`:""}</p>
+    <div class="scroll" style="max-height:420px"><table><tr><th>Fecha</th><th>Horario</th><th>Tipo</th><th>Profesor</th><th>Vehículo</th><th>Asistencia</th><th>Aviso</th><th></th></tr>
+    ${cl.map(c=>`<tr><td>${diaSem(c.fecha)} ${fmt(c.fecha)}</td><td>${c.hora} – ${finClase(c)}</td><td>${esc(c.tipo)}</td><td>${esc(c.profesor)}</td><td>${esc(c.vehiculo)}</td>
+    <td>${c.fecha<=h?`<select class="selmini" onchange="marcarClase('${c.id}',this.value)">
+        <option value="" ${!c.estado?"selected":""}>${c.fecha<h?"❔ Sin marcar":"Programada"}</option><option value="realizada" ${c.estado==="realizada"?"selected":""}>✔ Realizada</option>
+        <option value="falta" ${c.estado==="falta"?"selected":""}>✖ Falta</option><option value="anulada" ${c.estado==="anulada"?"selected":""}>⊘ Anulada</option></select>`:estTag(c)}</td>
+    <td>${c.fecha>=h&&c.estado!=="anulada"?estadoAviso(keyClase(c)):""}</td>
+    <td class="row"><button class="btn sec sm" onclick="editarClase('${c.id}')">Editar</button>${c.fecha>=h&&c.estado!=="anulada"?`<button class="btn wa sm" title="Avisar por WhatsApp" onclick="waClase('${c.id}')">📲</button>`:""}</td></tr>`).join("")}</table></div>`
+    : '<p style="color:var(--muted);margin:0">Sin clases programadas.</p>';
+}
+window.marcarClase=(id,v)=>{
+  const c=db.clases.find(x=>x.id===id); if(!c) return;
+  if(v!=="anulada"&&c.estado==="anulada"){ const r=validarClase(Object.assign({},c,{estado:v})); if(r.err.length){ alert("No se puede reactivar la clase:\n\n• "+r.err.join("\n• ")); pintarClasesAlumno(); return; } }
+  c.estado=v; persistir(); pintarClasesAlumno(); pintarPagos(); pintarAgenda(); pintarLista();
+};
+$("btnClaseAlumno").onclick=()=>{ if(actual) abrirClase(null,{alumnoId:actual,fecha:hoy()}); };
+
+/* Imprimir ficha */
+$("btnImprimir").onclick=()=>{
+  if(!actual){ alert("Guarda primero el alumno."); return; }
+  const a=alumno(actual);
+  const ex=EXAMENES[a.permiso].map(([k,n])=>{ const hi=(a.historial||[]).filter(h=>h.k===k).map(h=>fmt(h.fecha)+" "+TXT_RES[h.res]);
+    return `<tr><th>${n}</th><td>${a.examenes[k]?diaSem(a.examenes[k])+" "+fmt(a.examenes[k])+(horaEx(a,k)?" · "+horaEx(a,k):""):"—"}</td><td>${TXT_RES[(a.resultados||{})[k]]||""}</td><td>${hi.length?"Anteriores: "+hi.join(", "):""}</td></tr>`; }).join("");
+  const b=bonoDe(a);
+  const cl=db.clases.filter(c=>c.alumnoId===a.id).sort((x,y)=>(x.fecha+x.hora).localeCompare(y.fecha+y.hora));
+  $("printArea").innerHTML=`${a.foto?`<img class="pfoto" src="${a.foto}">`:`<div class="pfoto"></div>`}
+    <h2>Ficha de alumno · Permiso ${a.permiso}</h2>
+    <p><b>${esc(nombreCompleto(a))}</b><br>DNI/NIE: ${esc(a.dni)} · Nacimiento: ${fmt(a.fnac)}<br>
+    Tel.: ${esc(a.tel)} · ${esc(a.email)}<br>${esc(a.dir)}<br>Alta: ${fmt(a.alta)} · Profesor: ${esc(a.profesor)} · Vehículo: ${esc(a.vehiculo)}</p>
+    <div style="clear:both"></div><h3>Exámenes</h3><table>${ex}</table>
+    <h3>Clases prácticas (${cl.length})</h3>
+    <table><tr><th>Fecha</th><th>Horario</th><th>Tipo</th><th>Profesor</th><th>Vehículo</th><th>Asistencia</th></tr>
+    ${cl.map(c=>`<tr><td>${fmt(c.fecha)}</td><td>${c.hora}–${finClase(c)}</td><td>${esc(c.tipo)}</td><td>${esc(c.profesor)}</td><td>${esc(c.vehiculo)}</td><td>${c.estado?TXT_EST[c.estado]:c.fecha<hoy()?"Sin marcar":"Programada"}</td></tr>`).join("")}</table>
+    <h3>Bonos y clases</h3>
+    <p>Clases contratadas: ${b.contratadas} · Hechas: ${b.consumidas} · Ya programadas: ${b.programadas} · Quedan: ${b.quedan}</p>
+
+    ${a.obs?`<h3>Observaciones</h3><p>${esc(a.obs)}</p>`:""}`;
+  window.print();
+};
+
+/* ================== PAGOS Y BONOS ================== */
+const eur=n=>(Number(n)||0).toLocaleString("es-ES",{style:"currency",currency:"EUR"});
+/* Coche: cada 45 min es una clase (90 min = 2). Moto: cada 30 min es una clase (doble 30+30 = 2) */
+function unidades(c){ const a=alumno(c.alumnoId), base=a&&esMoto(a.permiso)?30:45; return Math.max(1,Math.round(durDe(c)/base)); }
+function bonoDe(a,excluir){
+  const cl=db.clases.filter(c=>c.alumnoId===a.id&&c.id!==excluir);
+  const contratadas=(a.cargos||[]).reduce((t,x)=>t+(Number(x.clases)||0),0);
+  const cuenta=c=>c.estado==="realizada"||(c.estado==="falta"&&db.config.faltaDescuenta!==false);
+  const consumidas=cl.filter(cuenta).reduce((t,c)=>t+unidades(c),0);
+  const programadas=cl.filter(c=>!c.estado&&c.fecha>=hoy()).reduce((t,c)=>t+unidades(c),0);
+  return {contratadas,consumidas,programadas,quedan:contratadas-consumidas,disponibles:contratadas-consumidas-programadas};
+}
+const CONCEPTOS=["Bono 5 clases","Bono 10 clases","Bono 15 clases","Bono 20 clases","Clase suelta","Clase doble (2 clases)"];
+function pintarPagos(){   // apartado «Bonos y clases»: lo contratado se va descontando con las clases realizadas
+  const box=$("pagosBox");
+  if(!actual||!alumno(actual)){ box.innerHTML='<p style="color:var(--muted);margin:0">Guarda primero el alumno para apuntar sus bonos o clases sueltas.</p>'; return; }
+  const a=alumno(actual), b=bonoDe(a);
+  const cg=(a.cargos||[]).filter(x=>Number(x.clases)>0).sort((x,y)=>x.fecha.localeCompare(y.fecha));
+  box.innerHTML=`<div class="kpis">
+      <div class="kpi"><b>${b.contratadas}</b><span>Clases contratadas</span></div>
+      <div class="kpi"><b>${b.consumidas}</b><span>Clases hechas${db.config.faltaDescuenta!==false?" (incluye faltas)":""}</span></div>
+      <div class="kpi"><b>${b.programadas}</b><span>Ya programadas</span></div>
+      <div class="kpi ${b.contratadas&&b.quedan<=0?"mal":b.contratadas?"bien":""}"><b>${b.quedan}</b><span>Quedan</span></div>
+    </div>
+    <div class="gpago c" style="grid-template-columns:150px 1fr 110px auto;max-width:720px">
+      <input type="date" id="cgFecha" value="${hoy()}"><input id="cgConcepto" list="dlConceptos" placeholder="Bono o clase suelta">
+      <input id="cgClases" type="number" min="1" step="1" placeholder="Nº clases"><button class="btn sm" id="cgAdd">Añadir</button></div>
+    <datalist id="dlConceptos">${CONCEPTOS.map(c=>`<option value="${c}">`).join("")}</datalist>
+    <table style="max-width:720px"><tr><th>Fecha</th><th>Bono / clase</th><th>Clases</th><th></th></tr>
+      ${cg.map(x=>`<tr><td>${fmt(x.fecha)}</td><td>${esc(x.concepto)}</td><td>${x.clases}</td><td><button class="btn del sm" onclick="borrarCargo('${x.id}')">✖</button></td></tr>`).join("")
+        ||`<tr><td colspan="4" style="color:var(--muted)">Ningún bono ni clase suelta apuntado.</td></tr>`}</table>
+    <p style="font-size:12px;color:var(--muted);margin:8px 0 0">${esMoto(a.permiso)?"Cada clase de 30 minutos descuenta una clase (doble 30+30 = 2).":"Cada clase de 45 minutos descuenta una clase (90 min = 2)."}</p>`;
+  $("cgConcepto").oninput=()=>{ const m=$("cgConcepto").value.match(/(\d+)\s*clases?/i); if(m) $("cgClases").value=m[1]; else if(/clase suelta/i.test($("cgConcepto").value)) $("cgClases").value=1; else if(/doble/i.test($("cgConcepto").value)) $("cgClases").value=2; };
+  $("cgAdd").onclick=()=>{
+    const concepto=$("cgConcepto").value.trim()||"Bono", clases=parseInt($("cgClases").value||"0",10);
+    if(!(clases>0)){ alert("Indica el número de clases."); return; }
+    a.cargos=a.cargos||[]; a.cargos.push({id:uid(),fecha:$("cgFecha").value||hoy(),concepto,clases});
+    persistir(); pintarPagos(); pintarLista(); toast("Añadido: "+concepto+" ("+clases+" clases)");
+  };
+}
+window.borrarCargo=id=>{ const a=alumno(actual), x=a.cargos.find(c=>c.id===id); if(!x||!confirm(`¿Borrar «${x.concepto}» (${x.clases} clases)?`)) return; a.cargos=a.cargos.filter(c=>c.id!==id); persistir(); pintarPagos(); pintarLista(); };
+
+/* ================== LISTADO ================== */
+$("buscar").oninput=pintarLista; $("filtroPermiso").onchange=pintarLista;
+function proximoExamen(a){
+  const h=hoy(); let best=null;
+  EXAMENES[a.permiso].forEach(([k,n])=>{ const f=a.examenes&&a.examenes[k]; if(f&&f>=h&&(!best||f<best.f)) best={f,n}; });
+  return best;
+}
+/* En qué fase está el alumno */
+function situacion(a){
+  const h=hoy(), r=a.resultados||{}, ex=a.examenes||{};
+  for(const [k] of EXAMENES[a.permiso]){
+    if(r[k]==="apto") continue;
+    const f=ex[k];
+    if(!f) return `<span style="color:var(--muted)">Sin fecha: ${EX_CORTO[k]}</span>`;
+    if(r[k]) return `${rtag(r[k])} ${EX_CORTO[k]}<br><small style="color:var(--err)">falta nueva fecha</small>`;
+    if(f<h) return `<span class="rt rt-falta">⏳ ${EX_CORTO[k]}</span><br><small>falta resultado (${fmt(f)})</small>`;
+    return `${EX_CORTO[k]}<br><small>${diaSem(f)} ${fmt(f)}</small>`;
+  }
+  return `<span class="rt rt-apto">✔ Todo aprobado</span>`;
+}
+function pintarLista(){
+  const q=$("buscar").value.toLowerCase().trim(), fp=$("filtroPermiso").value;
+  const lst=db.alumnos.filter(a=>(!fp||a.permiso===fp)&&(!q||[a.nombre,a.apellidos,a.dni,a.tel,a.email,a.profesor].join(" ").toLowerCase().includes(q)))
+    .sort((a,b)=>nombreCompleto(a).localeCompare(nombreCompleto(b),"es"));
+  const cnt=p=>db.alumnos.filter(a=>a.permiso===p).length;
+  $("kpis").innerHTML=`<div class="kpi"><b>${db.alumnos.length}</b><span>Alumnos</span></div>
+    <div class="kpi"><b>${cnt("B")}</b><span>Permiso B</span></div><div class="kpi"><b>${cnt("AM")}</b><span>AM</span></div><div class="kpi"><b>${cnt("A1")}</b><span>A1</span></div>
+    <div class="kpi"><b>${cnt("A2")}</b><span>A2</span></div><div class="kpi"><b>${db.clases.filter(c=>c.fecha>=hoy()&&c.estado!=="anulada").length}</b><span>Clases programadas</span></div>
+    ${(()=>{ const sm=db.clases.filter(c=>c.fecha<hoy()&&!c.estado).length; return `<div class="kpi ${sm?"mal":""}"><b>${sm}</b><span>Clases sin marcar asistencia</span></div>`; })()}`;
+  $("tLista").innerHTML=`<tr><th></th><th>Alumno</th><th>DNI/NIE</th><th>Permiso</th><th>Teléfono</th><th>Profesor</th><th>Clases<br><small>hechas / quedan</small></th><th>Situación</th><th></th></tr>`+
+    (lst.length?lst.map(a=>{ const b=bonoDe(a);
+      return `<tr><td>${a.foto?`<img class="mini" src="${a.foto}">`:`<div class="mini"></div>`}</td>
+      <td><a href="#" onclick="abrirFicha('${a.id}');return false"><b>${esc(nombreCompleto(a))}</b></a>${a.nuevo&&esMoto(a.permiso)?'<span class="tag-warn" style="background:#e6f4ec;color:var(--ok);border-color:#9fd3b4">🆕 Nuevo</span>':""}</td>
+      <td>${esc(a.dni)}</td><td><span class="tag t-${a.permiso}">${a.permiso}</span></td><td>${esc(a.tel)}</td><td>${esc(a.profesor)}</td>
+      <td>${b.consumidas} / ${b.contratadas?`<b style="color:${b.quedan<=0?"var(--err)":"inherit"}">${b.quedan}</b>`:"—"}</td>
+      <td>${situacion(a)}</td>
+      <td class="row"><button class="btn sec sm" onclick="abrirFicha('${a.id}')">Abrir</button><button class="btn del sm" onclick="borrarAlumno('${a.id}')">Borrar</button></td></tr>`;}).join("")
+    :`<tr><td colspan="9" style="color:var(--muted);text-align:center;padding:20px">No hay alumnos${q||fp?" con ese filtro":""}.</td></tr>`);
+}
+$("btnCSV").onclick=()=>{
+  const cab=["Apellidos","Nombre","DNI","F.Nacimiento","Teléfono","Email","Dirección","Permiso","Alta","Profesor","Vehículo",
+    "Ex.Teórico B","Res.","Ex.Práctico B","Res.","Ex.Teórico común","Res.","Ex.Teórico específico","Res.","Ex.Circuito cerrado","Res.","Ex.Vía pública","Res.",
+    "Clases realizadas","Faltas","Clases contratadas","Quedan"];
+  const q=v=>'"'+String(v??"").replace(/"/g,'""')+'"';
+  const filas=db.alumnos.map(a=>{ const e=a.examenes||{}, r=a.resultados||{}, b=bonoDe(a), cl=db.clases.filter(x=>x.alumnoId===a.id);
+    const ex=k=>[(fmt(e[k])+(e[k]&&horaEx(a,k)?" "+horaEx(a,k):"")),TXT_RES[r[k]]||""];
+    return [a.apellidos,a.nombre,a.dni,fmt(a.fnac),a.tel,a.email,a.dir,a.permiso,fmt(a.alta),a.profesor,a.vehiculo,
+      ...ex("teorico"),...ex("practico"),...ex("comun"),...ex("especifico"),...ex("circuito"),...ex("via"),
+      cl.filter(x=>x.estado==="realizada").length,cl.filter(x=>x.estado==="falta").length,b.contratadas,b.contratadas?b.quedan:""].map(q).join(";"); });
+  descargar("Listado_alumnos_"+hoy()+".csv","\ufeff"+[cab.map(q).join(";"),...filas].join("\r\n"),"text/csv;charset=utf-8");
+};
+
+/* ================== CLASES PRÁCTICAS ================== */
+/* Horas de inicio cada 15 minutos (08:00 … 19:45) para poder encadenar clases de 45 minutos */
+const FIN_DIA=21*60;   // fin de la jornada: 21:00
+function minutos(h){ const [a,b]=String(h).split(":").map(Number); return a*60+(b||0); }
+function hhmm(m){ return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"); }
+for(let m=8*60;m<FIN_DIA;m+=15){ const o=document.createElement("option"); o.value=o.textContent=hhmm(m); $("cHora").appendChild(o); }
+function durDe(c){ return Number(c.durMin||60); }
+const MOTO=["AM","A1","A2"]; function esMoto(p){ return MOTO.includes(p); }
+function esCircuito(t){ return t==="Circuito cerrado"||t==="Maniobras"; }
+const MAX_COMPARTIDA=3;
+/* Los exámenes son por la mañana: el día de examen se bloquean solo las clases de MAÑANA (que empiezan antes de las 15:00).
+   - Los exámenes TEÓRICOS no afectan a nada (el alumno va solo).
+   - El alumno que se examina de un práctico no puede tener clase esa mañana.
+   - Examen PRÁCTICO (práctico B, circuito, vía pública): esa mañana no hay clases para nadie (modo «todos»)
+     o solo para el profesor de ese alumno (modo «profesor»), según ⚙️ Autoescuela. Las clases de la tarde se mantienen. */
+const EX_PRACT=["practico","circuito","via"], EX_MOTO_PRACT=["circuito","via"], FIN_MANANA=15*60;
+function esManana(hora){ return minutos(hora||"00:00")<FIN_MANANA; }
+function bloqueoDia(fecha,profesor,alumnoId,hora){
+  if(hora&&!esManana(hora)) return "";
+  const modo=db.config.bloqueoExamen||"todos";
+  for(const a of db.alumnos) for(const [k] of EXAMENES[a.permiso]||[]){
+    if(!a.examenes||a.examenes[k]!==fecha||!EX_PRACT.includes(k)) continue;   // los teóricos no afectan: el alumno va solo
+    if(a.id===alumnoId) return `El alumno tiene ${TXT_EXAMEN[k].toLowerCase()} esa mañana: no puede tener clase de mañana (por la tarde sí).`;
+    if(EX_PRACT.includes(k)&&(modo==="todos"||(a.profesor&&profesor&&a.profesor===profesor)))
+      return `Esa mañana ${nombreCompleto(a)} tiene ${TXT_EXAMEN[k].toLowerCase()}${a.profesor?" (profesor "+a.profesor+")":""}: no hay clases de mañana${modo==="todos"?"":" de ese profesor"} (por la tarde sí).`;
+  }
+  return "";
+}
+function cabeceraBloqueo(f){
+  const modo=db.config.bloqueoExamen||"todos", ps=new Set();
+  db.alumnos.forEach(a=>EXAMENES[a.permiso].forEach(([k])=>{ if(EX_PRACT.includes(k)&&a.examenes&&a.examenes[k]===f) ps.add(a.profesor||"?"); }));
+  if(!ps.size) return "";
+  return `<span class="exmas" style="display:block;color:var(--err)" title="Las clases de la tarde (desde las 15:00) se mantienen">⛔ Sin clases de mañana${modo==="todos"?"":": "+esc([...ps].join(", "))}</span>`;
+}
+/* Clase de moto de maniobras/circuito con alumno no nuevo: se puede compartir (hasta 3 alumnos) */
+function compartible(c){ const a=alumno(c.alumnoId); return !!(a&&esMoto(a.permiso)&&esCircuito(c.tipo)&&!a.nuevo); }
+function grupoDe(c,lista){ return (lista||db.clases).filter(x=>x.estado!=="anulada"&&x.profesor&&x.profesor===c.profesor&&solapan(x,c)&&compartible(x)); }
+function opcionesDur(permiso,val){
+  const l=esMoto(permiso)?[[30,"30 minutos"],[60,"1 hora (doble 30+30)"]]:[[45,"45 minutos"],[60,"1 hora"],[90,"1 h 30 min (2 × 45 min)"],[120,"2 horas"],[180,"3 horas"]];
+  if(val&&!l.some(x=>x[0]===Number(val))) l.push([Number(val),val+" minutos"]);
+  return l.map(([v,t])=>`<option value="${v}">${t}</option>`).join("");
+}
+function rellenarDur(permiso,val){ $("cDur").innerHTML=opcionesDur(permiso,val); $("cDur").value=String(val||(esMoto(permiso)?30:45)); }
+function finClase(c){ return hhmm(minutos(c.hora)+durDe(c)); }
+function ocupaHora(c,h){ const i=minutos(c.hora), f=i+durDe(c), hi=minutos(h); return i<hi+30 && f>hi; }
+function solapan(a,b){ if(a.fecha!==b.fecha) return false; const i1=minutos(a.hora),f1=i1+durDe(a),i2=minutos(b.hora),f2=i2+durDe(b); return i1<f2&&i2<f1; }
+function rellenarSelectsClase(permiso,p,v){
+  $("cProf").innerHTML=opcionesProf(permiso,p); $("cProf").value=p||"";
+  $("cVeh").innerHTML=opcionesVeh(permiso,v); $("cVeh").value=v||"";
+}
+
+function abrirClase(id, pre){
+  claseEdit=id;
+  const sel=$("cAlumno");
+  sel.innerHTML='<option value="">— Selecciona alumno —</option>'+db.alumnos.slice().sort((a,b)=>nombreCompleto(a).localeCompare(nombreCompleto(b),"es"))
+    .map(a=>`<option value="${a.id}">${esc(nombreCompleto(a))} · ${a.permiso}</option>`).join("");
+  const c=id?db.clases.find(x=>x.id===id):Object.assign({fecha:hoy(),hora:"08:00",tipo:"Vía pública",profesor:"",vehiculo:"",obs:""},pre||{});
+  const a=alumno(c.alumnoId);
+  if(!c.durMin) c.durMin=a&&esMoto(a.permiso)?30:45;
+  if(!id&&a){ c.profesor=c.profesor||a.profesor; c.vehiculo=c.vehiculo||a.vehiculo; }
+  sel.value=c.alumnoId||""; $("cFecha").value=c.fecha; $("cHora").value=c.hora; rellenarDur(a?a.permiso:"",durDe(c));
+  $("cTipo").value=c.tipo||"Vía pública"; rellenarSelectsClase(a?a.permiso:"",c.profesor,c.vehiculo); $("cObs").value=c.obs||"";
+  $("cEstado").value=c.estado||"";
+  $("cRepBox").classList.toggle("hidden",!!id); $("cRepetir").checked=false; $("cRepOpts").classList.add("hidden");
+  $("mClaseTit").textContent=id?"Editar clase práctica":"Programar clase práctica";
+  $("cAvisar").checked=!id;
+  $("cBorrar").classList.toggle("hidden",!id); $("mClase").classList.remove("hidden"); comprobarClase();
+}
+window.editarClase=id=>abrirClase(id);
+$("cAlumno").onchange=()=>{
+  const a=alumno($("cAlumno").value);
+  if(a){ rellenarSelectsClase(a.permiso, claseEdit?$("cProf").value:($("cProf").value||a.profesor), claseEdit?$("cVeh").value:a.vehiculo);
+    const d=Number($("cDur").value), vale=esMoto(a.permiso)?[30,60]:[45,60,90,120,180]; rellenarDur(a.permiso,vale.includes(d)?d:(esMoto(a.permiso)?30:45)); }
+  comprobarClase();
+};
+["cFecha","cHora","cDur","cProf","cVeh","cEstado"].forEach(i=>$(i).addEventListener("input",comprobarClase));
+$("cCancelar").onclick=()=>$("mClase").classList.add("hidden");
+$("mClase").onclick=e=>{ if(e.target.id==="mClase") $("mClase").classList.add("hidden"); };
+
+function leerClase(){ return {id:claseEdit||uid(),alumnoId:$("cAlumno").value,fecha:$("cFecha").value,hora:$("cHora").value,durMin:Number($("cDur").value),
+  tipo:$("cTipo").value,profesor:$("cProf").value.trim(),vehiculo:$("cVeh").value.trim(),obs:$("cObs").value,estado:$("cEstado").value}; }
+function comprobarClase(){
+  const r=validarClase(leerClase());
+  $("cMsgs").innerHTML=r.err.map(t=>`<div class="m-err">⛔ ${esc(t)}</div>`).join("")+r.warn.map(t=>`<div class="m-warn">⚠️ ${esc(t)}</div>`).join("");
+  return r;
+}
+function validarClase(c,extra){
+  const err=[], warn=[];
+  if(c.fecha&&c.hora){
+    if((c.estado==="realizada"||c.estado==="falta")&&c.fecha>hoy()) err.push("No se puede marcar como realizada o falta una clase que aún no ha llegado.");
+    if(minutos(c.hora)+durDe(c)>FIN_DIA) err.push(`La clase terminaría a las ${finClase(c)}; el horario acaba a las ${hhmm(FIN_DIA)}.`);
+    const al=alumno(c.alumnoId), ve=vehiculoPorEtiqueta(c.vehiculo), pr=db.profesores.find(p=>p.nombre===c.profesor);
+    if(ve&&al&&ve.permiso!==al.permiso) err.push(`El vehículo ${c.vehiculo} es de permiso ${ve.permiso} y el alumno se examina del ${al.permiso}.`);
+    if(ve&&ve.itv&&ve.itv<c.fecha) err.push(`El vehículo ${c.vehiculo} tiene la ITV caducada desde el ${fmt(ve.itv)}.`);
+    if(ve&&ve.activo===false) warn.push(`El vehículo ${c.vehiculo} está marcado como fuera de servicio.`);
+    if(pr&&al&&!pr.permisos.includes(al.permiso)) warn.push(`${pr.nombre} no tiene marcado que imparta el permiso ${al.permiso}.`);
+    if(parse(c.fecha).getDay()===0) warn.push("La fecha es domingo.");
+    if(c.estado!=="anulada"){
+      const sol=db.clases.concat(extra||[]).filter(x=>x.id!==c.id&&x.estado!=="anulada"&&solapan(x,c));
+      sol.forEach(x=>{
+        const a=alumno(x.alumnoId), n=a?nombreCompleto(a):"?";
+        if(c.alumnoId&&x.alumnoId===c.alumnoId) err.push(`El alumno ya tiene clase ${x.hora}–${finClase(x)} ese día.`);
+        if(c.vehiculo&&x.vehiculo&&x.vehiculo.toLowerCase()===c.vehiculo.toLowerCase()) err.push(`El vehículo ${x.vehiculo} ya está asignado a ${n} de ${x.hora} a ${finClase(x)}.`);
+      });
+      // Profesor: solo se comparte una clase de moto de maniobras/circuito (máx. 3 alumnos, ninguno «nuevo»)
+      const pr2=sol.filter(x=>c.profesor&&x.profesor&&x.profesor.toLowerCase()===c.profesor.toLowerCase()&&x.alumnoId!==c.alumnoId);
+      if(pr2.length){
+        if(compartible(c)&&pr2.every(compartible)){
+          const todos=pr2.concat([c]); let max=0;
+          for(let t=minutos(c.hora);t<minutos(c.hora)+durDe(c);t+=15) max=Math.max(max,todos.filter(x=>minutos(x.hora)<=t&&t<minutos(x.hora)+durDe(x)).length);
+          if(max>MAX_COMPARTIDA) err.push(`La clase de maniobras de ${c.profesor} a esa hora ya tiene ${MAX_COMPARTIDA} alumnos (máximo).`);
+        } else pr2.forEach(x=>{ const a=alumno(x.alumnoId), n=a?nombreCompleto(a):"?";
+          const motivo=!compartible(c)?(alumno(c.alumnoId)&&alumno(c.alumnoId).nuevo?" (este alumno es nuevo: va solo)":esMoto((alumno(c.alumnoId)||{}).permiso)&&!esCircuito(c.tipo)?" (las clases de vía pública son individuales)":"")
+            :(a&&a.nuevo?" (ese alumno es nuevo: va solo)":" (esa clase es individual)");
+          err.push(`El profesor ${x.profesor} ya está con ${n} de ${x.hora} a ${finClase(x)}${motivo}.`); });
+      }
+    }
+    const a=alumno(c.alumnoId);
+    if(c.estado!=="anulada"&&c.fecha>=hoy()){ const bl=bloqueoDia(c.fecha,c.profesor,c.alumnoId,c.hora); if(bl) err.push(bl); }
+    // Bono: clases disponibles (contratadas − consumidas − ya programadas)
+    if(a&&c.estado!=="anulada"&&!(extra&&extra.length)){ const b=bonoDe(a,c.id);
+      if(b.contratadas>0&&b.disponibles-unidades(c)<0) warn.push(`Al alumno no le quedan clases del bono (contratadas ${b.contratadas}, hechas ${b.consumidas}, ya programadas ${b.programadas}).`); }
+  }
+  return {err,warn};
+}
+for(let i=1;i<=12;i++){ const o=document.createElement("option"); o.value=i; o.textContent=i; $("cRepSem").appendChild(o); }
+$("cRepSem").value="4";
+$("cRepetir").onchange=()=>{
+  $("cRepOpts").classList.toggle("hidden",!$("cRepetir").checked);
+  if($("cRepetir").checked&&$("cFecha").value){ const d=(parse($("cFecha").value).getDay()+6)%7;
+    [...$("cRepDias").querySelectorAll("input")].forEach(x=>x.checked=Number(x.value)===d); }
+};
+function guardarBloque(base){
+  const dias=[...$("cRepDias").querySelectorAll("input:checked")].map(x=>Number(x.value)), sem=Number($("cRepSem").value);
+  if(!dias.length){ alert("Marca al menos un día de la semana."); return; }
+  const L=lunesDe(base.fecha), nuevas=[], fallos=[], avisos=[];
+  for(let w=0;w<sem;w++) for(const d of dias){
+    const f=addDias(L,w*7+d); if(f<base.fecha) continue;
+    const c=Object.assign({},base,{id:uid(),fecha:f,estado:""});
+    const r=validarClase(c,nuevas);
+    if(r.err.length) fallos.push(`${diaSem(f)} ${fmt(f)}: ${r.err[0]}`);
+    else{ nuevas.push(c); r.warn.forEach(t=>avisos.push(`${diaSem(f)} ${fmt(f)}: ${t}`)); }
+  }
+  if(!nuevas.length){ alert("No se ha podido programar ninguna clase:\n\n• "+fallos.join("\n• ")); return; }
+  const a=alumno(base.alumnoId), b=bonoDe(a), u=nuevas.reduce((t,c)=>t+unidades(c),0);
+  let txt=`Se van a programar ${nuevas.length} clase(s) para ${nombreCompleto(a)}.`;
+  if(fallos.length) txt+=`\n\nNo se pueden programar ${fallos.length}:\n• `+fallos.join("\n• ");
+  if(avisos.length) txt+=`\n\nAvisos:\n• `+avisos.join("\n• ");
+  if(b.contratadas>0&&b.disponibles-u<0) txt+=`\n\n⚠ Con estas clases se supera el bono (quedan ${b.disponibles} sin programar).`;
+  if(!confirm(txt+"\n\n¿Programarlas?")) return;
+  db.clases.push(...nuevas); persistir(); $("mClase").classList.add("hidden");
+  refrescarListas(); pintarAgenda(); pintarClasesAlumno(); pintarPagos(); toast(nuevas.length+" clases programadas.");
+  if($("cAvisar").checked){
+    const l=nuevas.sort((x,y)=>(x.fecha+x.hora).localeCompare(y.fecha+y.hora)).map(c=>`• ${fechaLarga(c.fecha)}, de ${c.hora} a ${finClase(c)}`).join("\n");
+    waAbrir(a,`Hola ${a.nombre} 👋\nTe confirmamos tus próximas clases prácticas de conducción (${TXT_TIPO_CLASE[base.tipo]||base.tipo}):\n\n${l}`
+      +(base.profesor?`\n\n👤 Profesor: ${base.profesor}`:"")+`\n\nSi no puedes asistir a alguna, avísanos con antelación, por favor.`+firma(), nuevas.map(keyClase));
+  }
+}
+$("cGuardar").onclick=()=>{
+  const c=leerClase();
+  if(!c.alumnoId||!c.fecha||!c.hora){ alert("Indica alumno, fecha y hora."); return; }
+  if(!claseEdit&&$("cRepetir").checked){ guardarBloque(c); return; }
+  const r=comprobarClase();
+  if(r.err.length){ alert("No se puede guardar la clase:\n\n• "+r.err.join("\n• ")); return; }
+  if(r.warn.length&&!confirm("Avisos:\n\n• "+r.warn.join("\n• ")+"\n\n¿Guardar igualmente?")) return;
+  const i=db.clases.findIndex(x=>x.id===c.id); if(i>=0) db.clases[i]=c; else db.clases.push(c);
+  persistir(); $("mClase").classList.add("hidden"); refrescarListas(); pintarAgenda(); pintarClasesAlumno(); pintarPagos(); toast("Clase guardada.");
+  if($("cAvisar").checked&&c.estado!=="anulada"&&c.fecha>=hoy()) waClase(c.id);
+};
+$("cBorrar").onclick=()=>{
+  if(!confirm("¿Borrar esta clase?")) return;
+  db.clases=db.clases.filter(x=>x.id!==claseEdit); persistir(); $("mClase").classList.add("hidden"); pintarAgenda(); pintarClasesAlumno();
+};
+
+/* Agenda semanal */
+$("semAnt").onclick=()=>{ lunes=addDias(lunes,-7); pintarAgenda(); };
+$("semSig").onclick=()=>{ lunes=addDias(lunes,7); pintarAgenda(); };
+$("semHoy").onclick=()=>{ lunes=lunesDe(hoy()); pintarAgenda(); };
+$("semFecha").onchange=()=>{ if($("semFecha").value){ lunes=lunesDe($("semFecha").value); pintarAgenda(); } };
+$("filtroProf").onchange=pintarAgenda;
+
+function examenesDelDia(f){
+  const r=[]; db.alumnos.forEach(a=>EXAMENES[a.permiso].forEach(([k,n])=>{ if(a.examenes&&a.examenes[k]===f) r.push({a,k,n}); }));
+  return r.sort((x,y)=>(horaEx(x.a,x.k)||"99").localeCompare(horaEx(y.a,y.k)||"99")||nombreCompleto(x.a).localeCompare(nombreCompleto(y.a),"es"));
+}
+const EX_CORTO={teorico:"Teórico",practico:"Práctico",comun:"T. común",especifico:"T. específico",circuito:"Circuito",via:"Vía pública"};
+const COLOR_PERM={B:"var(--b)",AM:"var(--am)",A1:"var(--a1)",A2:"var(--a2)"};
+function cabeceraExamenes(ex){
+  if(!ex.length) return "";
+  const max=4, vis=ex.slice(0,max);
+  return `<div class="exlist">`+vis.map(e=>`<span class="exchip" data-al="${e.a.id}" style="--c:${COLOR_PERM[e.a.permiso]||"#999"}"
+      title="${esc(nombreCompleto(e.a)+" · "+e.a.permiso+" · "+TXT_EXAMEN[e.k])}">📝 ${esc(e.a.apellidos.split(" ")[0]+", "+(e.a.nombre[0]||"")+".")}<small>${esc(EX_CORTO[e.k])}${horaEx(e.a,e.k)?" · "+horaEx(e.a,e.k):""}</small></span>`).join("")
+    +(ex.length>max?`<span class="exmas" title="${esc(ex.slice(max).map(e=>nombreCompleto(e.a)+" – "+TXT_EXAMEN[e.k]).join("\n"))}">+${ex.length-max} más</span>`:"")+`</div>`;
+}
+function pintarAgenda(){
+  $("semFecha").value=lunes;
+  const fp=$("filtroProf").value.toLowerCase(), dias=DIAS.map((d,i)=>({d,f:addDias(lunes,i)})), h0=hoy();
+  let html="<table><tr><th style='width:70px'>Hora</th>"+dias.map(x=>{
+    const ex=examenesDelDia(x.f);
+    return `<th class="${x.f===h0?"today":""}">${x.d} ${fmt(x.f).slice(0,5)}${cabeceraBloqueo(x.f)}${cabeceraExamenes(ex)}</th>`;
+  }).join("")+"</tr>";
+  HORAS.forEach(h=>{
+    const media=h.endsWith(":30"); html+=`<tr class="${media?"":"enpunto"}"><td class="h ${media?"media":""}">${h}</td>`;
+    dias.forEach(x=>{
+      const cl=db.clases.filter(c=>c.fecha===x.f&&ocupaHora(c,h)&&(!fp||(c.profesor||"").toLowerCase()===fp));
+      html+=`<td class="cell" data-f="${x.f}" data-h="${h}">`+cl.map(c=>{ const a=alumno(c.alumnoId); if(!a) return "";
+        const cont=minutos(c.hora)<minutos(h);
+        const est=c.estado?"est-"+c.estado:(c.fecha<hoy()?"est-sinmarcar":""), gr=c.estado!=="anulada"&&compartible(c)?grupoDe(c).length:0;
+        return `<span class="chip ${a.permiso} ${est}" data-id="${c.id}" title="${esc(c.estado?TXT_EST[c.estado]+" · ":c.fecha<hoy()?"Asistencia sin marcar · ":"")}${esc(nombreCompleto(a)+" · "+c.hora+"–"+finClase(c)+" · "+c.tipo+(c.profesor?" · "+c.profesor:"")+(c.vehiculo?" · "+c.vehiculo:""))}">${gr>1?"👥":""}${cont?"↳ ":c.hora+" "}${esc(a.apellidos.split(" ")[0]+", "+(a.nombre[0]||"")+".")} · ${esc(c.profesor||c.tipo)}</span>`;
+      }).join("")+"</td>";
+    });
+    html+="</tr>";
+  });
+  $("agenda").innerHTML=html+"</table>";
+}
+$("agenda").onclick=e=>{
+  const exc=e.target.closest(".exchip"); if(exc){ abrirFicha(exc.dataset.al); return; }
+  const chip=e.target.closest(".chip"); if(chip){ abrirClase(chip.dataset.id); return; }
+  const td=e.target.closest("td.cell"); if(!td) return;
+  if(!db.alumnos.length){ alert("Da de alta primero algún alumno."); return; }
+  const fp=$("filtroProf").value, prof=fp?$("filtroProf").selectedOptions[0].textContent:"";
+  // con un profesor filtrado, propone empezar justo cuando termina su clase anterior dentro de esa hora
+  let hora=td.dataset.h; const hi=minutos(hora);
+  if(fp){ const fines=db.clases.filter(c=>c.fecha===td.dataset.f&&(c.profesor||"").toLowerCase()===fp).map(c=>minutos(c.hora)+durDe(c)).filter(m=>m>hi&&m<hi+30);
+    if(fines.length) hora=hhmm(Math.max(...fines)); }
+  abrirClase(null,{fecha:td.dataset.f,hora,profesor:prof});
+};
+
+/* ================== EXÁMENES ================== */
+$("exFiltro").onchange=pintarExamenes; $("exTipo").onchange=pintarExamenes;
+function pintarExamenes(){
+  const fl=$("exFiltro").value, tp=$("exTipo").value, h=hoy(), filas=[];
+  db.alumnos.forEach(a=>EXAMENES[a.permiso].forEach(([k,n])=>{
+    const f=a.examenes&&a.examenes[k]; if(!f) return;
+    if(fl==="prox"&&f<h) return; if(fl==="pas"&&f>=h) return; if(tp&&tp!==k) return;
+    filas.push({f,k,n,a});
+  }));
+  if(fl!=="prox") db.alumnos.forEach(a=>(a.historial||[]).forEach(hh=>{ if(tp&&tp!==hh.k) return; if(!EXAMENES[a.permiso].some(([k])=>k===hh.k)) return;
+    filas.push({f:hh.fecha,k:hh.k,n:NOMBRE_EX[hh.k],a,hist:hh.res}); }));
+  filas.sort((x,y)=>x.f.localeCompare(y.f)||horaEx(x.a,x.k).localeCompare(horaEx(y.a,y.k))||nombreCompleto(x.a).localeCompare(nombreCompleto(y.a),"es"));
+  // Avisos globales: alumnos con fechas que coinciden o desordenadas, y clases en día de examen
+  const av=[];
+  db.alumnos.forEach(a=>{ const r=comprobarExamenes(a.permiso,a.examenes||{},a.id,a.resultados,a.horasEx,a.profesor);
+    r.err.forEach(t=>av.push(`<div class="m-err">⛔ <b>${esc(nombreCompleto(a))}</b>: ${esc(t)}</div>`));
+    r.warn.forEach(t=>av.push(`<div class="m-warn">⚠️ <b>${esc(nombreCompleto(a))}</b>: ${esc(t)}</div>`)); });
+  $("exAvisos").innerHTML=av.length?`<div class="msgs" style="margin:0 0 12px">${av.join("")}</div>`:"";
+  let ult="";
+  $("tExam").innerHTML=`<tr><th>Fecha</th><th>Examen</th><th>Fase</th><th>Alumno</th><th>Permiso</th><th>DNI/NIE</th><th>Profesor</th><th>Aviso / Resultado</th></tr>`+
+    (filas.length?filas.map(x=>{ const nuevo=x.f!==ult; ult=x.f;
+      const fase=["teorico","comun","especifico"].includes(x.k)?"Teórica":"Práctica";
+      return `<tr${nuevo?' style="border-top:2px solid var(--pri2)"':""}><td>${nuevo?`<b>${diaSem(x.f)} ${fmt(x.f)}</b>`:""}</td><td>${esc(x.n)}${(()=>{ const hh=x.hist?"":horaEx(x.a,x.k); return hh?` · <b>${hh}</b>`:(!x.hist&&x.f>=h?' · <span class="pend">sin hora</span>':""); })()}</td><td>${fase}</td>
+      <td><a href="#" onclick="abrirFicha('${x.a.id}');return false">${esc(nombreCompleto(x.a))}</a></td>
+      <td><span class="tag t-${x.a.permiso}">${x.a.permiso}</span></td><td>${esc(x.a.dni)}</td><td>${esc(x.a.profesor)}</td>
+      <td>${x.hist?`${rtag(x.hist)} <small style="color:var(--muted)">intento anterior</small>`
+        :x.f>h?`<div class="row">${estadoAviso(keyEx(x.a,x.k))}<button class="btn wa sm" title="Avisar por WhatsApp" onclick="waExamen('${x.a.id}','${x.k}')">📲</button></div>`
+        :(()=>{ const r=(x.a.resultados||{})[x.k]||""; return `<select class="selmini" onchange="ponerResultado('${x.a.id}','${x.k}',this.value)" style="${r?"":"background:#fff3e0"}">
+            <option value="" ${!r?"selected":""}>⏳ Falta resultado</option><option value="apto" ${r==="apto"?"selected":""}>✔ Apto</option>
+            <option value="noapto" ${r==="noapto"?"selected":""}>✖ No apto</option><option value="nopres" ${r==="nopres"?"selected":""}>No presentado</option></select>`; })()}</td></tr>`; }).join("")
+    :`<tr><td colspan="8" style="color:var(--muted);text-align:center;padding:20px">No hay exámenes en esta vista.</td></tr>`);
+}
+
+window.ponerResultado=(id,k,v)=>{
+  const a=alumno(id); if(!a) return;
+  a.resultados=a.resultados||{}; a.resultados[k]=v; persistir();
+  if(actual===id&&!cambiosFicha) cargarFicha(id);
+  pintarExamenes(); pintarLista();
+  if((v==="noapto"||v==="nopres")&&confirm(`${nombreCompleto(a)}: ${TXT_EXAMEN[k]} – ${TXT_RES[v]}.\n\n¿Abrir su ficha para poner la nueva fecha?`)) abrirFicha(id);
+  else if(v) toast(TXT_EXAMEN[k]+": "+TXT_RES[v]);
+};
+
+/* ================== HOJA DEL DÍA DEL PROFESOR ================== */
+$("btnHoja").onclick=()=>{
+  const ps=db.profesores.filter(p=>p.activo!==false).map(p=>p.nombre).sort((a,b)=>a.localeCompare(b,"es"));
+  $("hjProf").innerHTML='<option value="">Todos los profesores (solo imprimir)</option>'+ps.map(n=>`<option>${esc(n)}</option>`).join("");
+  $("hjFecha").value=hoy();
+  // por defecto: el profesor filtrado en la agenda, o el primero que tenga clases ese día, o el primero de la lista
+  const fp=$("filtroProf").value, conClase=ps.find(n=>db.clases.some(c=>c.fecha===hoy()&&c.profesor===n&&c.estado!=="anulada"));
+  $("hjProf").value=(fp&&ps.find(n=>n.toLowerCase()===fp))||conClase||ps[0]||"";
+  $("mHoja").classList.remove("hidden"); pintarHoja();
+};
+$("hjFecha").onchange=pintarHoja; $("hjProf").onchange=pintarHoja;
+$("hjCerrar").onclick=()=>$("mHoja").classList.add("hidden");
+function datosHoja(){
+  const f=$("hjFecha").value||hoy(), pf=$("hjProf").value;
+  const cl=db.clases.filter(c=>c.fecha===f&&c.estado!=="anulada"&&(!pf||c.profesor===pf)).sort((x,y)=>(x.profesor||"").localeCompare(y.profesor||"","es")||x.hora.localeCompare(y.hora));
+  const ex=examenesDelDia(f).filter(e=>!pf||e.a.profesor===pf);
+  return {f,pf,cl,ex};
+}
+function htmlHoja(){
+  const {f,pf,cl,ex}=datosHoja();
+  const grupos={}; cl.forEach(c=>(grupos[c.profesor||"Sin profesor"]=grupos[c.profesor||"Sin profesor"]||[]).push(c));
+  let h=`<h2 style="margin:0 0 4px">Hoja del día · ${esc(fechaLarga(f))}</h2><p style="margin:0 0 10px">${pf?"Profesor: <b>"+esc(pf)+"</b>":"Todos los profesores"}</p>`;
+  if(!cl.length) h+=`<p style="color:#777">No hay clases ese día.</p>`;
+  Object.keys(grupos).forEach(p=>{
+    if(!pf) h+=`<h3 style="margin:12px 0 4px">${esc(p)}</h3>`;
+    h+=`<table style="width:100%;border-collapse:collapse"><tr><th>Hora</th><th>Alumno</th><th>Teléfono</th><th>Clase</th><th>Vehículo</th><th>Observaciones</th><th>Asistencia</th></tr>`+
+      grupos[p].map(c=>{ const a=alumno(c.alumnoId)||{}; return `<tr><td>${c.hora}–${finClase(c)}</td><td>${esc(nombreCompleto(a))} (${a.permiso||""})</td><td>${esc(a.tel)}</td>
+        <td>${esc(TXT_TIPO_CLASE[c.tipo]||c.tipo)}${compartible(c)&&grupoDe(c).length>1?" 👥":""}</td><td>${esc(c.vehiculo)}</td><td>${esc(c.obs)}</td><td>☐ Sí ☐ Falta</td></tr>`; }).join("")+`</table>`;
+  });
+  if(ex.length) h+=`<h3 style="margin:14px 0 4px">📝 Exámenes de ese día</h3><ul style="margin:0">`+ex.map(e=>`<li>${horaEx(e.a,e.k)?"<b>"+horaEx(e.a,e.k)+"</b> · ":""}${esc(nombreCompleto(e.a))} (${e.a.permiso}) – ${esc(TXT_EXAMEN[e.k])}</li>`).join("")+`</ul>`;
+  return h;
+}
+function pintarHoja(){
+  const pf=$("hjProf").value, p=db.profesores.find(x=>x.nombre===pf);
+  const aviso=!pf?'<div class="m-warn">Para enviarla por WhatsApp, elige un profesor arriba.</div>'
+    :!telWa(p&&p.tel)?`<div class="m-warn">⚠️ ${esc(pf)} no tiene teléfono móvil. Añádelo en «Profesores y vehículos» para poder enviarle la hoja.</div>`:"";
+  $("hjVista").innerHTML=(aviso?`<div class="msgs" style="margin:0 0 8px">${aviso}</div>`:"")+`<div class="scroll" style="max-height:50vh">${htmlHoja()}</div>`;
+}
+$("hjImprimir").onclick=()=>{ $("printArea").innerHTML=htmlHoja(); window.print(); };
+$("hjWa").onclick=()=>{
+  const {f,pf,cl,ex}=datosHoja(), p=db.profesores.find(x=>x.nombre===pf);
+  if(!pf){ alert("Elige un profesor en la lista para enviarle su hoja del día."); return; }
+  const n=telWa(p&&p.tel); if(!n){ alert(pf+" no tiene un teléfono móvil válido.\nAñádelo en «Profesores y vehículos» y vuelve a intentarlo."); return; }
+  const l=cl.map(c=>{ const a=alumno(c.alumnoId)||{}; return `🕗 ${c.hora}–${finClase(c)} · ${nombreCompleto(a)}${a.tel?" ("+a.tel+")":""}\n    ${TXT_TIPO_CLASE[c.tipo]||c.tipo}${c.vehiculo?" · "+c.vehiculo:""}${c.obs?" · "+c.obs:""}`; }).join("\n");
+  const t=`Hola ${pf.split(" ")[0]} 👋\nTus clases del ${fechaLarga(f)}:\n\n${l||"No tienes clases programadas."}`
+    +(ex.length?`\n\n📝 Exámenes de tus alumnos:\n`+ex.map(e=>`• ${horaEx(e.a,e.k)?horaEx(e.a,e.k)+" · ":""}${nombreCompleto(e.a)} – ${TXT_EXAMEN[e.k]}`).join("\n"):"")+firma();
+  window.open("https://api.whatsapp.com/send?phone="+n+"&text="+encodeURIComponent(t),"_blank");
+};
+
+/* ================== RECORDATORIO DE COPIA DE SEGURIDAD ================== */
+function marcarCopia(){ db.ultimaCopia=hoy(); persistir(); comprobarCopia(); }
+let copiaPospuesta=false;
+function comprobarCopia(){
+  const dias=db.ultimaCopia?Math.round((parse(hoy())-parse(db.ultimaCopia))/864e5):null;
+  const ver=db.alumnos.length>0&&!copiaPospuesta&&(dias===null||dias>=7);
+  $("avisoCopia").classList.toggle("hidden",!ver);
+  if(ver) $("avisoCopiaTxt").innerHTML=dias===null?"⚠️ <b>Todavía no has hecho ninguna copia de seguridad</b> de la agenda."
+    :`⚠️ <b>Hace ${dias} días que no haces copia de seguridad</b> (última: ${fmt(db.ultimaCopia)}).`;
+  $("acEnviar").classList.toggle("hidden",$("btnEnviar").classList.contains("hidden"));
+}
+$("acEnviar").onclick=()=>$("btnEnviar").click();
+$("acGuardar").onclick=()=>$("btnGuardar").click();
+$("acLuego").onclick=()=>{ copiaPospuesta=true; comprobarCopia(); };
+
+/* ================== PLAN SEMANAL DE MOTOS ================== */
+const DIAS_PL=["L","M","X","J","V"];
+function proximoLunes(){ return addDias(lunesDe(hoy()),7); }
+function planDe(lun){ db.planes[lun]=db.planes[lun]||{preg:{},resp:{}}; return db.planes[lun]; }
+function alumnosMoto(){ return db.alumnos.filter(a=>esMoto(a.permiso)).sort((a,b)=>nombreCompleto(a).localeCompare(nombreCompleto(b),"es")); }
+function tipoPorDefecto(a){ return (a.resultados||{}).circuito==="apto"?"Vía pública":"Circuito cerrado"; }
+function respDe(P,a){ P.resp[a.id]=P.resp[a.id]||{inc:false,prio:"",n:1,tipo:tipoPorDefecto(a),doble:false,dias:{}};
+  const r=P.resp[a.id]; r.modo=r.modo||{}; r.hasta=r.hasta||{}; return r; }
+const TXT_MODO={desde:"desde",exacta:"a las",entre:"entre"};
+function resumenResp(r){
+  const l=Object.keys(r.dias).sort().map(i=>{ const m=r.modo[i]||"desde"; return DIAS_LARGOS[i]+" "+(m==="exacta"?"a las "+r.dias[i]:m==="entre"?"de "+r.dias[i]+" a "+(r.hasta[i]||hhmm(FIN_DIA)):"desde "+r.dias[i]); });
+  return (l.join(" · ")||"sin días")+" · "+r.n+" clase(s)";
+}
+const DIAS_LARGOS=["Lunes","Martes","Miércoles","Jueves","Viernes"];
+let plProp=null, plCreadas=null;
+function pintarPlan(){
+  if(!$("plSemana").value) $("plSemana").value=proximoLunes();
+  const lun=lunesDe($("plSemana").value); $("plSemana").value=lun;
+  const ps=db.profesores.filter(p=>p.activo!==false&&p.permisos.some(esMoto)).map(p=>p.nombre).sort((a,b)=>a.localeCompare(b,"es"));
+  const cur=$("plProf").value;
+  $("plProf").innerHTML=(ps.length?"":'<option value="">— Da de alta un profesor de moto —</option>')+ps.map(n=>`<option>${esc(n)}</option>`).join("");
+  if(ps.includes(cur)) $("plProf").value=cur;
+  const P=planDe(lun), L=alumnosMoto(), desde=$("plDesde").value||"15:30";
+  const inc=L.filter(a=>respDe(P,a).inc), preg=inc.filter(a=>P.preg[a.id]).length;
+  $("plResumen").textContent=L.length?`${inc.length} elegido(s) · ${preg} preguntado(s) · semana del ${fmt(lun)} al ${fmt(addDias(lun,4))}`:"";
+  $("plTabla").innerHTML=L.length?`<tr><th>Incluir</th><th>Alumno</th><th>Pregunta</th><th>Prioridad</th><th>Clases</th><th>Tipo</th><th>Doble</th><th>Días y horas</th></tr>`+
+    L.map(a=>{ const r=respDe(P,a);
+      return `<tr data-al="${a.id}" style="${r.inc?"":"opacity:.55"}">
+        <td><input type="checkbox" data-f="inc" ${r.inc?"checked":""} style="width:auto"></td>
+        <td><a href="#" onclick="abrirFicha('${a.id}');return false">${esc(nombreCompleto(a))}</a> <span class="tag t-${a.permiso}">${a.permiso}</span>${a.nuevo?' <span title="Alumno nuevo: va solo">🆕</span>':""}</td>
+        <td>${P.preg[a.id]?`<span class="sent" title="${esc(P.preg[a.id])}">✔ preguntado</span>`:""} <button class="btn wa sm" onclick="plPreguntar('${a.id}')" ${a.tel?"":"disabled title=\"Sin teléfono\""}>📲</button>
+          <button class="btn sm" onclick="plPegar('${a.id}')" title="Pegar su respuesta de WhatsApp">📋 Respuesta</button>
+          ${r.texto?`<span class="plres ${r.dudosa?"dud":""}" title="${esc(r.texto)}">${r.dudosa?"⚠ Revisar: ":"✔ "}${esc(resumenResp(r))}</span>`:""}</td>
+        <td><input type="number" min="1" step="1" data-f="prio" value="${r.prio}" placeholder="—"></td>
+        <td><input type="number" min="0" max="10" step="1" data-f="n" value="${r.n}"></td>
+        <td><select data-f="tipo"><option ${r.tipo==="Circuito cerrado"?"selected":""}>Circuito cerrado</option><option ${r.tipo==="Vía pública"?"selected":""}>Vía pública</option></select></td>
+        <td><input type="checkbox" data-f="doble" ${r.doble?"checked":""} style="width:auto" title="Clase doble de 1 hora (30+30)"></td>
+        <td>${DIAS_PL.map((d,i)=>{ const on=r.dias[i]!=null, m=r.modo[i]||"desde";
+          return `<span class="pld"><label><input type="checkbox" data-d="${i}" ${on?"checked":""}> ${d}</label>
+            <select data-m="${i}" ${on?"":"disabled"}><option value="desde" ${m==="desde"?"selected":""}>desde</option><option value="exacta" ${m==="exacta"?"selected":""}>a las</option><option value="entre" ${m==="entre"?"selected":""}>entre</option></select>
+            <input type="time" step="900" data-h="${i}" value="${r.dias[i]||desde}" ${on?"":"disabled"}>
+            <input type="time" step="900" class="hh ${m==="entre"&&on?"":"hidden"}" data-hh="${i}" value="${r.hasta[i]||hhmm(FIN_DIA)}"></span>`; }).join("")}</td></tr>`; }).join("")
+    :`<tr><td style="color:var(--muted);padding:16px">No hay alumnos de moto (AM, A1, A2).</td></tr>`;
+}
+$("plSemana").onchange=()=>{ plProp=null; $("plPropuesta").innerHTML=""; pintarPlan(); };
+$("plDesde").onchange=pintarPlan;
+$("plTabla").addEventListener("change",e=>{
+  const tr=e.target.closest("tr[data-al]"); if(!tr) return;
+  const a=alumno(tr.dataset.al), r=respDe(planDe(lunesDe($("plSemana").value)),a), t=e.target;
+  if(t.dataset.f==="inc") r.inc=t.checked;
+  else if(t.dataset.f==="prio") r.prio=t.value?Math.max(1,parseInt(t.value,10)):"";
+  else if(t.dataset.f==="n") r.n=Math.max(0,parseInt(t.value||"0",10));
+  else if(t.dataset.f==="tipo") r.tipo=t.value;
+  else if(t.dataset.f==="doble") r.doble=t.checked;
+  else if(t.dataset.d!=null){ const i=t.dataset.d, h=tr.querySelector(`input[data-h="${i}"]`), sm=tr.querySelector(`select[data-m="${i}"]`), hh=tr.querySelector(`input[data-hh="${i}"]`);
+    if(t.checked){ r.dias[i]=h.value||$("plDesde").value||"15:30"; r.inc=true; tr.querySelector('input[data-f="inc"]').checked=true; } else { delete r.dias[i]; delete r.modo[i]; delete r.hasta[i]; }
+    h.disabled=sm.disabled=!t.checked; hh.classList.toggle("hidden",!(t.checked&&sm.value==="entre")); }
+  else if(t.dataset.m!=null){ const i=t.dataset.m; r.modo[i]=t.value; const hh=tr.querySelector(`input[data-hh="${i}"]`);
+    hh.classList.toggle("hidden",t.value!=="entre"); if(t.value==="entre") r.hasta[i]=hh.value||hhmm(FIN_DIA); else delete r.hasta[i]; }
+  else if(t.dataset.hh!=null){ r.hasta[t.dataset.hh]=t.value||hhmm(FIN_DIA); }
+  else if(t.dataset.h!=null){ if(r.dias[t.dataset.h]!=null) r.dias[t.dataset.h]=t.value||"15:30"; }
+  tr.style.opacity=r.inc?"":".55";      // sin redibujar la tabla mientras se escribe
+  persistir(); pintarResumenPlan();
+});
+function pintarResumenPlan(){
+  const lun=lunesDe($("plSemana").value), P=planDe(lun), L=alumnosMoto(), inc=L.filter(a=>respDe(P,a).inc);
+  $("plResumen").textContent=L.length?`${inc.length} elegido(s) · ${inc.filter(a=>P.preg[a.id]).length} preguntado(s) · semana del ${fmt(lun)} al ${fmt(addDias(lun,4))}`:"";
+}
+$("plTodos").onclick=()=>{ const P=planDe(lunesDe($("plSemana").value)); alumnosMoto().forEach(a=>respDe(P,a).inc=true); persistir(); pintarPlan(); };
+$("plNinguno").onclick=()=>{ const P=planDe(lunesDe($("plSemana").value)); alumnosMoto().forEach(a=>respDe(P,a).inc=false); persistir(); pintarPlan(); };
+function txtPregunta(a,lun){
+  return `Hola ${a.nombre} 👋\nEstamos organizando las clases de moto de la semana del lunes ${fmt(lun)} al viernes ${fmt(addDias(lun,4))}.\n\n`
+    +`📅 ¿Qué días puedes venir y a qué hora? Las clases son por la tarde, de ${$("plDesde").value||"15:30"} a ${hhmm(FIN_DIA)}.\n`
+    +`🏍️ ¿Cuántas clases quieres hacer esa semana?\n\n`
+    +`✍️ Contesta así, por favor:\n«lunes desde las 17, jueves a las 18:30, 2 clases»\n\n¡Gracias!`+firma();
+}
+window.plPreguntar=id=>{
+  const lun=lunesDe($("plSemana").value), P=planDe(lun), a=alumno(id), n=telWa(a&&a.tel);
+  if(!n){ alert("El alumno no tiene un teléfono móvil válido."); return; }
+  window.open("https://api.whatsapp.com/send?phone="+n+"&text="+encodeURIComponent(txtPregunta(a,lun)),"_blank");
+  const d=new Date(); P.preg[id]=fmt(iso(d))+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
+  respDe(P,a).inc=true; persistir(); pintarPlan(); comprobarMiercoles();
+};
+$("plPreguntar").onclick=()=>{
+  const P=planDe(lunesDe($("plSemana").value)), sig=alumnosMoto().find(a=>respDe(P,a).inc&&!P.preg[a.id]&&a.tel);
+  if(sig) plPreguntar(sig.id); else alert("No queda ningún alumno elegido sin preguntar.");
+};
+/* ---------- Lector de respuestas de WhatsApp (sin Internet, por reglas) ----------
+   Entiende días («lunes», «de lunes a jueves», «toda la semana», «menos el viernes», «el martes no»),
+   horas («desde las 17», «a partir de las 5», «a las 18:30», «a las 6 y media», «de 16 a 18», «hasta las 19», «por la tarde»)
+   y número de clases («2 clases», «dos clases»). Las horas de 1 a 11 se entienden de la tarde (5 → 17:00). */
+const PG_NUM={un:1,una:1,uno:1,dos:2,tres:3,cuatro:4,cinco:5,seis:6,siete:7,ocho:8,nueve:9,diez:10,once:11,doce:12};
+const PG_DIA={lunes:0,lun:0,martes:1,mar:1,miercoles:2,mier:2,mie:2,jueves:3,jue:3,viernes:4,vie:4};
+function pgHora(h,m,frac){
+  h=isNaN(+h)?PG_NUM[h]:+h; if(h==null) return null; m=+(m||0);
+  if(frac==="media") m=30; else if(frac==="cuarto") m=15;
+  if(h>=1&&h<=11) h+=12;
+  const t=h*60+m; return t>=8*60&&t<=24*60?t:null;
+}
+function interpretarRespuesta(texto,desdeDef){
+  // días escritos con su letra en mayúscula: «L X V» → lunes miércoles viernes
+  texto=String(texto||"").replace(/(^|[\s,;\/(])([LMXJV])(?=$|[\s,;\/.)\-])/g,(x,a,l)=>a+{L:"lunes",M:"martes",X:"miercoles",J:"jueves",V:"viernes"}[l]+" ");
+  const t=" "+String(texto||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[!¡?¿"«»()*_~]/g," ").replace(/\s+/g," ")+" ";
+  const H="(\\d{1,2}|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce)(?:[:.h](\\d{2}))?(?:\\s*(?:h|hrs?|horas))?(?:\\s*y\\s*(media|cuarto))?";
+  const D="(lunes|martes|miercoles|mier|mie|jueves|jue|viernes|vie|lun|mar)";
+  const re=new RegExp([
+    `(?:entre|de)\\s+(?:las\\s+)?${H}\\s+(?:y|a|hasta)\\s+(?:las\\s+)?${H}`,                          // 1-6 entre
+    `(?:a\\s+partir\\s+de|desde|despues\\s+de|mas\\s+tarde\\s+de|a\\s+partir)\\s+(?:las\\s+)?${H}`,      // 7-9 desde
+    `(?:hasta|antes\\s+de)\\s+(?:las\\s+)?${H}`,                                                    // 10-12 hasta
+    `a\\s+las\\s+${H}`,                                                                         // 13-15 exacta
+    `\\b(\\d{1,2})(?:[:.](\\d{2})|\\s?h)\\b`,                                                     // 16-17 exacta 18:30 / 17h
+    `(por\\s+la\\s+tarde|toda\\s+la\\s+tarde|cualquier\\s+hora|a\\s+cualquier\\s+hora|cuando\\s+sea|me\\s+da\\s+igual)`, // 18 tarde
+    `(toda\\s+la\\s+semana|todos\\s+los\\s+dias|cualquier\\s+dia|entre\\s+semana|todos\\s+menos|todos|el\\s+resto|los\\s+demas(?:\\s+dias)?|los\\s+otros\\s+dias|resto\\s+de\\s+(?:la\\s+semana|dias))`,     // 19 todos / el resto
+    `(?:de|del)?\\s*\\b${D}\\s+(?:a|al|hasta(?:\\s+el)?)\\s+${D}\\b`,                                  // 20-21 rango de días
+    `(menos|excepto|salvo|quitando|no\\s+puedo(?:\\s+ir)?|imposible)`,                                // 22 exclusión
+    `\\b${D}\\s+no\\b`,                                                                       // 23 día excluido
+    `\\b${D}\\b`,                                                                              // 24 día
+    `\\b(\\d+|un|una|dos|tres|cuatro|cinco|seis)\\s+(?:clases?|practicas?|horas?\\s+de\\s+clase)\\b`,   // 25 nº clases
+    `([,;.]|\\by\\b|\\bo\\b|\\bel\\b|\\blos\\b|\\bni\\b)`,                                             // 26 separadores (no cortan la exclusión)
+    `\\b(1[3-9]|20)\\b`                                                                        // 27 hora suelta: «lunes 17» → a las 17:00
+  ].join("|"),"g");
+  const dias={}, modo={}, hasta={}, dudas=[], excl=new Set(); let grupo=[], suelto=null, excluyendo=false, n=null, m, todos=false;
+  let ultimo=null;   // último grupo de días con su hora, para «a las 5 o a las 6»
+  const asigna=(g,tm)=>g.forEach(i=>{ dias[i]=hhmm(tm.d); modo[i]=tm.m; if(tm.h) hasta[i]=hhmm(tm.h); else delete hasta[i]; });
+  const tiempo=tm=>{
+    if(grupo.length){ asigna(grupo,tm); ultimo={g:grupo.slice(),tm}; grupo=[]; }
+    else if(ultimo&&ultimo.tm.m==="exacta"&&tm.m==="exacta"&&tm.d!==ultimo.tm.d){       // dos horas seguidas para los mismos días → franja
+      const a=Math.min(ultimo.tm.d,tm.d), b=Math.max(ultimo.tm.d,tm.d)+30; ultimo.tm={d:a,m:"entre",h:b}; asigna(ultimo.g,ultimo.tm); }
+    else suelto=tm;
+    excluyendo=false; };
+  const fuera=v=>{ if(v==null){ dudas.push("Hay una hora que no encaja en el horario de tarde."); return true; } return false; };
+  while((m=re.exec(t))){
+    if(m[1]!=null){ const a=pgHora(m[1],m[2],m[3]), b=pgHora(m[4],m[5],m[6]); if(!fuera(a)&&!fuera(b)) tiempo({d:a,m:"entre",h:b}); }
+    else if(m[7]!=null){ const a=pgHora(m[7],m[8],m[9]); if(!fuera(a)) tiempo({d:a,m:"desde"}); }
+    else if(m[10]!=null){ const b=pgHora(m[10],m[11],m[12]); if(!fuera(b)) tiempo({d:minutos(desdeDef),m:"entre",h:b}); }
+    else if(m[13]!=null){ const a=pgHora(m[13],m[14],m[15]); if(!fuera(a)) tiempo({d:a,m:"exacta"}); }
+    else if(m[16]!=null){ const a=pgHora(m[16],m[17]); if(!fuera(a)) tiempo({d:a,m:"exacta"}); }
+    else if(m[18]!=null){ tiempo({d:minutos(desdeDef),m:"desde"}); }
+    else if(m[19]!=null){ todos=true; grupo.push(0,1,2,3,4); excluyendo=/menos/.test(m[19]); }
+    else if(m[20]!=null){ const a=PG_DIA[m[20]], b=PG_DIA[m[21]]; for(let i=Math.min(a,b);i<=Math.max(a,b);i++) (excluyendo?excl.add(i):grupo.push(i)); }
+    else if(m[22]!=null){ excluyendo=true; }
+    else if(m[23]!=null){ excl.add(PG_DIA[m[23]]); }
+    else if(m[24]!=null){ const i=PG_DIA[m[24]]; if(excluyendo) excl.add(i); else grupo.push(i); }
+    else if(m[25]!=null){ n=isNaN(+m[25])?PG_NUM[m[25]]:+m[25]; }
+    else if(m[27]!=null){ const a=pgHora(m[27]); if(!fuera(a)) tiempo({d:a,m:"exacta"}); }
+    // m[26]: separador, no hace nada
+  }
+  if(grupo.length) asigna(grupo,suelto||{d:minutos(desdeDef),m:"desde"});
+  else if(suelto&&!Object.keys(dias).length){ dudas.push("Indica una hora pero no qué días."); }
+  excl.forEach(i=>{ delete dias[i]; delete modo[i]; delete hasta[i]; });
+  // las horas «desde» anteriores al inicio de la tarde se suben al inicio
+  Object.keys(dias).forEach(i=>{ if(minutos(dias[i])<minutos(desdeDef)&&modo[i]!=="exacta"){ dias[i]=desdeDef; } });
+  if(!Object.keys(dias).length) dudas.push("No he encontrado ningún día disponible.");
+  if(/\b(igual|quizas?|a lo mejor|puede que|depende|no se|ya te (digo|confirmo)|si no|sino|mejor|aunque|tal vez)\b/.test(t)) dudas.push("La respuesta tiene condiciones o dudas: revísala.");
+  return {dias,modo,hasta,n,dudas};
+}
+let pgAlumno=null;
+function vistaPegar(){
+  const res=interpretarRespuesta($("pgTexto").value,$("plDesde").value||"15:30");
+  const ks=Object.keys(res.dias).sort();
+  $("pgVista").innerHTML=!$("pgTexto").value.trim()?'<span style="color:var(--muted)">Aquí verás lo que entiende la app.</span>'
+    :`<b>Lo que entiendo:</b><ul>${ks.map(i=>`<li>${DIAS_LARGOS[i]} ${res.modo[i]==="exacta"?"a las <b>"+res.dias[i]+"</b>":res.modo[i]==="entre"?"de <b>"+res.dias[i]+"</b> a <b>"+(res.hasta[i]||hhmm(FIN_DIA))+"</b>":"desde las <b>"+res.dias[i]+"</b>"}</li>`).join("")||"<li>—</li>"}</ul>
+      <div style="margin-top:6px">Clases: <b>${res.n!=null?res.n:"(no lo dice: se deja "+(respDe(planDe(lunesDe($("plSemana").value)),alumno(pgAlumno)).n)+")"}</b></div>
+      ${res.dudas.length?`<div class="msgs"><div class="m-warn">⚠️ ${res.dudas.map(esc).join("<br>⚠️ ")}</div></div>`:'<div class="msgs"><div class="m-ok">✔ Respuesta clara.</div></div>'}
+      <div style="font-size:12px;color:var(--muted);margin-top:6px">Al aplicar podrás corregir cualquier día u hora en su fila.</div>`;
+  return res;
+}
+window.plPegar=id=>{
+  pgAlumno=id; const a=alumno(id), r=respDe(planDe(lunesDe($("plSemana").value)),a);
+  $("pgTit").textContent="📋 Respuesta de "+nombreCompleto(a); $("pgTexto").value=r.texto||""; vistaPegar();
+  $("mPegar").classList.remove("hidden"); setTimeout(()=>$("pgTexto").focus(),50);
+};
+$("pgTexto").addEventListener("input",vistaPegar);
+$("pgPortapapeles").onclick=async()=>{ try{ const x=await navigator.clipboard.readText(); if(x){ $("pgTexto").value=x; vistaPegar(); } }
+  catch(e){ alert("El navegador no deja leer el portapapeles. Mantén pulsado el recuadro y elige «Pegar»."); } };
+$("pgCancelar").onclick=()=>$("mPegar").classList.add("hidden");
+$("pgAplicar").onclick=()=>{
+  const res=vistaPegar(), r=respDe(planDe(lunesDe($("plSemana").value)),alumno(pgAlumno));
+  r.texto=$("pgTexto").value.trim(); r.dias=res.dias; r.modo=res.modo; r.hasta=res.hasta; if(res.n!=null) r.n=res.n;
+  r.dudosa=res.dudas.length>0; r.inc=true;
+  persistir(); $("mPegar").classList.add("hidden"); pintarPlan(); toast(r.dudosa?"Aplicado. Revisa la fila marcada.":"Respuesta aplicada.");
+};
+
+/* Reparto: por rondas y por prioridad; cada alumno, el hueco más temprano que encaje con su disponibilidad.
+   Las reglas de solapes, clases compartidas (máx. 3), vía pública individual y alumno nuevo son las mismas de siempre (validarClase). */
+/* Huecos posibles de un alumno en un día según lo que ha dicho (desde / a las / entre) */
+function huecosDia(r,d,desde,dur){
+  const m=r.modo[d]||"desde", ini=minutos(r.dias[d]);
+  if(m==="exacta") return ini+dur<=FIN_DIA?[ini]:[];
+  const fin=m==="entre"?minutos(r.hasta[d]||hhmm(FIN_DIA)):FIN_DIA, l=[];
+  for(let t=Math.max(desde,ini);t+dur<=Math.min(fin,FIN_DIA);t+=30) l.push(t);
+  return l;
+}
+/* Una sola opción: un único día y a una hora concreta */
+function opcionUnica(r){ const ks=Object.keys(r.dias); return ks.length===1&&(r.modo[ks[0]]==="exacta"); }
+$("plGenerar").onclick=()=>{
+  const lun=lunesDe($("plSemana").value), P=planDe(lun), prof=$("plProf").value, desde=minutos($("plDesde").value||"15:30");
+  if(!prof){ alert("Elige el profesor."); return; }
+  const porPrio=(x,y)=>(Number(x.r.prio)||999)-(Number(y.r.prio)||999)||nombreCompleto(x.a).localeCompare(nombreCompleto(y.a),"es");
+  const lista=alumnosMoto().map(a=>({a,r:respDe(P,a)})).filter(x=>x.r.inc&&x.r.n>0&&Object.keys(x.r.dias).length).sort(porPrio);
+  if(!lista.length){ alert("No hay alumnos con respuesta anotada (incluidos, con clases y algún día marcado)."); return; }
+  const nuevas=[], citadas={};
+  const colocar=({a,r})=>{
+    const dur=r.doble?60:30;
+    for(let d=0;d<5;d++){
+      if(r.dias[d]==null) continue;
+      const f=addDias(lun,d);
+      if(nuevas.some(c=>c.alumnoId===a.id&&c.fecha===f)) continue;                                   // una clase al día por alumno
+      for(const t of huecosDia(r,d,desde,dur)){
+        const c={id:uid(),alumnoId:a.id,fecha:f,hora:hhmm(t),durMin:dur,tipo:r.tipo,profesor:prof,vehiculo:a.vehiculo||"",obs:"",estado:""};
+        if(!validarClase(c,nuevas).err.length){ nuevas.push(c); citadas[a.id]=(citadas[a.id]||0)+1; return true; }
+      }
+    }
+    return false;
+  };
+  // 1º) los que solo pueden en un día y hora concretos; 2º) el resto por rondas y prioridad (del lunes 15:30 al viernes 21:00)
+  const unicos=lista.filter(x=>opcionUnica(x.r)), resto=lista.filter(x=>!opcionUnica(x.r));
+  unicos.forEach(x=>colocar(x));
+  const maxN=Math.max(0,...resto.map(x=>x.r.n));
+  for(let ronda=0;ronda<maxN;ronda++) for(const x of resto){ if(x.r.n>ronda) colocar(x); }
+  plProp={lun,prof,nuevas,unicos:unicos.map(x=>x.a.id),
+    faltan:lista.filter(x=>(citadas[x.a.id]||0)<Math.min(x.r.n,opcionUnica(x.r)?1:x.r.n)).map(x=>({a:x.a,pide:opcionUnica(x.r)?1:x.r.n,citadas:citadas[x.a.id]||0,unica:opcionUnica(x.r)}))};
+  plCreadas=null; pintarPropuesta();
+};
+function filasPorHueco(cl){
+  const g={}; cl.forEach(c=>{ const k=c.fecha+" "+c.hora+" "+c.tipo+" "+(compartible(c)?"C":c.id); (g[k]=g[k]||[]).push(c); });
+  return Object.keys(g).sort().map(k=>g[k]);
+}
+function pintarPropuesta(){
+  const box=$("plPropuesta");
+  if(!plProp){ box.innerHTML=""; return; }
+  const {nuevas,faltan}=plProp, grupos=filasPorHueco(nuevas);
+  box.innerHTML=`<p style="margin:0 0 6px"><b>${nuevas.length} clase(s) propuestas</b> para <b>${esc(plProp.prof)}</b> · semana del ${fmt(plProp.lun)}${plCreadas?' · <b style="color:var(--ok)">✔ CREADAS</b>':""}</p>
+    <table class="plgrupo"><tr><th>Día</th><th>Hora</th><th>Clase</th><th>Alumnos</th></tr>`+
+    (grupos.map(gr=>{ const c=gr[0]; return `<tr><td>${diaSem(c.fecha)} ${fmt(c.fecha)}</td><td>${c.hora}–${finClase(c)}</td>
+      <td>${esc(TXT_TIPO_CLASE[c.tipo]||c.tipo)}${gr.length>1?` <b>👥 ${gr.length}</b>`:""}</td>
+      <td>${gr.map(x=>{ const a=alumno(x.alumnoId); return `${esc(nombreCompleto(a))} <span class="tag t-${a.permiso}">${a.permiso}</span>${a.nuevo?" 🆕":""}${(plProp.unicos||[]).includes(a.id)?' <span title="Solo podía este día y hora">📌</span>':""}`; }).join("<br>")}</td></tr>`; }).join("")
+      ||`<tr><td colspan="4" style="color:var(--muted)">No se ha podido citar a nadie con esa disponibilidad.</td></tr>`)+`</table>`
+    +(faltan.length?`<div class="msgs"><div class="m-warn">⚠️ Sin hueco suficiente: ${faltan.map(x=>`<b>${esc(nombreCompleto(x.a))}</b> (${x.unica?"solo podía a una hora concreta y ya está ocupada":"pidió "+x.pide+", citadas "+x.citadas})`).join(" · ")}. Revisa su disponibilidad o prográmalas a mano.</div></div>`:"")
+    +(plCreadas?`<div class="plpaso"><span>4</span> Avisa a cada alumno de sus clases</div>
+        <table><tr><th>Alumno</th><th>Clases</th><th>Aviso</th><th></th></tr>${Object.keys(plCreadas).map(id=>{ const a=alumno(id), cl=plCreadas[id];
+          const env=cl.every(c=>db.avisos[keyClase(c)]);
+          return `<tr><td>${esc(nombreCompleto(a))}</td><td>${cl.map(c=>`${diaSem(c.fecha)} ${fmt(c.fecha).slice(0,5)} ${c.hora}`).join(" · ")}</td>
+            <td>${env?'<span class="sent">✔ avisado</span>':'<span class="pend">pendiente</span>'}</td>
+            <td><button class="btn wa sm" onclick="plAvisar('${id}')">📲 WhatsApp</button></td></tr>`; }).join("")}</table>`
+      :nuevas.length?`<div class="row" style="margin-top:10px"><button class="btn" id="plCrear">✅ Crear estas clases</button><button class="btn sec" id="plDescartar">Descartar</button></div>`:"");
+  if($("plCrear")) $("plCrear").onclick=()=>{
+    const bad=nuevas.filter(c=>validarClase(c,nuevas.filter(x=>x!==c)).err.length);
+    if(bad.length&&!confirm(bad.length+" clase(s) ya no encajan (alguien ha programado algo mientras tanto). ¿Crear el resto?")) return;
+    const ok=nuevas.filter(c=>!bad.includes(c)); db.clases.push(...ok); persistir();
+    plCreadas={}; ok.forEach(c=>(plCreadas[c.alumnoId]=plCreadas[c.alumnoId]||[]).push(c));
+    refrescarListas(); pintarAgenda(); pintarLista(); pintarPropuesta(); toast(ok.length+" clases creadas.");
+  };
+  if($("plDescartar")) $("plDescartar").onclick=()=>{ plProp=null; pintarPropuesta(); };
+}
+window.plAvisar=id=>{
+  const a=alumno(id), cl=(plCreadas[id]||[]).slice().sort((x,y)=>(x.fecha+x.hora).localeCompare(y.fecha+y.hora));
+  const l=cl.map(c=>`• ${fechaLarga(c.fecha)}, de ${c.hora} a ${finClase(c)} · ${TXT_TIPO_CLASE[c.tipo]||c.tipo}${compartible(c)&&grupoDe(c).length>1?" (compartida)":""}`).join("\n");
+  waAbrir(a,`Hola ${a.nombre} 👋\nEstas son tus clases de moto de la semana que viene:\n\n${l}\n\n👤 Profesor: ${plProp.prof}\n\nSi no puedes asistir a alguna, avísanos con antelación, por favor.`+firma(), cl.map(keyClase));
+  pintarPropuesta();
+};
+/* Recordatorio de los miércoles */
+let miercolesPospuesto=false;
+function comprobarMiercoles(){
+  const lun=proximoLunes(), P=db.planes&&db.planes[lun];
+  const ver=parse(hoy()).getDay()===3&&!miercolesPospuesto&&alumnosMoto().length>0&&!(P&&Object.keys(P.preg||{}).length);
+  $("avisoMier").classList.toggle("hidden",!ver);
+  if(ver) $("avisoMierTxt").innerHTML=`📅 <b>Hoy es miércoles:</b> pregunta a los alumnos de moto su disponibilidad para la semana del lunes ${fmt(lun)}.`;
+}
+$("amIr").onclick=()=>{ $("plSemana").value=proximoLunes(); ver("plan"); };
+$("amLuego").onclick=()=>{ miercolesPospuesto=true; comprobarMiercoles(); };
+
+/* ================== GENERAL ================== */
+function refrescarListas(){
+  const profs=new Set(db.profesores.map(p=>p.nombre));
+  db.clases.forEach(c=>{ if(c.profesor) profs.add(c.profesor); });
+  const P=[...profs].sort((a,b)=>a.localeCompare(b,"es"));
+  const fp=$("filtroProf"), cur=fp.value;
+  fp.innerHTML='<option value="">Todos los profesores</option>'+P.map(p=>`<option value="${esc(p.toLowerCase())}">${esc(p)}</option>`).join("");
+  fp.value=cur;
+}
+function refrescarTodo(){ refrescarListas(); rellenarSelectsFicha(F.profesor.value,F.vehiculo.value); pintarLista(); pintarAgenda(); pintarExamenes(); pintarAvisos(); actualizarBadge(); comprobarCopia(); comprobarMiercoles(); }
+function refrescarVistas(){ pintarClasesAlumno(); pintarExamenes(); pintarAvisos(); }
+window.abrirFicha=abrirFicha; window.borrarAlumno=borrarAlumno;
+function normalizar(){
+  if(db.profesores) db.profesores.forEach(p=>{ p.permisos=(p.permisos||[]).filter(x=>["B","AM","A1","A2"].includes(x)); if(!p.permisos.length) p.permisos=["B"]; });
+  db.alumnos=db.alumnos||[]; db.clases=db.clases||[]; db.avisos=db.avisos||{};
+  db.config=db.config||{nombre:"Autoescuela",tel:""};
+  if(db.config.faltaDescuenta==null) db.config.faltaDescuenta=true;
+  if(!db.config.bloqueoExamen) db.config.bloqueoExamen="todos";
+  db.alumnos.forEach(a=>{ a.examenes=a.examenes||{}; a.horasEx=a.horasEx||{}; a.resultados=a.resultados||{}; a.historial=a.historial||[]; a.cargos=a.cargos||[]; a.pagos=a.pagos||[]; });
+  db.clases.forEach(c=>{ if(c.estado==null) c.estado=""; });
+  db.planes=db.planes||{};
+  // Bases de datos anteriores: duración en horas → minutos
+  db.clases.forEach(c=>{ if(c.durMin==null){ c.durMin=(Number(c.dur)||1)*60; delete c.dur; } });
+  // Bases de datos anteriores sin fichero de profesores/vehículos: se crean a partir de lo ya escrito
+  if(!db.profesores){
+    const m={}; db.alumnos.forEach(a=>{ if(a.profesor) (m[a.profesor]=m[a.profesor]||new Set()).add(a.permiso); });
+    db.clases.forEach(c=>{ if(c.profesor&&!m[c.profesor]) m[c.profesor]=new Set(); });
+    db.profesores=Object.keys(m).map(n=>({id:uid(),nombre:n,tel:"",permisos:m[n].size?[...m[n]]:["B","A1","A2"],activo:true}));
+  }
+  if(!db.vehiculos){
+    const m={}; db.alumnos.forEach(a=>{ if(a.vehiculo&&!m[a.vehiculo]) m[a.vehiculo]=a.permiso; });
+    db.clases.forEach(c=>{ if(c.vehiculo&&!m[c.vehiculo]){ const a=alumno(c.alumnoId); m[c.vehiculo]=a?a.permiso:"B"; } });
+    db.vehiculos=Object.keys(m).map(et=>{ const p=et.split(" · "); return {id:uid(),modelo:p.length>1?p[0]:et,matricula:p.length>1?p.slice(1).join(" · "):"",permiso:m[et],itv:"",obs:"",activo:true}; });
+  }
+}
+
+/* ================== PROFESORES Y VEHÍCULOS ================== */
+function etiquetaVeh(v){ return v.matricula?v.modelo+" · "+v.matricula:v.modelo; }
+function vehiculoPorEtiqueta(et){ return db.vehiculos.find(v=>etiquetaVeh(v)===et); }
+function icoVeh(p){ return p==="B"?"🚗":p==="AM"?"🛵":"🏍️"; }
+function opcionesProf(permiso,actualVal){
+  const l=db.profesores.filter(p=>p.activo!==false&&(!permiso||p.permisos.includes(permiso))).map(p=>p.nombre).sort((a,b)=>a.localeCompare(b,"es"));
+  if(actualVal&&!l.includes(actualVal)) l.push(actualVal);
+  return `<option value="">${db.profesores.length?"— Sin asignar —":"— Da de alta profesores en su pestaña —"}</option>`+l.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join("");
+}
+function opcionesVeh(permiso,actualVal){
+  const l=db.vehiculos.filter(v=>v.activo!==false&&(!permiso||v.permiso===permiso));
+  let h=`<option value="">${db.vehiculos.length?"— Sin asignar —":"— Da de alta vehículos en su pestaña —"}</option>`
+    +l.map(v=>`<option value="${esc(etiquetaVeh(v))}">${icoVeh(v.permiso)} ${esc(etiquetaVeh(v))}${itvDias(v)!==null&&itvDias(v)<0?" (ITV caducada)":""}</option>`).join("");
+  if(actualVal&&!l.some(v=>etiquetaVeh(v)===actualVal)) h+=`<option value="${esc(actualVal)}">${esc(actualVal)}</option>`;
+  return h;
+}
+function itvDias(v){ return v.itv?Math.round((parse(v.itv)-parse(hoy()))/864e5):null; }
+function itvTxt(v){
+  const d=itvDias(v); if(d===null) return '<span style="color:var(--muted)">—</span>';
+  if(d<0) return `<span class="itv-ko">Caducada ${fmt(v.itv)}</span>`;
+  if(d<=30) return `<span class="itv-av">${fmt(v.itv)} (${d} días)</span>`;
+  return fmt(v.itv);
+}
+let profEdit=null, vehEdit=null;
+const PERM_PROF=["B","AM","A1","A2"];
+function nuevoProf(){ profEdit=null; $("pfTit").textContent="Nuevo profesor"; $("pfNombre").value=""; $("pfTel").value="";
+  PERM_PROF.forEach(p=>$("pf"+p).checked=false); $("pfActivo").checked=true; cambiosProf=false; }
+function nuevoVeh(){ vehEdit=null; $("vhTit").textContent="Nuevo vehículo"; $("vhPermiso").value="B"; $("vhModelo").value=""; $("vhMatricula").value="";
+  $("vhItv").value=""; $("vhObs").value=""; $("vhActivo").checked=true; cambiosVeh=false; }
+$("pfNuevo").onclick=()=>{ nuevoProf(); }; $("vhNuevo").onclick=()=>{ nuevoVeh(); };
+["pfNombre","pfTel","pfB","pfAM","pfA1","pfA2","pfActivo"].forEach(i=>["input","change"].forEach(ev=>$(i).addEventListener(ev,()=>cambiosProf=true)));
+["vhPermiso","vhModelo","vhMatricula","vhItv","vhObs","vhActivo"].forEach(i=>["input","change"].forEach(ev=>$(i).addEventListener(ev,()=>cambiosVeh=true)));
+window.editarProf=id=>{ const p=db.profesores.find(x=>x.id===id); if(!p) return; profEdit=id; $("pfTit").textContent="Editar profesor";
+  $("pfNombre").value=p.nombre; $("pfTel").value=p.tel||""; PERM_PROF.forEach(k=>$("pf"+k).checked=p.permisos.includes(k)); $("pfActivo").checked=p.activo!==false; cambiosProf=false; $("pfNombre").focus(); };
+window.editarVeh=id=>{ const v=db.vehiculos.find(x=>x.id===id); if(!v) return; vehEdit=id; $("vhTit").textContent="Editar vehículo";
+  $("vhPermiso").value=v.permiso; $("vhModelo").value=v.modelo; $("vhMatricula").value=v.matricula; $("vhItv").value=v.itv||""; $("vhObs").value=v.obs||""; $("vhActivo").checked=v.activo!==false; cambiosVeh=false; $("vhModelo").focus(); };
+function guardarProf(){
+  const nombre=$("pfNombre").value.trim().replace(/\s+/g," "); if(!nombre){ alert("Escribe el nombre del profesor."); return false; }
+  const permisos=PERM_PROF.filter(k=>$("pf"+k).checked); if(!permisos.length){ alert("Marca al menos un permiso que imparta."); return false; }
+  if(db.profesores.some(p=>p.id!==profEdit&&p.nombre.toLowerCase()===nombre.toLowerCase())){ alert("Ya existe un profesor con ese nombre."); return false; }
+  const prev=db.profesores.find(p=>p.id===profEdit);
+  if(prev&&prev.nombre!==nombre){ // si se corrige el nombre, se actualiza en alumnos y clases
+    db.alumnos.forEach(a=>{ if(a.profesor===prev.nombre) a.profesor=nombre; }); db.clases.forEach(c=>{ if(c.profesor===prev.nombre) c.profesor=nombre; }); }
+  const o={id:profEdit||uid(),nombre,tel:$("pfTel").value.trim(),permisos,activo:$("pfActivo").checked};
+  if(prev) Object.assign(prev,o); else db.profesores.push(o);
+  persistir(); nuevoProf(); refrescarTodo(); pintarMedios(); toast("Profesor guardado.");
+  return true;
+}
+$("pfGuardar").onclick=()=>guardarProf();
+function guardarVeh(){
+  const modelo=$("vhModelo").value.trim(), matricula=$("vhMatricula").value.trim().toUpperCase().replace(/\s+/g," ");
+  if(!modelo||!matricula){ alert("Indica marca/modelo y matrícula."); return false; }
+  const norm=s=>s.replace(/[\s-]/g,"");
+  if(db.vehiculos.some(v=>v.id!==vehEdit&&norm(v.matricula)===norm(matricula))){ alert("Ya existe un vehículo con la matrícula "+matricula+"."); return false; }
+  const prev=db.vehiculos.find(v=>v.id===vehEdit);
+  const o={id:vehEdit||uid(),permiso:$("vhPermiso").value,modelo,matricula,itv:$("vhItv").value,obs:$("vhObs").value.trim(),activo:$("vhActivo").checked};
+  if(prev){ const viejo=etiquetaVeh(prev), nuevo=etiquetaVeh(o);
+    if(viejo!==nuevo){ db.alumnos.forEach(a=>{ if(a.vehiculo===viejo) a.vehiculo=nuevo; }); db.clases.forEach(c=>{ if(c.vehiculo===viejo) c.vehiculo=nuevo; }); }
+    Object.assign(prev,o); } else db.vehiculos.push(o);
+  persistir(); nuevoVeh(); refrescarTodo(); pintarMedios(); toast("Vehículo guardado.");
+  return true;
+}
+$("vhGuardar").onclick=()=>guardarVeh();
+window.borrarProf=id=>{
+  const p=db.profesores.find(x=>x.id===id), n=db.clases.filter(c=>c.profesor===p.nombre&&c.fecha>=hoy()).length;
+  if(!confirm(`¿Borrar a ${p.nombre}?`+(n?`\n\nTiene ${n} clase(s) pendiente(s). Si ya no trabaja, es mejor desmarcar «En activo» para conservar el historial.`:""))) return;
+  db.profesores=db.profesores.filter(x=>x.id!==id); persistir(); if(profEdit===id) nuevoProf(); refrescarTodo(); pintarMedios();
+};
+window.borrarVeh=id=>{
+  const v=db.vehiculos.find(x=>x.id===id), et=etiquetaVeh(v), n=db.clases.filter(c=>c.vehiculo===et&&c.fecha>=hoy()).length;
+  if(!confirm(`¿Borrar ${et}?`+(n?`\n\nTiene ${n} clase(s) pendiente(s). Si se ha dado de baja, es mejor desmarcar «En servicio» para conservar el historial.`:""))) return;
+  db.vehiculos=db.vehiculos.filter(x=>x.id!==id); persistir(); if(vehEdit===id) nuevoVeh(); refrescarTodo(); pintarMedios();
+};
+function pintarMedios(){
+  const h=hoy(), tags=l=>l.map(p=>`<span class="tag t-${p}">${p}</span>`).join(" ");
+  const P=db.profesores.slice().sort((a,b)=>a.nombre.localeCompare(b.nombre,"es"));
+  $("tProf").innerHTML=`<tr><th>Profesor</th><th>Teléfono</th><th>Permisos</th><th>Alumnos</th><th>Clases pend.</th><th></th></tr>`+
+    (P.length?P.map(p=>`<tr class="${p.activo===false?"inactivo":""}"><td><b>${esc(p.nombre)}</b>${p.activo===false?"<br><small>No activo</small>":""}</td><td>${esc(p.tel)}</td><td>${tags(p.permisos)}</td>
+      <td>${db.alumnos.filter(a=>a.profesor===p.nombre).length}</td><td>${db.clases.filter(c=>c.profesor===p.nombre&&c.fecha>=h).length}</td>
+      <td class="row"><button class="btn sec sm" onclick="editarProf('${p.id}')">Editar</button><button class="btn del sm" onclick="borrarProf('${p.id}')">Borrar</button></td></tr>`).join("")
+    :`<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:16px">Sin profesores. Rellena el formulario de arriba.</td></tr>`);
+  const V=db.vehiculos.slice().sort((a,b)=>(a.permiso+a.modelo).localeCompare(b.permiso+b.modelo,"es"));
+  $("tVeh").innerHTML=`<tr><th>Vehículo</th><th>Permiso</th><th>Próxima ITV</th><th>Clases pend.</th><th></th></tr>`+
+    (V.length?V.map(v=>`<tr class="${v.activo===false?"inactivo":""}"><td>${icoVeh(v.permiso)} <b>${esc(v.modelo)}</b><br><small>${esc(v.matricula)}${v.obs?" · "+esc(v.obs):""}${v.activo===false?" · Fuera de servicio":""}</small></td>
+      <td>${tags([v.permiso])}</td><td>${itvTxt(v)}</td><td>${db.clases.filter(c=>c.vehiculo===etiquetaVeh(v)&&c.fecha>=h).length}</td>
+      <td class="row"><button class="btn sec sm" onclick="editarVeh('${v.id}')">Editar</button><button class="btn del sm" onclick="borrarVeh('${v.id}')">Borrar</button></td></tr>`).join("")
+    :`<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:16px">Sin vehículos. Rellena el formulario de arriba.</td></tr>`);
+}
+function actualizarBadge(){ $("badgeEj").classList.toggle("hidden",!db.ejemplo); }
+
+/* ================== WHATSAPP ================== */
+const DIA_LARGO=["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
+function fechaLarga(s){ return DIA_LARGO[parse(s).getDay()]+" "+fmt(s); }
+/* Convierte el teléfono al formato internacional que pide WhatsApp (34 + 9 cifras en España) */
+function telWa(t){ let n=String(t||"").replace(/\D/g,""); if(n.startsWith("00")) n=n.slice(2); if(n.length===9) n="34"+n; return n.length>=11?n:""; }
+function firma(){ const c=db.config; return "\n\n"+(c.nombre||"Autoescuela")+(c.tel?" · Tel. "+c.tel:""); }
+const TXT_TIPO_CLASE={"Vía pública":"Clase en vía pública","Circuito cerrado":"Clase en circuito cerrado","Maniobras":"Clase de maniobras","Simulacro examen":"Clase de simulacro de examen"};
+const TXT_EXAMEN={teorico:"Examen teórico",practico:"Examen práctico",comun:"Examen de teórico común",especifico:"Examen de teórico específico",circuito:"Examen en circuito cerrado",via:"Examen en vía pública"};
+function txtClase(c){
+  const a=alumno(c.alumnoId);
+  return `Hola ${a.nombre} 👋\nTe confirmamos tu clase práctica de conducción:\n📅 ${fechaLarga(c.fecha)}\n🕗 De ${c.hora} a ${finClase(c)}\n🚦 ${TXT_TIPO_CLASE[c.tipo]||("Clase de "+String(c.tipo||"").toLowerCase())}`+(compartible(c)&&grupoDe(c).length>1?" (compartida)":"")
+    +(c.profesor?`\n👤 Profesor: ${c.profesor}`:"")+(c.vehiculo?`\n🔑 Vehículo: ${c.vehiculo}`:"")
+    +`\n\nSi no puedes asistir, avísanos con antelación, por favor.`+firma();
+}
+function txtExamen(a,k){
+  return `Hola ${a.nombre} 👋\nTe recordamos tu examen del permiso ${a.permiso}:\n📝 ${TXT_EXAMEN[k]}\n📅 ${fechaLarga(a.examenes[k])}`+(horaEx(a,k)?`\n🕘 Hora de la cita: ${horaEx(a,k)}`:"")
+    +`\n\nRecuerda llevar tu DNI/NIE original y en vigor. ¡Mucha suerte! 🍀`+firma();
+}
+function keyClase(c){ return "c:"+c.id+":"+c.fecha+":"+c.hora+":"+durDe(c); }   // si cambia fecha u hora, vuelve a quedar pendiente
+function keyEx(a,k){ return "e:"+a.id+":"+k+":"+a.examenes[k]+(horaEx(a,k)?":"+horaEx(a,k):""); }
+function estadoAviso(key){ const t=db.avisos[key]; return t?`<span class="sent" title="Enviado el ${t}">✔ avisado</span>`:`<span class="pend">pendiente</span>`; }
+function waAbrir(a,texto,key){
+  const n=telWa(a&&a.tel);
+  if(!n){ alert("El alumno no tiene un teléfono móvil válido en su ficha."); return; }
+  if(db.ejemplo && !confirm("Son datos de EJEMPLO con un teléfono ficticio.\nPara probar, pon tu propio móvil en la ficha de ese alumno.\n\n¿Abrir WhatsApp igualmente?")) return;
+  window.open("https://api.whatsapp.com/send?phone="+n+"&text="+encodeURIComponent(texto),"_blank");
+  if(key){ const d=new Date(), t=fmt(iso(d))+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
+    [].concat(key).forEach(k=>db.avisos[k]=t); persistir(); }
+  refrescarVistas();
+}
+window.waClase=id=>{ const c=db.clases.find(x=>x.id===id); if(c) waAbrir(alumno(c.alumnoId),txtClase(c),keyClase(c)); };
+window.waExamen=(id,k)=>{ const a=alumno(id); if(a) waAbrir(a,txtExamen(a,k),keyEx(a,k)); };
+
+/* Pestaña de avisos: por defecto TODAS las clases y exámenes pendientes de avisar (de hoy en adelante);
+   también se puede ver un día concreto (hoy, mañana o una fecha) con lo enviado y lo pendiente */
+let avItems=[], avModo="pend";
+$("avPend").onclick=()=>{ avModo="pend"; pintarAvisos(); };
+$("avHoy").onclick=()=>{ avModo="dia"; $("avFecha").value=hoy(); pintarAvisos(); };
+$("avManana").onclick=()=>{ avModo="dia"; $("avFecha").value=addDias(hoy(),1); pintarAvisos(); };
+$("avFecha").onchange=()=>{ if($("avFecha").value){ avModo="dia"; pintarAvisos(); } };
+function pintarAvisos(){
+  const h=hoy(), f=$("avFecha").value, vale=fe=>avModo==="pend"?fe>=h:fe===f;
+  avItems=[];
+  db.clases.filter(c=>vale(c.fecha)&&c.estado!=="anulada").forEach(c=>{ const a=alumno(c.alumnoId); if(!a) return;
+    avItems.push({fecha:c.fecha,ord:c.fecha+c.hora,a,que:"Clase práctica",det:`${c.hora}–${finClase(c)} · ${TXT_TIPO_CLASE[c.tipo]||c.tipo}${c.profesor?" · "+c.profesor:""}`,key:keyClase(c),run:()=>waClase(c.id)}); });
+  db.alumnos.forEach(a=>EXAMENES[a.permiso].forEach(([k])=>{ const fe=a.examenes&&a.examenes[k]; if(fe&&vale(fe))
+    if(!(a.resultados&&a.resultados[k])) avItems.push({fecha:fe,ord:fe+(horaEx(a,k)||"00"),a,que:"Examen",det:TXT_EXAMEN[k]+(horaEx(a,k)?" · "+horaEx(a,k):" · ⚠ sin hora"),key:keyEx(a,k),run:()=>waExamen(a.id,k)}); }));
+  if(avModo==="pend") avItems=avItems.filter(x=>!db.avisos[x.key]);
+  avItems.sort((x,y)=>x.ord.localeCompare(y.ord));
+  const pend=avItems.filter(x=>!db.avisos[x.key]).length;
+  $("avSig").textContent=pend?`📲 Enviar siguiente pendiente (${pend})`:"✔ Todo avisado";
+  $("avSig").disabled=!pend;
+  $("avPend").className="btn "+(avModo==="pend"?"":"sec");
+  $("avDesc").innerHTML=avModo==="pend"
+    ?`<b>Todos los pendientes:</b> clases y exámenes de hoy en adelante que aún no se han avisado (${pend}).`
+    :`<b>${esc(fechaLarga(f))}:</b> clases y exámenes de ese día, enviados y pendientes.`;
+  $("tAvisos").innerHTML=`<tr><th>Fecha</th><th>Aviso de</th><th>Alumno</th><th>Teléfono</th><th>Detalle</th><th>Estado</th><th></th></tr>`+
+    (avItems.length?avItems.map((x,i)=>`<tr><td style="white-space:nowrap">${diaSem(x.fecha)} ${fmt(x.fecha)}</td><td><b>${x.que}</b></td>
+      <td><a href="#" onclick="abrirFicha('${x.a.id}');return false">${esc(nombreCompleto(x.a))}</a> <span class="tag t-${x.a.permiso}">${x.a.permiso}</span></td>
+      <td>${esc(x.a.tel)||'<span class="pend">sin teléfono</span>'}</td><td>${esc(x.det)}</td><td>${estadoAviso(x.key)}</td>
+      <td><button class="btn wa sm" onclick="avItems[${i}].run()">📲 WhatsApp</button></td></tr>`).join("")
+    :`<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:20px">${avModo==="pend"?"✔ No hay nada pendiente de avisar.":"No hay clases ni exámenes ese día."}</td></tr>`);
+}
+
+$("avSig").onclick=()=>{ const x=avItems.find(x=>!db.avisos[x.key]); if(x) x.run(); };
+
+/* Configuración y vaciado */
+$("btnConfig").onclick=()=>{
+  $("cfNombre").value=db.config.nombre||""; $("cfTel").value=db.config.tel||"";
+  document.querySelector(`input[name=cfFalta][value=${db.config.faltaDescuenta!==false?"si":"no"}]`).checked=true;
+  document.querySelector(`input[name=cfBloq][value=${db.config.bloqueoExamen==="profesor"?"profesor":"todos"}]`).checked=true;
+  $("mConfig").classList.remove("hidden"); $("cfNombre").focus();
+};
+$("cfCancelar").onclick=()=>$("mConfig").classList.add("hidden");
+$("cfGuardar").onclick=()=>{
+  db.config=Object.assign(db.config,{nombre:$("cfNombre").value.trim()||"Autoescuela",tel:$("cfTel").value.trim(),
+    faltaDescuenta:document.querySelector("input[name=cfFalta]:checked").value==="si",
+    bloqueoExamen:document.querySelector("input[name=cfBloq]:checked").value});
+  $("mConfig").classList.add("hidden"); persistir(); pintarPagos(); pintarLista(); pintarAgenda(); toast("Datos de la autoescuela guardados.");
+};
+$("btnVaciar").onclick=()=>{
+  if(!confirm((db.ejemplo?"¿Quitar todos los DATOS DE EJEMPLO?\n(Se conservan los profesores y vehículos que hayas dado de alta tú.)":"¿Borrar TODOS los alumnos, clases y avisos?\n(Se conservan los profesores y vehículos.)")+"\n\nConsejo: antes pulsa «Guardar base de datos» para tener copia.")) return;
+  db=sinEjemplos(); persistir(); nuevaFicha(); refrescarTodo(); toast("Base de datos vacía.");
+};
+
+/* ================== DATOS DE EJEMPLO ================== */
+const EJ_PROF=["Carlos Martín","Pedro Sanz","Ana López","Rosa Iglesias"], EJ_MAT=["1234 LMN","5678 KJH","2468 HGT","9012 MPR","3456 NBC"];
+/* Base vacía: quita alumnos, clases y avisos, y los profesores/vehículos de ejemplo; conserva los dados de alta por el usuario */
+function sinEjemplos(){
+  const ej=!!db.ejemplo;
+  return {alumnos:[],clases:[],avisos:{},config:db.config,version:1,ejemplo:false,
+    profesores:db.profesores.filter(p=>!(ej&&EJ_PROF.includes(p.nombre))),
+    vehiculos:db.vehiculos.filter(v=>!(ej&&EJ_MAT.includes(v.matricula)))};
+}
+/* Elimina los alumnos de ejemplo de versiones anteriores (y sus clases), y los profesores/vehículos de ejemplo
+   que no use ningún alumno real. Se ejecuta al arrancar y al abrir una copia. */
+const EJ_DNI=[51234567,48765432,53456789,54987123,50321654].map(n=>n+"TRWAGMYFPDXBNJZSQVHLCKE"[n%23]);
+function purgarEjemplos(){
+  const ids=new Set(db.alumnos.filter(a=>EJ_DNI.includes(a.dni)).map(a=>a.id));
+  if(!ids.size&&!db.ejemplo) return false;
+  db.alumnos=db.alumnos.filter(a=>!ids.has(a.id));
+  db.clases=db.clases.filter(c=>!ids.has(c.alumnoId));
+  const usP=new Set([...db.alumnos.map(a=>a.profesor),...db.clases.map(c=>c.profesor)]);
+  const usV=new Set([...db.alumnos.map(a=>a.vehiculo),...db.clases.map(c=>c.vehiculo)]);
+  db.profesores=db.profesores.filter(p=>!EJ_PROF.includes(p.nombre)||usP.has(p.nombre));
+  db.vehiculos=db.vehiculos.filter(v=>!EJ_MAT.includes(v.matricula)||usV.has(etiquetaVeh(v)));
+  db.ejemplo=false; return true;
+}
+
+/* Versión instalable (Android): solo se activa cuando la app se sirve desde una web https */
+if("serviceWorker" in navigator && (location.protocol==="https:"||location.hostname==="localhost")){
+  navigator.serviceWorker.register("sw.js").catch(()=>{});
+  try{ navigator.storage&&navigator.storage.persist&&navigator.storage.persist(); }catch(e){}  // pide a Android que no borre los datos
+}
+
+/* ================== PIN DE ACCESO ==================
+   Se pide cada vez que se abre la app. Para cambiar el PIN hay que generar una versión nueva. */
+const PIN_HASH="fb3b8d00", PIN_LARGO=4;
+function hashPin(pin){ const h=s=>{ let x=0x811c9dc5; for(const c of s){ x^=c.charCodeAt(0); x=Math.imul(x,16777619)>>>0; } return x.toString(16); };
+  let v="AML·agenda·"+pin; for(let i=0;i<500;i++) v=h(v+i); return v; }
+(function(){
+  let pin="", fallos=0;
+  const dots=[...$("pinDots").children];
+  const pintar=()=>dots.forEach((d,i)=>d.classList.toggle("on",i<pin.length));
+  function tecla(k){
+    if(k==="borrar") pin=pin.slice(0,-1); else if(k==="limpiar") pin=""; else if(pin.length<PIN_LARGO) pin+=k;
+    pintar(); $("pinMsg").textContent="";
+    if(pin.length===PIN_LARGO){
+      if(hashPin(pin)===PIN_HASH){ $("pinGate").remove(); document.removeEventListener("keydown",teclado); }
+      else{ fallos++; $("pinDots").classList.add("mal"); $("pinMsg").textContent="PIN incorrecto"+(fallos>2?" ("+fallos+" intentos)":"");
+        setTimeout(()=>{ $("pinDots").classList.remove("mal"); pin=""; pintar(); },400); }
+    }
+  }
+  $("pinPad").onclick=e=>{ const b=e.target.closest("button"); if(b) tecla(b.dataset.k||b.textContent); };
+  function teclado(e){ if(/^[0-9]$/.test(e.key)) tecla(e.key); else if(e.key==="Backspace") tecla("borrar"); else if(e.key==="Escape") tecla("limpiar"); }
+  document.addEventListener("keydown",teclado);
+})();
+
+cargarLocal(); normalizar();
+if(purgarEjemplos()) persistir();
+$("verApp").textContent=VERSION;
+sinGuardar=false; nuevaFicha(); refrescarTodo();
+</script>
+</body>
+</html>

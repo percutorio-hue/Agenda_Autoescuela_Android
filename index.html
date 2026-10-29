@@ -71,7 +71,9 @@ tr:hover td{background:#f8fafd}
 .agenda table{min-width:900px;table-layout:fixed}
 .agenda th,.agenda td{border:1px solid var(--line);padding:3px;vertical-align:top}
 .agenda td.h{width:70px;background:#f0f3f8;font-weight:600;text-align:center;vertical-align:middle;color:var(--muted)}
-.agenda td.cell{height:58px;cursor:pointer}
+.agenda td.cell{height:40px;cursor:pointer}
+.agenda tr.enpunto td{border-top:2px solid #c3ccd9}
+.agenda td.h.media{font-weight:400;font-size:11px;color:#9aa3b2}
 .agenda td.cell:hover{background:#eef4fc}
 .agenda th.today{background:#dce8f8;color:var(--pri)}
 .agenda th .exday{display:block;font-size:11px;font-weight:600;color:var(--warn);margin-top:2px}
@@ -186,7 +188,7 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
   .btn{padding:10px 16px}.btn.sm{padding:8px 12px;font-size:13px}
   nav button,.hdrbtn{padding:10px 14px}
   input,select{padding:10px}
-  .agenda td.cell{height:68px}.chip{padding:6px;font-size:12px}
+  .agenda td.cell{height:46px}.chip{padding:5px;font-size:12px}
 }
 @media (max-width:900px){.ficha{grid-template-columns:1fr}.foto{height:180px;max-width:160px}.campos,.exgrid{grid-template-columns:1fr 1fr}.c4{grid-column:span 2}}
 @media print{
@@ -540,6 +542,14 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
   </div>
 </div>
 
+<div class="modal hidden" id="mAviso" style="z-index:90">
+  <div class="box" style="width:min(460px,100%)">
+    <h3>ℹ️ Aviso</h3>
+    <p id="mAvisoTxt" style="margin:0;white-space:pre-line"></p>
+    <div class="row" style="justify-content:flex-end;margin-top:16px"><button class="btn" id="mAvisoOk">Entendido</button></div>
+  </div>
+</div>
+
 <div class="modal hidden" id="mPegar">
   <div class="box" style="width:min(620px,100%)">
     <h3 id="pgTit">📋 Pegar respuesta</h3>
@@ -603,10 +613,16 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
 
 <script>
 "use strict";
+/* Los avisos se muestran en una ventana propia de la app: en algunas tablets Chrome bloquea sus ventanitas y parecía que «no pasaba nada» */
+window.alert=function(msg){
+  const m=document.getElementById("mAviso"); if(!m){ return; }
+  document.getElementById("mAvisoTxt").textContent=String(msg);
+  m.classList.remove("hidden"); document.getElementById("mAvisoOk").onclick=()=>m.classList.add("hidden");
+};
 /* ================== DATOS ================== */
 const LS_KEY = "agendaAutoescuela_v1";
-const VERSION = "v9.5 NOV27";
-const HORAS = []; for (let h = 8; h < 21; h++) HORAS.push(String(h).padStart(2,"0")+":00");
+const VERSION = "v9.6 NOV27";
+const HORAS = []; for (let m = 8*60; m < 21*60; m += 30) HORAS.push(String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"));   // filas de 30 min: 08:00 … 20:30 (la última termina a las 21:00)
 const EXAMENES = {
   B:  [["teorico","Teórico"],["practico","Práctico"]],
   AM: [["comun","Teórico común"],["especifico","Teórico específico"],["circuito","Circuito cerrado"]],   // el AM no tiene examen de vía pública
@@ -1131,7 +1147,7 @@ function opcionesDur(permiso,val){
 }
 function rellenarDur(permiso,val){ $("cDur").innerHTML=opcionesDur(permiso,val); $("cDur").value=String(val||(esMoto(permiso)?30:45)); }
 function finClase(c){ return hhmm(minutos(c.hora)+durDe(c)); }
-function ocupaHora(c,h){ const i=minutos(c.hora), f=i+durDe(c), hi=minutos(h); return i<hi+60 && f>hi; }
+function ocupaHora(c,h){ const i=minutos(c.hora), f=i+durDe(c), hi=minutos(h); return i<hi+30 && f>hi; }
 function solapan(a,b){ if(a.fecha!==b.fecha) return false; const i1=minutos(a.hora),f1=i1+durDe(a),i2=minutos(b.hora),f2=i2+durDe(b); return i1<f2&&i2<f1; }
 function rellenarSelectsClase(permiso,p,v){
   $("cProf").innerHTML=opcionesProf(permiso,p); $("cProf").value=p||"";
@@ -1289,7 +1305,7 @@ function pintarAgenda(){
     return `<th class="${x.f===h0?"today":""}">${x.d} ${fmt(x.f).slice(0,5)}${cabeceraBloqueo(x.f)}${cabeceraExamenes(ex)}</th>`;
   }).join("")+"</tr>";
   HORAS.forEach(h=>{
-    html+=`<tr><td class="h">${h}</td>`;
+    const media=h.endsWith(":30"); html+=`<tr class="${media?"":"enpunto"}"><td class="h ${media?"media":""}">${h}</td>`;
     dias.forEach(x=>{
       const cl=db.clases.filter(c=>c.fecha===x.f&&ocupaHora(c,h)&&(!fp||(c.profesor||"").toLowerCase()===fp));
       html+=`<td class="cell" data-f="${x.f}" data-h="${h}">`+cl.map(c=>{ const a=alumno(c.alumnoId); if(!a) return "";
@@ -1310,7 +1326,7 @@ $("agenda").onclick=e=>{
   const fp=$("filtroProf").value, prof=fp?$("filtroProf").selectedOptions[0].textContent:"";
   // con un profesor filtrado, propone empezar justo cuando termina su clase anterior dentro de esa hora
   let hora=td.dataset.h; const hi=minutos(hora);
-  if(fp){ const fines=db.clases.filter(c=>c.fecha===td.dataset.f&&(c.profesor||"").toLowerCase()===fp).map(c=>minutos(c.hora)+durDe(c)).filter(m=>m>hi&&m<hi+60);
+  if(fp){ const fines=db.clases.filter(c=>c.fecha===td.dataset.f&&(c.profesor||"").toLowerCase()===fp).map(c=>minutos(c.hora)+durDe(c)).filter(m=>m>hi&&m<hi+30);
     if(fines.length) hora=hhmm(Math.max(...fines)); }
   abrirClase(null,{fecha:td.dataset.f,hora,profesor:prof});
 };
@@ -1360,9 +1376,12 @@ window.ponerResultado=(id,k,v)=>{
 /* ================== HOJA DEL DÍA DEL PROFESOR ================== */
 $("btnHoja").onclick=()=>{
   const ps=db.profesores.filter(p=>p.activo!==false).map(p=>p.nombre).sort((a,b)=>a.localeCompare(b,"es"));
-  $("hjProf").innerHTML='<option value="">Todos los profesores</option>'+ps.map(n=>`<option>${esc(n)}</option>`).join("");
-  const fp=$("filtroProf").value; if(fp){ const m=ps.find(n=>n.toLowerCase()===fp); if(m) $("hjProf").value=m; }
-  $("hjFecha").value=hoy(); $("mHoja").classList.remove("hidden"); pintarHoja();
+  $("hjProf").innerHTML='<option value="">Todos los profesores (solo imprimir)</option>'+ps.map(n=>`<option>${esc(n)}</option>`).join("");
+  $("hjFecha").value=hoy();
+  // por defecto: el profesor filtrado en la agenda, o el primero que tenga clases ese día, o el primero de la lista
+  const fp=$("filtroProf").value, conClase=ps.find(n=>db.clases.some(c=>c.fecha===hoy()&&c.profesor===n&&c.estado!=="anulada"));
+  $("hjProf").value=(fp&&ps.find(n=>n.toLowerCase()===fp))||conClase||ps[0]||"";
+  $("mHoja").classList.remove("hidden"); pintarHoja();
 };
 $("hjFecha").onchange=pintarHoja; $("hjProf").onchange=pintarHoja;
 $("hjCerrar").onclick=()=>$("mHoja").classList.add("hidden");
@@ -1386,11 +1405,17 @@ function htmlHoja(){
   if(ex.length) h+=`<h3 style="margin:14px 0 4px">📝 Exámenes de ese día</h3><ul style="margin:0">`+ex.map(e=>`<li>${horaEx(e.a,e.k)?"<b>"+horaEx(e.a,e.k)+"</b> · ":""}${esc(nombreCompleto(e.a))} (${e.a.permiso}) – ${esc(TXT_EXAMEN[e.k])}</li>`).join("")+`</ul>`;
   return h;
 }
-function pintarHoja(){ $("hjVista").innerHTML=`<div class="scroll" style="max-height:50vh">${htmlHoja()}</div>`; $("hjWa").disabled=!$("hjProf").value; }
+function pintarHoja(){
+  const pf=$("hjProf").value, p=db.profesores.find(x=>x.nombre===pf);
+  const aviso=!pf?'<div class="m-warn">Para enviarla por WhatsApp, elige un profesor arriba.</div>'
+    :!telWa(p&&p.tel)?`<div class="m-warn">⚠️ ${esc(pf)} no tiene teléfono móvil. Añádelo en «Profesores y vehículos» para poder enviarle la hoja.</div>`:"";
+  $("hjVista").innerHTML=(aviso?`<div class="msgs" style="margin:0 0 8px">${aviso}</div>`:"")+`<div class="scroll" style="max-height:50vh">${htmlHoja()}</div>`;
+}
 $("hjImprimir").onclick=()=>{ $("printArea").innerHTML=htmlHoja(); window.print(); };
 $("hjWa").onclick=()=>{
   const {f,pf,cl,ex}=datosHoja(), p=db.profesores.find(x=>x.nombre===pf);
-  const n=telWa(p&&p.tel); if(!n){ alert("El profesor no tiene un teléfono móvil válido. Añádelo en «Profesores y vehículos»."); return; }
+  if(!pf){ alert("Elige un profesor en la lista para enviarle su hoja del día."); return; }
+  const n=telWa(p&&p.tel); if(!n){ alert(pf+" no tiene un teléfono móvil válido.\nAñádelo en «Profesores y vehículos» y vuelve a intentarlo."); return; }
   const l=cl.map(c=>{ const a=alumno(c.alumnoId)||{}; return `🕗 ${c.hora}–${finClase(c)} · ${nombreCompleto(a)}${a.tel?" ("+a.tel+")":""}\n    ${TXT_TIPO_CLASE[c.tipo]||c.tipo}${c.vehiculo?" · "+c.vehiculo:""}${c.obs?" · "+c.obs:""}`; }).join("\n");
   const t=`Hola ${pf.split(" ")[0]} 👋\nTus clases del ${fechaLarga(f)}:\n\n${l||"No tienes clases programadas."}`
     +(ex.length?`\n\n📝 Exámenes de tus alumnos:\n`+ex.map(e=>`• ${horaEx(e.a,e.k)?horaEx(e.a,e.k)+" · ":""}${nombreCompleto(e.a)} – ${TXT_EXAMEN[e.k]}`).join("\n"):"")+firma();
