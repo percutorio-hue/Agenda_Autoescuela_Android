@@ -104,6 +104,13 @@ tr:hover td{background:#f8fafd}
 .plpaso{display:flex;gap:8px;align-items:baseline;margin:14px 0 6px;color:var(--pri);font-weight:600}
 .plpaso span{background:var(--pri);color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;flex:none}
 .plgrupo td{vertical-align:top}
+.pld select{padding:2px;font-size:11px;width:auto}
+.pld .hh{width:74px}
+.plres{font-size:11px;color:var(--muted);max-width:220px;white-space:normal;display:block;margin-top:2px}
+.plres.dud{color:var(--warn);font-weight:600}
+#pgTexto{min-height:120px;font-size:14px}
+.pgvista{background:#f7f9fc;border:1px solid var(--line);border-radius:8px;padding:10px;margin-top:10px;font-size:14px}
+.pgvista ul{margin:4px 0 0;padding-left:18px}
 /* v7 */
 .exres{margin-top:6px;font-size:13px;padding:6px}
 .exfh{display:grid;grid-template-columns:minmax(0,1fr) 104px;gap:6px}
@@ -351,7 +358,7 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
 <section id="v-agenda" class="hidden">
   <div class="panel">
     <div class="row" style="justify-content:space-between;margin-bottom:10px">
-      <h2 style="margin:0">Clases prácticas · 08:00 a 20:00</h2>
+      <h2 style="margin:0">Clases prácticas · 08:00 a 21:00</h2>
       <div class="row">
         <button class="btn sec" id="semAnt">◀</button>
         <input type="date" id="semFecha" style="width:150px">
@@ -442,7 +449,7 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
         <span style="font-size:13px">desde</span><input type="time" id="plDesde" value="15:30" step="900" style="width:110px">
       </div>
     </div>
-    <p style="color:var(--muted);font-size:13px;margin:0">Clases de 30 min (o dobles de 1 h) de lunes a viernes. Las de <b>circuito cerrado / maniobras</b> se comparten hasta 3 alumnos; las de <b>vía pública</b> y los alumnos <b>🆕 nuevos</b> van solos.</p>
+    <p style="color:var(--muted);font-size:13px;margin:0">Clases de 30 min (o dobles de 1 h) de lunes a viernes, hasta las 21:00. 📌 = solo podía ese día y hora (se coloca primero). Las de <b>circuito cerrado / maniobras</b> se comparten hasta 3 alumnos; las de <b>vía pública</b> y los alumnos <b>🆕 nuevos</b> van solos.</p>
 
     <div class="plpaso"><span>1</span> Elige los alumnos y pregúntales su disponibilidad (los miércoles)</div>
     <div class="row" style="margin-bottom:6px">
@@ -450,7 +457,7 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
       <button class="btn wa sm" id="plPreguntar">📲 Preguntar al siguiente</button>
       <span id="plResumen" style="font-size:13px;color:var(--muted)"></span>
     </div>
-    <div class="plpaso"><span>2</span> Anota sus respuestas: prioridad (1 = primero), clases que quiere, tipo y días/hora</div>
+    <div class="plpaso"><span>2</span> Pega la respuesta de cada uno con «📋 Respuesta» (o márcala a mano) y pon la prioridad (1 = primero)</div>
     <div class="scroll" style="max-height:none"><table class="plt" id="plTabla"></table></div>
 
     <div class="plpaso"><span>3</span> Genera la propuesta (empieza el lunes a la hora indicada, por orden de prioridad)</div>
@@ -532,6 +539,19 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
   </div>
 </div>
 
+<div class="modal hidden" id="mPegar">
+  <div class="box" style="width:min(620px,100%)">
+    <h3 id="pgTit">📋 Pegar respuesta</h3>
+    <p style="margin:0 0 6px;font-size:13px;color:var(--muted)">En WhatsApp mantén pulsado el mensaje del alumno → <b>Copiar</b>, y pégalo aquí (mantén pulsado el recuadro → Pegar).</p>
+    <textarea id="pgTexto" placeholder="Ej.: lunes desde las 17, jueves a las 18:30, 2 clases"></textarea>
+    <div class="row" style="margin-top:6px"><button class="btn sec sm" id="pgPortapapeles">📋 Pegar del portapapeles</button></div>
+    <div class="pgvista" id="pgVista"></div>
+    <div class="row" style="justify-content:flex-end;margin-top:14px">
+      <button class="btn sec" id="pgCancelar">Cancelar</button><button class="btn" id="pgAplicar">Aplicar</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal hidden" id="mConfig">
   <div class="box" style="width:min(520px,100%)">
     <h3>⚙️ Datos de la autoescuela</h3>
@@ -584,8 +604,8 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
 "use strict";
 /* ================== DATOS ================== */
 const LS_KEY = "agendaAutoescuela_v1";
-const VERSION = "v9.4 NOV27";
-const HORAS = []; for (let h = 8; h < 20; h++) HORAS.push(String(h).padStart(2,"0")+":00");
+const VERSION = "v9.5 NOV27";
+const HORAS = []; for (let h = 8; h < 21; h++) HORAS.push(String(h).padStart(2,"0")+":00");
 const EXAMENES = {
   B:  [["teorico","Teórico"],["practico","Práctico"]],
   AM: [["comun","Teórico común"],["especifico","Teórico específico"],["circuito","Circuito cerrado"]],   // el AM no tiene examen de vía pública
@@ -1068,7 +1088,7 @@ $("btnCSV").onclick=()=>{
 
 /* ================== CLASES PRÁCTICAS ================== */
 /* Horas de inicio cada 15 minutos (08:00 … 19:45) para poder encadenar clases de 45 minutos */
-const FIN_DIA=20*60;
+const FIN_DIA=21*60;   // fin de la jornada: 21:00
 function minutos(h){ const [a,b]=String(h).split(":").map(Number); return a*60+(b||0); }
 function hhmm(m){ return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"); }
 for(let m=8*60;m<FIN_DIA;m+=15){ const o=document.createElement("option"); o.value=o.textContent=hhmm(m); $("cHora").appendChild(o); }
@@ -1156,7 +1176,7 @@ function validarClase(c,extra){
   const err=[], warn=[];
   if(c.fecha&&c.hora){
     if((c.estado==="realizada"||c.estado==="falta")&&c.fecha>hoy()) err.push("No se puede marcar como realizada o falta una clase que aún no ha llegado.");
-    if(minutos(c.hora)+durDe(c)>FIN_DIA) err.push(`La clase terminaría a las ${finClase(c)}; el horario acaba a las 20:00.`);
+    if(minutos(c.hora)+durDe(c)>FIN_DIA) err.push(`La clase terminaría a las ${finClase(c)}; el horario acaba a las ${hhmm(FIN_DIA)}.`);
     const al=alumno(c.alumnoId), ve=vehiculoPorEtiqueta(c.vehiculo), pr=db.profesores.find(p=>p.nombre===c.profesor);
     if(ve&&al&&ve.permiso!==al.permiso) err.push(`El vehículo ${c.vehiculo} es de permiso ${ve.permiso} y el alumno se examina del ${al.permiso}.`);
     if(ve&&ve.itv&&ve.itv<c.fecha) err.push(`El vehículo ${c.vehiculo} tiene la ITV caducada desde el ${fmt(ve.itv)}.`);
@@ -1397,7 +1417,14 @@ function proximoLunes(){ return addDias(lunesDe(hoy()),7); }
 function planDe(lun){ db.planes[lun]=db.planes[lun]||{preg:{},resp:{}}; return db.planes[lun]; }
 function alumnosMoto(){ return db.alumnos.filter(a=>esMoto(a.permiso)).sort((a,b)=>nombreCompleto(a).localeCompare(nombreCompleto(b),"es")); }
 function tipoPorDefecto(a){ return (a.resultados||{}).circuito==="apto"?"Vía pública":"Circuito cerrado"; }
-function respDe(P,a){ P.resp[a.id]=P.resp[a.id]||{inc:false,prio:"",n:1,tipo:tipoPorDefecto(a),doble:false,dias:{}}; return P.resp[a.id]; }
+function respDe(P,a){ P.resp[a.id]=P.resp[a.id]||{inc:false,prio:"",n:1,tipo:tipoPorDefecto(a),doble:false,dias:{}};
+  const r=P.resp[a.id]; r.modo=r.modo||{}; r.hasta=r.hasta||{}; return r; }
+const TXT_MODO={desde:"desde",exacta:"a las",entre:"entre"};
+function resumenResp(r){
+  const l=Object.keys(r.dias).sort().map(i=>{ const m=r.modo[i]||"desde"; return DIAS_LARGOS[i]+" "+(m==="exacta"?"a las "+r.dias[i]:m==="entre"?"de "+r.dias[i]+" a "+(r.hasta[i]||hhmm(FIN_DIA)):"desde "+r.dias[i]); });
+  return (l.join(" · ")||"sin días")+" · "+r.n+" clase(s)";
+}
+const DIAS_LARGOS=["Lunes","Martes","Miércoles","Jueves","Viernes"];
 let plProp=null, plCreadas=null;
 function pintarPlan(){
   if(!$("plSemana").value) $("plSemana").value=proximoLunes();
@@ -1409,17 +1436,23 @@ function pintarPlan(){
   const P=planDe(lun), L=alumnosMoto(), desde=$("plDesde").value||"15:30";
   const inc=L.filter(a=>respDe(P,a).inc), preg=inc.filter(a=>P.preg[a.id]).length;
   $("plResumen").textContent=L.length?`${inc.length} elegido(s) · ${preg} preguntado(s) · semana del ${fmt(lun)} al ${fmt(addDias(lun,4))}`:"";
-  $("plTabla").innerHTML=L.length?`<tr><th>Incluir</th><th>Alumno</th><th>Pregunta</th><th>Prioridad</th><th>Clases</th><th>Tipo</th><th>Doble</th><th>Días y desde qué hora</th></tr>`+
+  $("plTabla").innerHTML=L.length?`<tr><th>Incluir</th><th>Alumno</th><th>Pregunta</th><th>Prioridad</th><th>Clases</th><th>Tipo</th><th>Doble</th><th>Días y horas</th></tr>`+
     L.map(a=>{ const r=respDe(P,a);
       return `<tr data-al="${a.id}" style="${r.inc?"":"opacity:.55"}">
         <td><input type="checkbox" data-f="inc" ${r.inc?"checked":""} style="width:auto"></td>
         <td><a href="#" onclick="abrirFicha('${a.id}');return false">${esc(nombreCompleto(a))}</a> <span class="tag t-${a.permiso}">${a.permiso}</span>${a.nuevo?' <span title="Alumno nuevo: va solo">🆕</span>':""}</td>
-        <td>${P.preg[a.id]?`<span class="sent" title="${esc(P.preg[a.id])}">✔ preguntado</span>`:""} <button class="btn wa sm" onclick="plPreguntar('${a.id}')" ${a.tel?"":"disabled title=\"Sin teléfono\""}>📲</button></td>
+        <td>${P.preg[a.id]?`<span class="sent" title="${esc(P.preg[a.id])}">✔ preguntado</span>`:""} <button class="btn wa sm" onclick="plPreguntar('${a.id}')" ${a.tel?"":"disabled title=\"Sin teléfono\""}>📲</button>
+          <button class="btn sm" onclick="plPegar('${a.id}')" title="Pegar su respuesta de WhatsApp">📋 Respuesta</button>
+          ${r.texto?`<span class="plres ${r.dudosa?"dud":""}" title="${esc(r.texto)}">${r.dudosa?"⚠ Revisar: ":"✔ "}${esc(resumenResp(r))}</span>`:""}</td>
         <td><input type="number" min="1" step="1" data-f="prio" value="${r.prio}" placeholder="—"></td>
         <td><input type="number" min="0" max="10" step="1" data-f="n" value="${r.n}"></td>
         <td><select data-f="tipo"><option ${r.tipo==="Circuito cerrado"?"selected":""}>Circuito cerrado</option><option ${r.tipo==="Vía pública"?"selected":""}>Vía pública</option></select></td>
         <td><input type="checkbox" data-f="doble" ${r.doble?"checked":""} style="width:auto" title="Clase doble de 1 hora (30+30)"></td>
-        <td>${DIAS_PL.map((d,i)=>`<span class="pld"><label><input type="checkbox" data-d="${i}" ${r.dias[i]!=null?"checked":""}> ${d}</label><input type="time" step="900" data-h="${i}" value="${r.dias[i]||desde}" ${r.dias[i]==null?"disabled":""}></span>`).join("")}</td></tr>`; }).join("")
+        <td>${DIAS_PL.map((d,i)=>{ const on=r.dias[i]!=null, m=r.modo[i]||"desde";
+          return `<span class="pld"><label><input type="checkbox" data-d="${i}" ${on?"checked":""}> ${d}</label>
+            <select data-m="${i}" ${on?"":"disabled"}><option value="desde" ${m==="desde"?"selected":""}>desde</option><option value="exacta" ${m==="exacta"?"selected":""}>a las</option><option value="entre" ${m==="entre"?"selected":""}>entre</option></select>
+            <input type="time" step="900" data-h="${i}" value="${r.dias[i]||desde}" ${on?"":"disabled"}>
+            <input type="time" step="900" class="hh ${m==="entre"&&on?"":"hidden"}" data-hh="${i}" value="${r.hasta[i]||hhmm(FIN_DIA)}"></span>`; }).join("")}</td></tr>`; }).join("")
     :`<tr><td style="color:var(--muted);padding:16px">No hay alumnos de moto (AM, A1, A2).</td></tr>`;
 }
 $("plSemana").onchange=()=>{ plProp=null; $("plPropuesta").innerHTML=""; pintarPlan(); };
@@ -1432,9 +1465,12 @@ $("plTabla").addEventListener("change",e=>{
   else if(t.dataset.f==="n") r.n=Math.max(0,parseInt(t.value||"0",10));
   else if(t.dataset.f==="tipo") r.tipo=t.value;
   else if(t.dataset.f==="doble") r.doble=t.checked;
-  else if(t.dataset.d!=null){ const i=t.dataset.d, h=tr.querySelector(`input[data-h="${i}"]`);
-    if(t.checked){ r.dias[i]=h.value||$("plDesde").value||"15:30"; r.inc=true; tr.querySelector('input[data-f="inc"]').checked=true; } else delete r.dias[i];
-    h.disabled=!t.checked; }
+  else if(t.dataset.d!=null){ const i=t.dataset.d, h=tr.querySelector(`input[data-h="${i}"]`), sm=tr.querySelector(`select[data-m="${i}"]`), hh=tr.querySelector(`input[data-hh="${i}"]`);
+    if(t.checked){ r.dias[i]=h.value||$("plDesde").value||"15:30"; r.inc=true; tr.querySelector('input[data-f="inc"]').checked=true; } else { delete r.dias[i]; delete r.modo[i]; delete r.hasta[i]; }
+    h.disabled=sm.disabled=!t.checked; hh.classList.toggle("hidden",!(t.checked&&sm.value==="entre")); }
+  else if(t.dataset.m!=null){ const i=t.dataset.m; r.modo[i]=t.value; const hh=tr.querySelector(`input[data-hh="${i}"]`);
+    hh.classList.toggle("hidden",t.value!=="entre"); if(t.value==="entre") r.hasta[i]=hh.value||hhmm(FIN_DIA); else delete r.hasta[i]; }
+  else if(t.dataset.hh!=null){ r.hasta[t.dataset.hh]=t.value||hhmm(FIN_DIA); }
   else if(t.dataset.h!=null){ if(r.dias[t.dataset.h]!=null) r.dias[t.dataset.h]=t.value||"15:30"; }
   tr.style.opacity=r.inc?"":".55";      // sin redibujar la tabla mientras se escribe
   persistir(); pintarResumenPlan();
@@ -1447,8 +1483,9 @@ $("plTodos").onclick=()=>{ const P=planDe(lunesDe($("plSemana").value)); alumnos
 $("plNinguno").onclick=()=>{ const P=planDe(lunesDe($("plSemana").value)); alumnosMoto().forEach(a=>respDe(P,a).inc=false); persistir(); pintarPlan(); };
 function txtPregunta(a,lun){
   return `Hola ${a.nombre} 👋\nEstamos organizando las clases de moto de la semana del lunes ${fmt(lun)} al viernes ${fmt(addDias(lun,4))}.\n\n`
-    +`📅 ¿Qué días puedes venir y a partir de qué hora? Las clases son por la tarde, desde las ${$("plDesde").value||"15:30"}.\n`
-    +`🏍️ ¿Cuántas clases quieres hacer esa semana?\n\nContéstanos por aquí, por favor. ¡Gracias!`+firma();
+    +`📅 ¿Qué días puedes venir y a qué hora? Las clases son por la tarde, de ${$("plDesde").value||"15:30"} a ${hhmm(FIN_DIA)}.\n`
+    +`🏍️ ¿Cuántas clases quieres hacer esa semana?\n\n`
+    +`✍️ Contesta así, por favor:\n«lunes desde las 17, jueves a las 18:30, 2 clases»\n\n¡Gracias!`+firma();
 }
 window.plPreguntar=id=>{
   const lun=lunesDe($("plSemana").value), P=planDe(lun), a=alumno(id), n=telWa(a&&a.tel);
@@ -1461,29 +1498,141 @@ $("plPreguntar").onclick=()=>{
   const P=planDe(lunesDe($("plSemana").value)), sig=alumnosMoto().find(a=>respDe(P,a).inc&&!P.preg[a.id]&&a.tel);
   if(sig) plPreguntar(sig.id); else alert("No queda ningún alumno elegido sin preguntar.");
 };
+/* ---------- Lector de respuestas de WhatsApp (sin Internet, por reglas) ----------
+   Entiende días («lunes», «de lunes a jueves», «toda la semana», «menos el viernes», «el martes no»),
+   horas («desde las 17», «a partir de las 5», «a las 18:30», «a las 6 y media», «de 16 a 18», «hasta las 19», «por la tarde»)
+   y número de clases («2 clases», «dos clases»). Las horas de 1 a 11 se entienden de la tarde (5 → 17:00). */
+const PG_NUM={un:1,una:1,uno:1,dos:2,tres:3,cuatro:4,cinco:5,seis:6,siete:7,ocho:8,nueve:9,diez:10,once:11,doce:12};
+const PG_DIA={lunes:0,lun:0,martes:1,mar:1,miercoles:2,mier:2,mie:2,jueves:3,jue:3,viernes:4,vie:4};
+function pgHora(h,m,frac){
+  h=isNaN(+h)?PG_NUM[h]:+h; if(h==null) return null; m=+(m||0);
+  if(frac==="media") m=30; else if(frac==="cuarto") m=15;
+  if(h>=1&&h<=11) h+=12;
+  const t=h*60+m; return t>=8*60&&t<=24*60?t:null;
+}
+function interpretarRespuesta(texto,desdeDef){
+  // días escritos con su letra en mayúscula: «L X V» → lunes miércoles viernes
+  texto=String(texto||"").replace(/(^|[\s,;\/(])([LMXJV])(?=$|[\s,;\/.)\-])/g,(x,a,l)=>a+{L:"lunes",M:"martes",X:"miercoles",J:"jueves",V:"viernes"}[l]+" ");
+  const t=" "+String(texto||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[!¡?¿"«»()*_~]/g," ").replace(/\s+/g," ")+" ";
+  const H="(\\d{1,2}|una|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez|once|doce)(?:[:.h](\\d{2}))?(?:\\s*(?:h|hrs?|horas))?(?:\\s*y\\s*(media|cuarto))?";
+  const D="(lunes|martes|miercoles|mier|mie|jueves|jue|viernes|vie|lun|mar)";
+  const re=new RegExp([
+    `(?:entre|de)\\s+(?:las\\s+)?${H}\\s+(?:y|a|hasta)\\s+(?:las\\s+)?${H}`,                          // 1-6 entre
+    `(?:a\\s+partir\\s+de|desde|despues\\s+de|mas\\s+tarde\\s+de|a\\s+partir)\\s+(?:las\\s+)?${H}`,      // 7-9 desde
+    `(?:hasta|antes\\s+de)\\s+(?:las\\s+)?${H}`,                                                    // 10-12 hasta
+    `a\\s+las\\s+${H}`,                                                                         // 13-15 exacta
+    `\\b(\\d{1,2})(?:[:.](\\d{2})|\\s?h)\\b`,                                                     // 16-17 exacta 18:30 / 17h
+    `(por\\s+la\\s+tarde|toda\\s+la\\s+tarde|cualquier\\s+hora|a\\s+cualquier\\s+hora|cuando\\s+sea|me\\s+da\\s+igual)`, // 18 tarde
+    `(toda\\s+la\\s+semana|todos\\s+los\\s+dias|cualquier\\s+dia|entre\\s+semana|todos\\s+menos|todos|el\\s+resto|los\\s+demas(?:\\s+dias)?|los\\s+otros\\s+dias|resto\\s+de\\s+(?:la\\s+semana|dias))`,     // 19 todos / el resto
+    `(?:de|del)?\\s*\\b${D}\\s+(?:a|al|hasta(?:\\s+el)?)\\s+${D}\\b`,                                  // 20-21 rango de días
+    `(menos|excepto|salvo|quitando|no\\s+puedo(?:\\s+ir)?|imposible)`,                                // 22 exclusión
+    `\\b${D}\\s+no\\b`,                                                                       // 23 día excluido
+    `\\b${D}\\b`,                                                                              // 24 día
+    `\\b(\\d+|un|una|dos|tres|cuatro|cinco|seis)\\s+(?:clases?|practicas?|horas?\\s+de\\s+clase)\\b`,   // 25 nº clases
+    `([,;.]|\\by\\b|\\bo\\b|\\bel\\b|\\blos\\b|\\bni\\b)`,                                             // 26 separadores (no cortan la exclusión)
+    `\\b(1[3-9]|20)\\b`                                                                        // 27 hora suelta: «lunes 17» → a las 17:00
+  ].join("|"),"g");
+  const dias={}, modo={}, hasta={}, dudas=[], excl=new Set(); let grupo=[], suelto=null, excluyendo=false, n=null, m, todos=false;
+  let ultimo=null;   // último grupo de días con su hora, para «a las 5 o a las 6»
+  const asigna=(g,tm)=>g.forEach(i=>{ dias[i]=hhmm(tm.d); modo[i]=tm.m; if(tm.h) hasta[i]=hhmm(tm.h); else delete hasta[i]; });
+  const tiempo=tm=>{
+    if(grupo.length){ asigna(grupo,tm); ultimo={g:grupo.slice(),tm}; grupo=[]; }
+    else if(ultimo&&ultimo.tm.m==="exacta"&&tm.m==="exacta"&&tm.d!==ultimo.tm.d){       // dos horas seguidas para los mismos días → franja
+      const a=Math.min(ultimo.tm.d,tm.d), b=Math.max(ultimo.tm.d,tm.d)+30; ultimo.tm={d:a,m:"entre",h:b}; asigna(ultimo.g,ultimo.tm); }
+    else suelto=tm;
+    excluyendo=false; };
+  const fuera=v=>{ if(v==null){ dudas.push("Hay una hora que no encaja en el horario de tarde."); return true; } return false; };
+  while((m=re.exec(t))){
+    if(m[1]!=null){ const a=pgHora(m[1],m[2],m[3]), b=pgHora(m[4],m[5],m[6]); if(!fuera(a)&&!fuera(b)) tiempo({d:a,m:"entre",h:b}); }
+    else if(m[7]!=null){ const a=pgHora(m[7],m[8],m[9]); if(!fuera(a)) tiempo({d:a,m:"desde"}); }
+    else if(m[10]!=null){ const b=pgHora(m[10],m[11],m[12]); if(!fuera(b)) tiempo({d:minutos(desdeDef),m:"entre",h:b}); }
+    else if(m[13]!=null){ const a=pgHora(m[13],m[14],m[15]); if(!fuera(a)) tiempo({d:a,m:"exacta"}); }
+    else if(m[16]!=null){ const a=pgHora(m[16],m[17]); if(!fuera(a)) tiempo({d:a,m:"exacta"}); }
+    else if(m[18]!=null){ tiempo({d:minutos(desdeDef),m:"desde"}); }
+    else if(m[19]!=null){ todos=true; grupo.push(0,1,2,3,4); excluyendo=/menos/.test(m[19]); }
+    else if(m[20]!=null){ const a=PG_DIA[m[20]], b=PG_DIA[m[21]]; for(let i=Math.min(a,b);i<=Math.max(a,b);i++) (excluyendo?excl.add(i):grupo.push(i)); }
+    else if(m[22]!=null){ excluyendo=true; }
+    else if(m[23]!=null){ excl.add(PG_DIA[m[23]]); }
+    else if(m[24]!=null){ const i=PG_DIA[m[24]]; if(excluyendo) excl.add(i); else grupo.push(i); }
+    else if(m[25]!=null){ n=isNaN(+m[25])?PG_NUM[m[25]]:+m[25]; }
+    else if(m[27]!=null){ const a=pgHora(m[27]); if(!fuera(a)) tiempo({d:a,m:"exacta"}); }
+    // m[26]: separador, no hace nada
+  }
+  if(grupo.length) asigna(grupo,suelto||{d:minutos(desdeDef),m:"desde"});
+  else if(suelto&&!Object.keys(dias).length){ dudas.push("Indica una hora pero no qué días."); }
+  excl.forEach(i=>{ delete dias[i]; delete modo[i]; delete hasta[i]; });
+  // las horas «desde» anteriores al inicio de la tarde se suben al inicio
+  Object.keys(dias).forEach(i=>{ if(minutos(dias[i])<minutos(desdeDef)&&modo[i]!=="exacta"){ dias[i]=desdeDef; } });
+  if(!Object.keys(dias).length) dudas.push("No he encontrado ningún día disponible.");
+  if(/\b(igual|quizas?|a lo mejor|puede que|depende|no se|ya te (digo|confirmo)|si no|sino|mejor|aunque|tal vez)\b/.test(t)) dudas.push("La respuesta tiene condiciones o dudas: revísala.");
+  return {dias,modo,hasta,n,dudas};
+}
+let pgAlumno=null;
+function vistaPegar(){
+  const res=interpretarRespuesta($("pgTexto").value,$("plDesde").value||"15:30");
+  const ks=Object.keys(res.dias).sort();
+  $("pgVista").innerHTML=!$("pgTexto").value.trim()?'<span style="color:var(--muted)">Aquí verás lo que entiende la app.</span>'
+    :`<b>Lo que entiendo:</b><ul>${ks.map(i=>`<li>${DIAS_LARGOS[i]} ${res.modo[i]==="exacta"?"a las <b>"+res.dias[i]+"</b>":res.modo[i]==="entre"?"de <b>"+res.dias[i]+"</b> a <b>"+(res.hasta[i]||hhmm(FIN_DIA))+"</b>":"desde las <b>"+res.dias[i]+"</b>"}</li>`).join("")||"<li>—</li>"}</ul>
+      <div style="margin-top:6px">Clases: <b>${res.n!=null?res.n:"(no lo dice: se deja "+(respDe(planDe(lunesDe($("plSemana").value)),alumno(pgAlumno)).n)+")"}</b></div>
+      ${res.dudas.length?`<div class="msgs"><div class="m-warn">⚠️ ${res.dudas.map(esc).join("<br>⚠️ ")}</div></div>`:'<div class="msgs"><div class="m-ok">✔ Respuesta clara.</div></div>'}
+      <div style="font-size:12px;color:var(--muted);margin-top:6px">Al aplicar podrás corregir cualquier día u hora en su fila.</div>`;
+  return res;
+}
+window.plPegar=id=>{
+  pgAlumno=id; const a=alumno(id), r=respDe(planDe(lunesDe($("plSemana").value)),a);
+  $("pgTit").textContent="📋 Respuesta de "+nombreCompleto(a); $("pgTexto").value=r.texto||""; vistaPegar();
+  $("mPegar").classList.remove("hidden"); setTimeout(()=>$("pgTexto").focus(),50);
+};
+$("pgTexto").addEventListener("input",vistaPegar);
+$("pgPortapapeles").onclick=async()=>{ try{ const x=await navigator.clipboard.readText(); if(x){ $("pgTexto").value=x; vistaPegar(); } }
+  catch(e){ alert("El navegador no deja leer el portapapeles. Mantén pulsado el recuadro y elige «Pegar»."); } };
+$("pgCancelar").onclick=()=>$("mPegar").classList.add("hidden");
+$("pgAplicar").onclick=()=>{
+  const res=vistaPegar(), r=respDe(planDe(lunesDe($("plSemana").value)),alumno(pgAlumno));
+  r.texto=$("pgTexto").value.trim(); r.dias=res.dias; r.modo=res.modo; r.hasta=res.hasta; if(res.n!=null) r.n=res.n;
+  r.dudosa=res.dudas.length>0; r.inc=true;
+  persistir(); $("mPegar").classList.add("hidden"); pintarPlan(); toast(r.dudosa?"Aplicado. Revisa la fila marcada.":"Respuesta aplicada.");
+};
+
 /* Reparto: por rondas y por prioridad; cada alumno, el hueco más temprano que encaje con su disponibilidad.
    Las reglas de solapes, clases compartidas (máx. 3), vía pública individual y alumno nuevo son las mismas de siempre (validarClase). */
+/* Huecos posibles de un alumno en un día según lo que ha dicho (desde / a las / entre) */
+function huecosDia(r,d,desde,dur){
+  const m=r.modo[d]||"desde", ini=minutos(r.dias[d]);
+  if(m==="exacta") return ini+dur<=FIN_DIA?[ini]:[];
+  const fin=m==="entre"?minutos(r.hasta[d]||hhmm(FIN_DIA)):FIN_DIA, l=[];
+  for(let t=Math.max(desde,ini);t+dur<=Math.min(fin,FIN_DIA);t+=30) l.push(t);
+  return l;
+}
+/* Una sola opción: un único día y a una hora concreta */
+function opcionUnica(r){ const ks=Object.keys(r.dias); return ks.length===1&&(r.modo[ks[0]]==="exacta"); }
 $("plGenerar").onclick=()=>{
   const lun=lunesDe($("plSemana").value), P=planDe(lun), prof=$("plProf").value, desde=minutos($("plDesde").value||"15:30");
   if(!prof){ alert("Elige el profesor."); return; }
-  const lista=alumnosMoto().map(a=>({a,r:respDe(P,a)})).filter(x=>x.r.inc&&x.r.n>0&&Object.keys(x.r.dias).length)
-    .sort((x,y)=>(Number(x.r.prio)||999)-(Number(y.r.prio)||999)||nombreCompleto(x.a).localeCompare(nombreCompleto(y.a),"es"));
+  const porPrio=(x,y)=>(Number(x.r.prio)||999)-(Number(y.r.prio)||999)||nombreCompleto(x.a).localeCompare(nombreCompleto(y.a),"es");
+  const lista=alumnosMoto().map(a=>({a,r:respDe(P,a)})).filter(x=>x.r.inc&&x.r.n>0&&Object.keys(x.r.dias).length).sort(porPrio);
   if(!lista.length){ alert("No hay alumnos con respuesta anotada (incluidos, con clases y algún día marcado)."); return; }
-  const nuevas=[], citadas={}, maxN=Math.max(...lista.map(x=>x.r.n));
-  for(let ronda=0;ronda<maxN;ronda++) for(const {a,r} of lista){
-    if(r.n<=ronda) continue;
-    const dur=r.doble?60:30; let hecho=false;
-    for(let d=0;d<5&&!hecho;d++){
+  const nuevas=[], citadas={};
+  const colocar=({a,r})=>{
+    const dur=r.doble?60:30;
+    for(let d=0;d<5;d++){
       if(r.dias[d]==null) continue;
       const f=addDias(lun,d);
       if(nuevas.some(c=>c.alumnoId===a.id&&c.fecha===f)) continue;                                   // una clase al día por alumno
-      for(let m=Math.max(desde,minutos(r.dias[d]));m+dur<=FIN_DIA;m+=30){
-        const c={id:uid(),alumnoId:a.id,fecha:f,hora:hhmm(m),durMin:dur,tipo:r.tipo,profesor:prof,vehiculo:a.vehiculo||"",obs:"",estado:""};
-        if(!validarClase(c,nuevas).err.length){ nuevas.push(c); citadas[a.id]=(citadas[a.id]||0)+1; hecho=true; break; }
+      for(const t of huecosDia(r,d,desde,dur)){
+        const c={id:uid(),alumnoId:a.id,fecha:f,hora:hhmm(t),durMin:dur,tipo:r.tipo,profesor:prof,vehiculo:a.vehiculo||"",obs:"",estado:""};
+        if(!validarClase(c,nuevas).err.length){ nuevas.push(c); citadas[a.id]=(citadas[a.id]||0)+1; return true; }
       }
     }
-  }
-  plProp={lun,prof,nuevas,faltan:lista.filter(x=>(citadas[x.a.id]||0)<x.r.n).map(x=>({a:x.a,pide:x.r.n,citadas:citadas[x.a.id]||0}))};
+    return false;
+  };
+  // 1º) los que solo pueden en un día y hora concretos; 2º) el resto por rondas y prioridad (del lunes 15:30 al viernes 21:00)
+  const unicos=lista.filter(x=>opcionUnica(x.r)), resto=lista.filter(x=>!opcionUnica(x.r));
+  unicos.forEach(x=>colocar(x));
+  const maxN=Math.max(0,...resto.map(x=>x.r.n));
+  for(let ronda=0;ronda<maxN;ronda++) for(const x of resto){ if(x.r.n>ronda) colocar(x); }
+  plProp={lun,prof,nuevas,unicos:unicos.map(x=>x.a.id),
+    faltan:lista.filter(x=>(citadas[x.a.id]||0)<Math.min(x.r.n,opcionUnica(x.r)?1:x.r.n)).map(x=>({a:x.a,pide:opcionUnica(x.r)?1:x.r.n,citadas:citadas[x.a.id]||0,unica:opcionUnica(x.r)}))};
   plCreadas=null; pintarPropuesta();
 };
 function filasPorHueco(cl){
@@ -1498,9 +1647,9 @@ function pintarPropuesta(){
     <table class="plgrupo"><tr><th>Día</th><th>Hora</th><th>Clase</th><th>Alumnos</th></tr>`+
     (grupos.map(gr=>{ const c=gr[0]; return `<tr><td>${diaSem(c.fecha)} ${fmt(c.fecha)}</td><td>${c.hora}–${finClase(c)}</td>
       <td>${esc(TXT_TIPO_CLASE[c.tipo]||c.tipo)}${gr.length>1?` <b>👥 ${gr.length}</b>`:""}</td>
-      <td>${gr.map(x=>{ const a=alumno(x.alumnoId); return `${esc(nombreCompleto(a))} <span class="tag t-${a.permiso}">${a.permiso}</span>${a.nuevo?" 🆕":""}`; }).join("<br>")}</td></tr>`; }).join("")
+      <td>${gr.map(x=>{ const a=alumno(x.alumnoId); return `${esc(nombreCompleto(a))} <span class="tag t-${a.permiso}">${a.permiso}</span>${a.nuevo?" 🆕":""}${(plProp.unicos||[]).includes(a.id)?' <span title="Solo podía este día y hora">📌</span>':""}`; }).join("<br>")}</td></tr>`; }).join("")
       ||`<tr><td colspan="4" style="color:var(--muted)">No se ha podido citar a nadie con esa disponibilidad.</td></tr>`)+`</table>`
-    +(faltan.length?`<div class="msgs"><div class="m-warn">⚠️ Sin hueco suficiente: ${faltan.map(x=>`<b>${esc(nombreCompleto(x.a))}</b> (pidió ${x.pide}, citadas ${x.citadas})`).join(" · ")}. Revisa su disponibilidad o prográmalas a mano.</div></div>`:"")
+    +(faltan.length?`<div class="msgs"><div class="m-warn">⚠️ Sin hueco suficiente: ${faltan.map(x=>`<b>${esc(nombreCompleto(x.a))}</b> (${x.unica?"solo podía a una hora concreta y ya está ocupada":"pidió "+x.pide+", citadas "+x.citadas})`).join(" · ")}. Revisa su disponibilidad o prográmalas a mano.</div></div>`:"")
     +(plCreadas?`<div class="plpaso"><span>4</span> Avisa a cada alumno de sus clases</div>
         <table><tr><th>Alumno</th><th>Clases</th><th>Aviso</th><th></th></tr>${Object.keys(plCreadas).map(id=>{ const a=alumno(id), cl=plCreadas[id];
           const env=cl.every(c=>db.avisos[keyClase(c)]);
