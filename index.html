@@ -260,6 +260,7 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
       <div class="row">
         <button class="btn sec" id="btnNuevo">➕ Nuevo</button>
         <span id="bienvOk" class="sent hidden"></span>
+        <button class="btn wa hidden" id="btnPracticas" title="Lugar, equipación y normas de las prácticas (solo se envía una vez)">🏍️ Enviar info prácticas</button>
         <button class="btn wa hidden" id="btnBienvenida" title="Mensaje de bienvenida al alumno (solo se envía una vez)">👋 Enviar bienvenida</button>
         <button class="btn sec" id="btnImprimir">🖨️ Imprimir ficha</button>
         <button class="btn" id="btnGuardarAlumno">Guardar alumno</button>
@@ -286,7 +287,7 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
           <div class="c2"><label>Profesor asignado</label><select name="profesor"></select></div>
           <div class="c2"><label>Vehículo habitual</label><select name="vehiculo"></select></div>
           <div class="c4"><label>Observaciones</label><textarea name="obs"></textarea></div>
-          <div class="c4 boxchk"><label class="chk"><input type="checkbox" name="nuevo"> 🆕 <b>Alumno nuevo</b>: sus clases de moto serán siempre individuales (no comparte clase de maniobras)</label></div>
+          <div class="c4 boxchk"><label class="chk"><input type="checkbox" name="nuevo"> 🆕 <b>Alumno nuevo</b>: sus clases de moto serán siempre individuales (no comparte clase de destreza)</label></div>
         </div>
         <div>
           <div class="foto" id="fotoBox" title="Pulsa para añadir la fotografía">
@@ -318,12 +319,12 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
           <div class="exgroup"><h4>Teórico</h4><label>Específico · fecha y hora</label><div class="exfh"><input type="date" name="ex_especifico"><input type="time" name="hora_especifico" step="300" title="Hora de la cita del examen"></div>
             <select name="res_especifico" class="exres"><option value="">Resultado: pendiente</option><option value="apto">✔ Apto</option><option value="noapto">✖ No apto</option><option value="nopres">No presentado</option></select>
             <div class="exhist" id="hist_especifico"></div></div>
-          <div class="exgroup"><h4>Práctico</h4><label>Circuito cerrado · fecha y hora</label><div class="exfh"><input type="date" name="ex_circuito"><input type="time" name="hora_circuito" step="300" title="Hora de la cita del examen"></div>
+          <div class="exgroup"><h4>Práctico</h4><label>Destreza (maniobras) · fecha y hora</label><div class="exfh"><input type="date" name="ex_circuito"><input type="time" name="hora_circuito" step="300" title="Hora de la cita del examen"></div>
             <select name="res_circuito" class="exres"><option value="">Resultado: pendiente</option><option value="apto">✔ Apto</option><option value="noapto">✖ No apto</option><option value="nopres">No presentado</option></select>
-            <div class="exhist" id="hist_circuito"></div></div>
-          <div class="exgroup"><h4>Práctico</h4><label>Vía pública · fecha y hora</label><div class="exfh"><input type="date" name="ex_via"><input type="time" name="hora_via" step="300" title="Hora de la cita del examen"></div>
+            <div class="exhist" id="hist_circuito"></div><div class="row" id="msg_circuito" style="margin-top:6px;gap:4px"></div></div>
+          <div class="exgroup"><h4>Práctico</h4><label>Circulación · fecha y hora</label><div class="exfh"><input type="date" name="ex_via"><input type="time" name="hora_via" step="300" title="Hora de la cita del examen"></div>
             <select name="res_via" class="exres"><option value="">Resultado: pendiente</option><option value="apto">✔ Apto</option><option value="noapto">✖ No apto</option><option value="nopres">No presentado</option></select>
-            <div class="exhist" id="hist_via"></div></div>
+            <div class="exhist" id="hist_via"></div><div class="row" id="msg_via" style="margin-top:6px;gap:4px"></div></div>
         </div>
         <div class="msgs" id="exMsgs"></div>
       </fieldset>
@@ -382,7 +383,7 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
       <span style="--c:var(--a1)">A1</span>
       <span style="--c:var(--a2)">A2</span>
       <span style="--c:#f0c36d">📝 Examen (arriba, en el día; pulsa para abrir la ficha)</span>
-      <span>✔ realizada · ✖ falta · <s>anulada</s> · ❔ pasada sin marcar asistencia · 👥 clase de maniobras compartida</span>
+      <span>✔ realizada · ✖ falta · <s>anulada</s> · ❔ pasada sin marcar asistencia · 👥 clase de destreza compartida</span>
       <span>Pulsa una casilla vacía para programar una clase; pulsa una clase para editarla.</span>
     </div>
   </div>
@@ -400,8 +401,8 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
         <select id="exTipo" style="width:170px">
           <option value="">Todos los tipos</option>
           <option value="teorico">B · Teórico</option><option value="practico">B · Práctico</option>
-          <option value="comun">A · Teórico común</option><option value="especifico">A · Teórico específico</option>
-          <option value="circuito">A · Circuito cerrado</option><option value="via">A · Vía pública</option>
+          <option value="comun">Moto · Teórico común</option><option value="especifico">Moto · Teórico específico</option>
+          <option value="circuito">Moto · Destreza</option><option value="via">Moto · Circulación</option>
         </select>
       </div>
     </div>
@@ -457,7 +458,7 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
         <span style="font-size:13px">desde</span><input type="time" id="plDesde" value="15:30" step="900" style="width:110px">
       </div>
     </div>
-    <p style="color:var(--muted);font-size:13px;margin:0">De lunes a viernes, hasta las 21:00. <b>Moto:</b> clases de 30 min (doble 1 h); las de circuito cerrado / maniobras se comparten hasta 3 alumnos; vía pública y alumnos 🆕 nuevos van solos. <b>Coche:</b> clases de 45 min (doble 1 h 30), siempre individuales. 📌 = solo podía ese día y hora (se coloca primero).</p>
+    <p style="color:var(--muted);font-size:13px;margin:0">De lunes a viernes, hasta las 21:00. <b>Moto:</b> clases de 30 min (doble 1 h); las de <b>destreza</b> (maniobras) se comparten hasta 3 alumnos; <b>circulación</b> y alumnos 🆕 nuevos van solos. <b>Coche:</b> clases de 45 min (doble 1 h 30), siempre individuales. 📌 = solo podía ese día y hora (se coloca primero).</p>
 
     <div class="plpaso"><span>1</span> Elige los alumnos y pregúntales su disponibilidad (los miércoles)</div>
     <div class="row" style="margin-bottom:6px">
@@ -508,7 +509,7 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
         <select id="cDur"><option value="45">45 minutos</option><option value="60">1 hora</option><option value="90">1 h 30 min (2 × 45 min)</option>
           <option value="120">2 horas</option><option value="180">3 horas</option></select></div>
       <div><label>Tipo de clase</label>
-        <select id="cTipo"><option>Vía pública</option><option>Circuito cerrado</option><option>Maniobras</option><option>Simulacro examen</option></select></div>
+        <select id="cTipo"><option>Circulación</option><option>Destreza</option><option>Simulacro examen</option></select></div>
       <div><label>Profesor</label><select id="cProf"></select></div>
       <div><label>Vehículo</label><select id="cVeh"></select></div>
       <div><label>Asistencia</label>
@@ -576,6 +577,9 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
     <div class="g2">
       <div style="grid-column:span 2"><label>Nombre (firma de los WhatsApp)</label><input id="cfNombre"></div>
       <div style="grid-column:span 2"><label>Teléfono de contacto (opcional)</label><input id="cfTel" type="tel"></div>
+      <div style="grid-column:span 2"><label>Lugar de prácticas de moto</label><input id="cfLugar" placeholder="Ej.: Ciudad Santander"></div>
+      <div style="grid-column:span 2"><label>Ubicación (enlace de Google Maps)</label><input id="cfUbi" placeholder="https://maps.app.goo.gl/…"></div>
+      <div style="grid-column:span 2"><button type="button" class="btn sec" id="cfTextos">✉️ Editar textos de los mensajes</button></div>
     </div>
     <div style="margin-top:14px">
       <label>Faltas del alumno (no avisadas)</label>
@@ -593,6 +597,22 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
   </div>
 </div>
 
+<div class="modal hidden" id="mTxt">
+  <div class="box" style="width:min(460px,100%)">
+    <h3 id="mTxtTit"></h3><input id="mTxtIn">
+    <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn sec" id="mTxtNo">Cancelar</button><button class="btn wa" id="mTxtSi">📲 Enviar WhatsApp</button></div>
+  </div>
+</div>
+
+<div class="modal hidden" id="mTextos">
+  <div class="box" style="width:min(760px,100%)">
+    <h3>✉️ Textos de los mensajes</h3>
+    <p style="margin:0 0 8px;font-size:13px;color:var(--muted)">Puedes cambiarlos a tu gusto. Marcas que se sustituyen solas: <b>{alumno}</b> nombre · <b>{profesor}</b> su profesor · <b>{tipo}</b> moto/coche · <b>{autoescuela}</b> · <b>{lugar}</b> y <b>{ubicacion}</b> (de ⚙️) · <b>{dias}</b> días previstos · <b>{fecha}</b> fecha del examen.</p>
+    <div id="txLista"></div>
+    <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn sec" id="txCerrar">Cancelar</button><button class="btn" id="txGuardar">Guardar textos</button></div>
+  </div>
+</div>
+
 <div class="modal hidden" id="mPend">
   <div class="box" style="width:min(460px,100%)">
     <h3>⚠️ Cambios sin guardar</h3>
@@ -607,7 +627,7 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
 </div>
 <div class="modal hidden" id="mExWa">
   <div class="box" style="width:min(460px,100%)">
-    <h3>📲 Avisar del examen</h3>
+    <h3 id="mExWaTit">📲 Avisar del examen</h3>
     <p id="mExWaTxt" style="margin:0 0 6px"></p>
     <p style="margin:0;color:var(--muted);font-size:13px">Se guardará la ficha y se abrirá WhatsApp con el mensaje ya escrito.</p>
     <div class="row" style="justify-content:flex-end;margin-top:16px">
@@ -628,15 +648,15 @@ window.alert=function(msg){
 };
 /* ================== DATOS ================== */
 const LS_KEY = "agendaAutoescuela_v1";
-const VERSION = "v9.8 NOV27";
+const VERSION = "v10 NOV27";
 const HORAS = []; for (let m = 8*60; m < 21*60; m += 30) HORAS.push(String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"));   // filas de 30 min: 08:00 … 20:30 (la última termina a las 21:00)
 const EXAMENES = {
   B:  [["teorico","Teórico"],["practico","Práctico"]],
-  AM: [["comun","Teórico común"],["especifico","Teórico específico"],["circuito","Circuito cerrado"]],   // el AM no tiene examen de vía pública
-  A1: [["comun","Teórico común"],["especifico","Teórico específico"],["circuito","Circuito cerrado"],["via","Vía pública"]],
-  A2: [["comun","Teórico común"],["especifico","Teórico específico"],["circuito","Circuito cerrado"],["via","Vía pública"]]
+  AM: [["comun","Teórico común"],["especifico","Teórico específico"],["circuito","Destreza"]],   // el AM no tiene examen de vía pública
+  A1: [["comun","Teórico común"],["especifico","Teórico específico"],["circuito","Destreza"],["via","Circulación"]],
+  A2: [["comun","Teórico común"],["especifico","Teórico específico"],["circuito","Destreza"],["via","Circulación"]]
 };
-const NOMBRE_EX = {teorico:"Teórico",practico:"Práctico",comun:"Teórico común",especifico:"Teórico específico",circuito:"Circuito cerrado",via:"Vía pública"};
+const NOMBRE_EX = {teorico:"Teórico",practico:"Práctico",comun:"Teórico común",especifico:"Teórico específico",circuito:"Destreza",via:"Circulación"};
 const DIAS = ["Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
 
 let db = {alumnos:[], clases:[], version:1};
@@ -762,11 +782,73 @@ F.addEventListener("change",e=>{
     const k=nm.slice(3), a=actual&&alumno(actual), pr=a&&a.resultados&&a.resultados[k];
     // nueva fecha tras un No apto / No presentado: el intento anterior pasará al historial al guardar
     if(a&&(pr==="noapto"||pr==="nopres")&&a.examenes[k]&&e.target.value!==a.examenes[k]&&F["res_"+k].value===pr){ F["res_"+k].value=""; pintarSelRes(); }
+    // la DGT cita a todos a la misma hora: si ya hay alumnos citados a ese examen ese día, se copia su hora
+    if(e.target.value&&!F["hora_"+k].value){ const b=db.alumnos.find(b=>b.id!==actual&&b.examenes&&b.examenes[k]===e.target.value&&horaEx(b,k));
+      if(b){ F["hora_"+k].value=horaEx(b,k); toast("Hora puesta como la del resto de citados ese día: "+horaEx(b,k)); } }
     pintarHistorial(); const r=validarFicha();
-    if(F["hora_"+k].value) ofrecerWaExamen(k,e.target.value,r);   // sin hora todavía: se ofrecerá al ponerla
+    ofrecerWaExamen(k,e.target.value,r); pintarMsgsEx();
   }
 });
 const TXT_RES={apto:"Apto",noapto:"No apto",nopres:"No presentado"};
+/* ---------- Plantillas de mensajes (editables en ⚙️ Autoescuela → ✉️ Textos) ----------
+   Marcas: {alumno} {profesor} {tipo} {autoescuela} {lugar} {ubicacion} {dias} {fecha} */
+const PLANTILLAS_DEF={
+ bienvenida:`Buenas!
+Soy {profesor}, el profe de {tipo} de {autoescuela}, encantado {alumno}. Te escribo primero para presentarme y para organizar cuándo podemos empezar las clases.
+Por favor, necesito que me respondas con tu nombre completo, ya que por este medio te daré información de todo lo que corresponda, y tú me indicarás la disponibilidad que tienes para las clases, teniendo en cuenta que mi horario es de lunes a viernes de 15:30 a 20:00 aproximadamente. Cuanta más disponibilidad me des, más fácil será agendarlas.
+Semanalmente te iré escribiendo para ver tu disponibilidad.
+Una vez tenga tu información te iré indicando dónde hacemos las prácticas y alguna otra información. ¡Muchas gracias!`,
+ practicas:`Lugar de prácticas: {lugar} {ubicacion}
+Para las clases tienes que traer mínimo casco y guantes para ir empezando.
+
+De cara al examen, tienes que llevar obligatoriamente:
+• Casco homologado
+• Guantes con protección de nudillos
+• Chaqueta de cordura con protección en codos, hombros y espalda
+• Pantalón de cordura con protección en rodillas
+• Botas (que protejan bien el tobillo); las deportivas no están autorizadas.
+
+Recomiendo llevar también toda esta equipación a las clases. Tienes libertad, bajo tu responsabilidad, de no usar alguna prenda, excepto casco y guantes, que son obligatorios.
+
+Cada clase es de 30 minutos. En las primeras sesiones recomiendo que sean dobles (1 hora), ya que de esta forma alcanzarás más experiencia, y a medida que avances iremos viendo si pasamos a clases simples (30 minutos).
+
+Una vez agendadas las clases y confirmadas por ti, solo se podrán anular con 24 horas de antelación o justificadas por médico; de no ser así, tendrás que abonar el importe de la clase aunque no hayas asistido, tal y como se te ha informado en el contrato.`,
+ prev_circuito:`Buenas!
+El próximo examen de Destreza se prevé que nos tocará en los días {dias}, más o menos. Pero con Tráfico nunca se sabe.
+Cuando nos den la fecha definitiva, ahí aún podríamos decidir NO ir.
+¿Te pido hueco?`,
+ conf_circuito:`Buenas,
+Examen de Destreza confirmado el día {fecha}; la hora está aún pendiente de confirmar.
+¿Te apunto? Una vez confirmes ya no podrás echarte para atrás; solo será válida la anulación por estas causas:
+1. Enfermedad que necesite ingreso/reposo
+2. Enfermedad u hospitalización de familiar de primer o segundo grado, incluido fallecimiento
+3. Citación judicial
+4. Robo o pérdida del DNI, acreditada con denuncia
+5. Asistencia a urgencias hospitalarias que coincidan en fecha y hora con el examen`,
+ prev_via:`Buenas!
+El próximo examen de Circulación se prevé que nos tocará en los días {dias}, más o menos. Pero con Tráfico nunca se sabe.
+Cuando nos den la fecha definitiva, ahí aún podríamos decidir NO ir.
+¿Te pido hueco?`,
+ conf_via:`Buenas,
+Examen de Circulación confirmado el día {fecha}; la hora está aún pendiente de confirmar.
+¿Te apunto? Una vez confirmes ya no podrás echarte para atrás; solo será válida la anulación por estas causas:
+1. Enfermedad que necesite ingreso/reposo
+2. Enfermedad u hospitalización de familiar de primer o segundo grado, incluido fallecimiento
+3. Citación judicial
+4. Robo o pérdida del DNI, acreditada con denuncia
+5. Asistencia a urgencias hospitalarias que coincidan en fecha y hora con el examen`
+};
+const NOMBRE_PLANT={bienvenida:"👋 Bienvenida (una sola vez)",practicas:"🏍️ Inicio de prácticas de destreza (tras aprobar el teórico de moto)",
+  prev_circuito:"📅 Destreza · previsión «¿Te pido hueco?»",conf_circuito:"✅ Destreza · fecha confirmada (hora pendiente)",
+  prev_via:"📅 Circulación · previsión «¿Te pido hueco?»",conf_via:"✅ Circulación · fecha confirmada (hora pendiente)"};
+function plantilla(k){ return (db.config.plantillas&&db.config.plantillas[k])||PLANTILLAS_DEF[k]; }
+function rellenar(k,a,extra){
+  const c=db.config, v=Object.assign({alumno:a.nombre||"",profesor:(a.profesor||"").split(" ")[0]||"tu profesor",tipo:esMoto(a.permiso)?"moto":"coche",
+    autoescuela:c.nombre||"la autoescuela",lugar:c.lugar||"",ubicacion:c.ubicacion||""},extra||{});
+  return plantilla(k).replace(/\{(\w+)\}/g,(m,x)=>v[x]!=null?v[x]:m).replace(/[ \t]+\n/g,"\n");
+}
+function sello(){ const d=new Date(); return fmt(iso(d))+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); }
+function teoriaAprobada(a){ const r=a.resultados||{}; return esMoto(a.permiso)&&r.comun==="apto"&&r.especifico==="apto"; }
 function horaEx(a,k){ return (a&&a.horasEx&&a.horasEx[k])||""; }
 function leerHoras(){ const o={}; EXAMENES[F.permiso.value].forEach(([k])=>{ o[k]=F["hora_"+k].value||""; }); return o; }
 function rtag(r){ return r?`<span class="rt rt-${r}">${r==="apto"?"✔ ":r==="noapto"?"✖ ":""}${TXT_RES[r]}</span>`:""; }
@@ -784,18 +866,38 @@ function pintarHistorial(){
     $("hist_"+k).innerHTML=txt;
   });
 }
+/* Ventana genérica «¿Enviar WhatsApp?» */
+function preguntaWa(tit,html,onSi){
+  $("mExWaTit").textContent=tit; $("mExWaTxt").innerHTML=html; $("mExWa").classList.remove("hidden");
+  $("mExWaNo").onclick=()=>$("mExWa").classList.add("hidden");
+  $("mExWaSi").onclick=()=>{ $("mExWa").classList.add("hidden"); onSi(); };
+}
+/* Pide un texto corto en una ventana propia */
+function pedirTexto(tit,ph,val,onOk){
+  $("mTxtTit").textContent=tit; $("mTxtIn").placeholder=ph; $("mTxtIn").value=val||""; $("mTxt").classList.remove("hidden"); setTimeout(()=>$("mTxtIn").focus(),50);
+  $("mTxtNo").onclick=()=>$("mTxt").classList.add("hidden");
+  $("mTxtSi").onclick=()=>{ const v=$("mTxtIn").value.trim(); if(!v){ $("mTxtIn").focus(); return; } $("mTxt").classList.add("hidden"); onOk(v); };
+}
 /* Al fijar una fecha de examen correcta (hoy o futura), ofrece avisar al alumno por WhatsApp */
 let ultimoOfrecido="";
 function ofrecerWaExamen(k,f,r){
   if(!f||!/^\d{4}-\d{2}-\d{2}$/.test(f)||f<hoy()||r.err.length) return;
   const hh=F["hora_"+k].value;
-  if(!hh) return;                                                          // primero hay que poner la hora de la cita
+  if(!hh){                                                                 // moto destreza/circulación: la DGT da primero el día
+    if(!esMoto(F.permiso.value)||!["circuito","via"].includes(k)) return;
+    const a0=actual&&alumno(actual), cf=a0&&a0.msgs&&a0.msgs["conf_"+k];
+    if(cf&&cf.startsWith(f+"|")) return;
+    const clave0=(actual||"nuevo")+k+f; if(clave0===ultimoOfrecido) return; ultimoOfrecido=clave0;
+    preguntaWa("📲 Examen confirmado",`<b>${esc(TXT_EXAMEN[k])}</b> confirmado el <b>${esc(fechaLarga(f))}</b> (hora pendiente).<br>¿Enviar ahora el mensaje «¿Te apunto?» a ${esc(F.nombre.value.trim()||"el alumno")}?`,
+      ()=>{ if(!telWa(F.tel.value)){ alert("Escribe primero un teléfono móvil en la ficha."); return; } if(guardarAlumno()) msgConfirmado(k); });
+    return;
+  }
   const clave=(actual||"nuevo")+k+f+hh; if(clave===ultimoOfrecido) return;   // no repetir la pregunta para la misma fecha y hora
   const a=actual&&alumno(actual);
   if(a&&a.examenes&&a.examenes[k]===f&&horaEx(a,k)===hh&&db.avisos[keyEx(a,k)]) return;    // ya estaba guardada y avisada
   ultimoOfrecido=clave;
   const nom=F.nombre.value.trim()||"el alumno";
-  $("mExWaTxt").innerHTML=`<b>${esc(TXT_EXAMEN[k])}</b> el <b>${esc(fechaLarga(f))}</b> a las <b>${esc(hh)}</b>.<br>¿Quieres enviar ahora el aviso por WhatsApp a ${esc(nom)}?`;
+  $("mExWaTit").textContent="📲 Avisar del examen"; $("mExWaTxt").innerHTML=`<b>${esc(TXT_EXAMEN[k])}</b> el <b>${esc(fechaLarga(f))}</b> a las <b>${esc(hh)}</b>.<br>¿Quieres enviar ahora el aviso por WhatsApp a ${esc(nom)}?`;
   $("mExWa").classList.remove("hidden");
   $("mExWaNo").onclick=()=>$("mExWa").classList.add("hidden");
   $("mExWaSi").onclick=()=>{
@@ -815,7 +917,7 @@ function comprobarExamenes(permiso, ex, idAlumno, res, horas, prof){
   // 1. Ninguna fecha puede coincidir con otra del mismo alumno
   for(let i=0;i<lista.length;i++) for(let j=i+1;j<lista.length;j++)
     if(lista[i].f===lista[j].f) err.push(`«${lista[i].n}» y «${lista[j].n}» coinciden el ${fmt(lista[i].f)}. Deben ir en fechas distintas.`);
-  // 2. Orden lógico: teórico antes que práctico (A: común → específico → circuito → vía pública)
+  // 2. Orden lógico: teórico antes que práctico (moto: común → específico → destreza → circulación)
   const orden=EXAMENES[permiso];
   for(let i=0;i<orden.length;i++) for(let j=i+1;j<orden.length;j++){
     const a=ex[orden[i][0]], b=ex[orden[j][0]];
@@ -824,26 +926,13 @@ function comprobarExamenes(permiso, ex, idAlumno, res, horas, prof){
   // 3. Domingos: la DGT no examina en domingo
   lista.forEach(x=>{ if(parse(x.f).getDay()===0){ if(x.f>=hoy()) err.push(`«${x.n}» cae en domingo (${fmt(x.f)}). La DGT no hace exámenes en domingo.`);
     else warn.push(`«${x.n}» figura en domingo (${fmt(x.f)}): revisa la fecha.`); } });
-  // 3a. Motos de examen: ese día se lleva como máximo una moto de AM (circuito), una de A1 (circuito o vía) y una de A2 (circuito o vía).
-  //     Es decir, un solo alumno de cada permiso por día; y si van con el mismo profesor, a horas distintas.
-  if(esMoto(permiso)){
-    horas=horas||(alumno(idAlumno)||{}).horasEx||{}; prof=prof!=null?prof:(alumno(idAlumno)||{}).profesor||"";
-    EX_MOTO_PRACT.forEach(k=>{ const f=ex[k]; if(!f||f<hoy()||!EXAMENES[permiso].some(x=>x[0]===k)) return;
-      const otros=[]; db.alumnos.forEach(b=>{ if(b.id===idAlumno||!esMoto(b.permiso)) return;
-        EX_MOTO_PRACT.forEach(k2=>{ if(b.examenes&&b.examenes[k2]===f&&!(b.resultados&&b.resultados[k2])) otros.push({b,k2}); }); });
-      // Examen de circulación (vía pública): un solo profesor → un único examen de vía pública de moto por día (A1 o A2)
-      if(k==="via"){ const v=otros.find(o=>o.k2==="via"&&o.b.permiso!==permiso);
-        if(v) err.push(`El ${fmt(f)} ya tiene examen de vía pública ${nombreCompleto(v.b)} (${v.b.permiso}): solo puede haber un examen de circulación de moto por día. Los de circuito cerrado sí pueden coincidir.`); }
-      const mismo=otros.find(o=>o.b.permiso===permiso);
-      if(mismo) err.push(`El ${fmt(f)} ya va ${nombreCompleto(mismo.b)} al ${TXT_EXAMEN[mismo.k2].toLowerCase()} con la moto de ${permiso}: solo puede ir un alumno de ${permiso} por día.`);
-      const h=horas[k];
-      otros.filter(o=>o.b.permiso!==permiso).forEach(o=>{ const h2=horaEx(o.b,o.k2), p2=o.b.profesor||"";
-        if(!h||!h2||h!==h2) return;
-        if(prof&&p2&&prof===p2) err.push(`El ${fmt(f)} a las ${h} ya tiene examen ${nombreCompleto(o.b)} (${o.b.permiso}) con el mismo profesor (${prof}): cambia la hora.`);
-        else if(!prof||!p2) warn.push(`El ${fmt(f)} a las ${h} también se examina ${nombreCompleto(o.b)} (${o.b.permiso}); si les acompaña el mismo profesor, no puede ser a la misma hora.`);
-      });
-    });
-  }
+  // 3a. La DGT cita a todos los alumnos el mismo día y hora (pueden ir 7, 10…), sin límite de alumnos.
+  //     Única regla: en moto, destreza y circulación NO pueden ser el mismo día (coche y moto sí pueden coincidir).
+  if(esMoto(permiso)) EX_MOTO_PRACT.forEach(k=>{ const f=ex[k]; if(!f||f<hoy()||!EXAMENES[permiso].some(x=>x[0]===k)) return;
+    const otro=k==="circuito"?"via":"circuito";
+    const b=db.alumnos.find(b=>b.id!==idAlumno&&esMoto(b.permiso)&&b.examenes&&b.examenes[otro]===f&&!(b.resultados&&b.resultados[otro]));
+    if(b) err.push(`El ${fmt(f)} ya hay examen de ${NOMBRE_EX[otro].toLowerCase()} de moto (${nombreCompleto(b)}): destreza y circulación de moto no pueden ser el mismo día.`);
+  });
   // 3b. Resultados coherentes con la fecha
   EXAMENES[permiso].forEach(([k,n])=>{
     if(res[k]&&!ex[k]) err.push(`«${n}» tiene resultado pero no tiene fecha.`);
@@ -941,6 +1030,7 @@ function guardarAlumno(){
     nuevo:F.nuevo.checked };
   const prev=actual&&alumno(actual); const esNuevo=!prev;
   if(prev&&prev.bienvenida) o.bienvenida=prev.bienvenida;
+  if(prev&&prev.msgs) o.msgs=prev.msgs;
   o.historial=(prev&&prev.historial||[]).slice(); o.cargos=prev&&prev.cargos||[]; o.pagos=prev&&prev.pagos||[];
   // Intento suspendido / no presentado al que se le pone fecha nueva → pasa al historial
   if(prev) EXAMENES[o.permiso].forEach(([k])=>{
@@ -953,6 +1043,8 @@ function guardarAlumno(){
   $("fichaTitulo").textContent=nombreCompleto(o); pintarClasesAlumno(); pintarPagos(); pintarHistorial();
   cambiosFicha=false; pintarBienvenida(); toast(esNuevo?"Alumno guardado. Puedes enviarle la bienvenida 👋":"Alumno guardado.");
   anularBloqueadas(Object.values(o.examenes).filter(f=>f&&f>=hoy()));
+  if(teoriaAprobada(o)&&!(o.msgs&&o.msgs.practicas)&&!(prev&&teoriaAprobada(prev)))
+    setTimeout(()=>preguntaWa("🏍️ Teórico aprobado",`${esc(nombreCompleto(o))} ya tiene el teórico de moto aprobado.<br>¿Enviarle ahora la información para empezar las prácticas de destreza?`,()=>enviarPracticas(o.id)),300);
   return true;
 }
 /* Clases ya programadas que caen en un día de examen bloqueado → se ofrecen anular */
@@ -1103,7 +1195,7 @@ function pintarLista(){
 }
 $("btnCSV").onclick=()=>{
   const cab=["Apellidos","Nombre","DNI","F.Nacimiento","Teléfono","Email","Dirección","Permiso","Alta","Profesor","Vehículo",
-    "Ex.Teórico B","Res.","Ex.Práctico B","Res.","Ex.Teórico común","Res.","Ex.Teórico específico","Res.","Ex.Circuito cerrado","Res.","Ex.Vía pública","Res.",
+    "Ex.Teórico B","Res.","Ex.Práctico B","Res.","Ex.Teórico común","Res.","Ex.Teórico específico","Res.","Ex.Destreza","Res.","Ex.Circulación","Res.",
     "Clases realizadas","Faltas","Clases contratadas","Quedan"];
   const q=v=>'"'+String(v??"").replace(/"/g,'""')+'"';
   const filas=db.alumnos.map(a=>{ const e=a.examenes||{}, r=a.resultados||{}, b=bonoDe(a), cl=db.clases.filter(x=>x.alumnoId===a.id);
@@ -1122,7 +1214,7 @@ function hhmm(m){ return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%6
 for(let m=8*60;m<FIN_DIA;m+=15){ const o=document.createElement("option"); o.value=o.textContent=hhmm(m); $("cHora").appendChild(o); }
 function durDe(c){ return Number(c.durMin||60); }
 const MOTO=["AM","A1","A2"]; function esMoto(p){ return MOTO.includes(p); }
-function esCircuito(t){ return t==="Circuito cerrado"||t==="Maniobras"; }
+function esCircuito(t){ return t==="Destreza"||t==="Circuito cerrado"||t==="Maniobras"; }   // destreza = maniobras
 const MAX_COMPARTIDA=3;
 /* Los exámenes son por la mañana: el día de examen se bloquean solo las clases de MAÑANA (que empiezan antes de las 15:00).
    - Los exámenes TEÓRICOS no afectan a nada (el alumno va solo).
@@ -1170,12 +1262,12 @@ function abrirClase(id, pre){
   const sel=$("cAlumno");
   sel.innerHTML='<option value="">— Selecciona alumno —</option>'+db.alumnos.slice().sort((a,b)=>nombreCompleto(a).localeCompare(nombreCompleto(b),"es"))
     .map(a=>`<option value="${a.id}">${esc(nombreCompleto(a))} · ${a.permiso}</option>`).join("");
-  const c=id?db.clases.find(x=>x.id===id):Object.assign({fecha:hoy(),hora:"08:00",tipo:"Vía pública",profesor:"",vehiculo:"",obs:""},pre||{});
+  const c=id?db.clases.find(x=>x.id===id):Object.assign({fecha:hoy(),hora:"08:00",tipo:"Circulación",profesor:"",vehiculo:"",obs:""},pre||{});
   const a=alumno(c.alumnoId);
   if(!c.durMin) c.durMin=a&&esMoto(a.permiso)?30:45;
   if(!id&&a){ c.profesor=c.profesor||a.profesor; c.vehiculo=c.vehiculo||a.vehiculo; }
   sel.value=c.alumnoId||""; $("cFecha").value=c.fecha; $("cHora").value=c.hora; rellenarDur(a?a.permiso:"",durDe(c));
-  $("cTipo").value=c.tipo||"Vía pública"; rellenarSelectsClase(a?a.permiso:"",c.profesor,c.vehiculo); $("cObs").value=c.obs||"";
+  $("cTipo").value=c.tipo||"Circulación"; rellenarSelectsClase(a?a.permiso:"",c.profesor,c.vehiculo); $("cObs").value=c.obs||"";
   $("cEstado").value=c.estado||"";
   $("cRepBox").classList.toggle("hidden",!!id); $("cRepetir").checked=false; $("cRepOpts").classList.add("hidden");
   $("mClaseTit").textContent=id?"Editar clase práctica":"Programar clase práctica";
@@ -1222,15 +1314,15 @@ function validarClase(c,extra){
         if(c.alumnoId&&x.alumnoId===c.alumnoId) err.push(`El alumno ya tiene clase ${x.hora}–${finClase(x)} ese día.`);
         if(c.vehiculo&&x.vehiculo&&x.vehiculo.toLowerCase()===c.vehiculo.toLowerCase()) err.push(`El vehículo ${x.vehiculo} ya está asignado a ${n} de ${x.hora} a ${finClase(x)}.`);
       });
-      // Profesor: solo se comparte una clase de moto de maniobras/circuito (máx. 3 alumnos, ninguno «nuevo»)
+      // Profesor: solo se comparte una clase de moto de destreza (máx. 3 alumnos, ninguno «nuevo»)
       const pr2=sol.filter(x=>c.profesor&&x.profesor&&x.profesor.toLowerCase()===c.profesor.toLowerCase()&&x.alumnoId!==c.alumnoId);
       if(pr2.length){
         if(compartible(c)&&pr2.every(compartible)){
           const todos=pr2.concat([c]); let max=0;
           for(let t=minutos(c.hora);t<minutos(c.hora)+durDe(c);t+=15) max=Math.max(max,todos.filter(x=>minutos(x.hora)<=t&&t<minutos(x.hora)+durDe(x)).length);
-          if(max>MAX_COMPARTIDA) err.push(`La clase de maniobras de ${c.profesor} a esa hora ya tiene ${MAX_COMPARTIDA} alumnos (máximo).`);
+          if(max>MAX_COMPARTIDA) err.push(`La clase de destreza de ${c.profesor} a esa hora ya tiene ${MAX_COMPARTIDA} alumnos (máximo).`);
         } else pr2.forEach(x=>{ const a=alumno(x.alumnoId), n=a?nombreCompleto(a):"?";
-          const motivo=!compartible(c)?(alumno(c.alumnoId)&&alumno(c.alumnoId).nuevo?" (este alumno es nuevo: va solo)":esMoto((alumno(c.alumnoId)||{}).permiso)&&!esCircuito(c.tipo)?" (las clases de vía pública son individuales)":"")
+          const motivo=!compartible(c)?(alumno(c.alumnoId)&&alumno(c.alumnoId).nuevo?" (este alumno es nuevo: va solo)":esMoto((alumno(c.alumnoId)||{}).permiso)&&!esCircuito(c.tipo)?" (las clases de circulación son individuales)":"")
             :(a&&a.nuevo?" (ese alumno es nuevo: va solo)":" (esa clase es individual)");
           err.push(`El profesor ${x.profesor} ya está con ${n} de ${x.hora} a ${finClase(x)}${motivo}.`); });
       }
@@ -1305,7 +1397,7 @@ function examenesDelDia(f){
   const r=[]; db.alumnos.forEach(a=>EXAMENES[a.permiso].forEach(([k,n])=>{ if(a.examenes&&a.examenes[k]===f) r.push({a,k,n}); }));
   return r.sort((x,y)=>(horaEx(x.a,x.k)||"99").localeCompare(horaEx(y.a,y.k)||"99")||nombreCompleto(x.a).localeCompare(nombreCompleto(y.a),"es"));
 }
-const EX_CORTO={teorico:"Teórico",practico:"Práctico",comun:"T. común",especifico:"T. específico",circuito:"Circuito",via:"Vía pública"};
+const EX_CORTO={teorico:"Teórico",practico:"Práctico",comun:"T. común",especifico:"T. específico",circuito:"Destreza",via:"Circulación"};
 const COLOR_PERM={B:"var(--b)",AM:"var(--am)",A1:"var(--a1)",A2:"var(--a2)"};
 function cabeceraExamenes(ex){
   if(!ex.length) return "";
@@ -1393,6 +1485,8 @@ window.ponerResultado=(id,k,v)=>{
   a.resultados=a.resultados||{}; a.resultados[k]=v; persistir();
   if(actual===id&&!cambiosFicha) cargarFicha(id);
   pintarExamenes(); pintarLista();
+  if(v==="apto"&&teoriaAprobada(a)&&!(a.msgs&&a.msgs.practicas)){
+    preguntaWa("🏍️ Teórico aprobado",`${esc(nombreCompleto(a))} ya tiene el teórico de moto aprobado.<br>¿Enviarle ahora la información para empezar las prácticas de destreza?`,()=>enviarPracticas(id)); return; }
   if((v==="noapto"||v==="nopres")&&confirm(`${nombreCompleto(a)}: ${TXT_EXAMEN[k]} – ${TXT_RES[v]}.\n\n¿Abrir su ficha para poner la nueva fecha?`)) abrirFicha(id);
   else if(v) toast(TXT_EXAMEN[k]+": "+TXT_RES[v]);
 };
@@ -1470,7 +1564,7 @@ function alumnosMoto(){ return db.alumnos.filter(a=>esMoto(a.permiso)).sort((a,b
 function alumnosPlan(){ const f=($("plFiltro")&&$("plFiltro").value)||"todos";
   return db.alumnos.filter(a=>f==="todos"||(f==="moto"?esMoto(a.permiso):a.permiso==="B"))
     .sort((a,b)=>(a.permiso==="B")-(b.permiso==="B")||nombreCompleto(a).localeCompare(nombreCompleto(b),"es")); }
-function tipoPorDefecto(a){ return a.permiso==="B"?"Vía pública":(a.resultados||{}).circuito==="apto"?"Vía pública":"Circuito cerrado"; }
+function tipoPorDefecto(a){ return a.permiso==="B"?"Circulación":(a.resultados||{}).circuito==="apto"?"Circulación":"Destreza"; }
 function durPlan(a,r){ return esMoto(a.permiso)?(r.doble?60:30):(r.doble?90:45); }
 function respDe(P,a){ P.resp[a.id]=P.resp[a.id]||{inc:false,prio:"",n:1,tipo:tipoPorDefecto(a),doble:false,dias:{}};
   const r=P.resp[a.id]; r.modo=r.modo||{}; r.hasta=r.hasta||{}; return r; }
@@ -1502,7 +1596,7 @@ function pintarPlan(){
           ${r.texto?`<span class="plres ${r.dudosa?"dud":""}" title="${esc(r.texto)}">${r.dudosa?"⚠ Revisar: ":"✔ "}${esc(resumenResp(r))}</span>`:""}</td>
         <td><input type="number" min="1" step="1" data-f="prio" value="${r.prio}" placeholder="—"></td>
         <td><input type="number" min="0" max="10" step="1" data-f="n" value="${r.n}"></td>
-        <td><select data-f="tipo">${(esMoto(a.permiso)?["Circuito cerrado","Vía pública"]:["Vía pública","Maniobras","Simulacro examen"]).map(t=>`<option ${r.tipo===t?"selected":""}>${t}</option>`).join("")}</select></td>
+        <td><select data-f="tipo">${(esMoto(a.permiso)?["Destreza","Circulación"]:["Circulación","Destreza","Simulacro examen"]).map(t=>`<option ${r.tipo===t?"selected":""}>${t}</option>`).join("")}</select></td>
         <td><label class="chk" style="font-size:11px" title="${esMoto(a.permiso)?"Clase doble de 1 hora (30+30)":"Clase doble de 1 h 30 (45+45)"}"><input type="checkbox" data-f="doble" ${r.doble?"checked":""} style="width:auto"> ${esMoto(a.permiso)?"1 h":"1 h 30"}</label></td>
         <td>${DIAS_PL.map((d,i)=>{ const on=r.dias[i]!=null, m=r.modo[i]||"desde";
           return `<span class="pld"><label><input type="checkbox" data-d="${i}" ${on?"checked":""}> ${d}</label>
@@ -1794,7 +1888,9 @@ function normalizar(){
   if(db.config.faltaDescuenta==null) db.config.faltaDescuenta=true;
   if(!db.config.bloqueoExamen) db.config.bloqueoExamen="todos";
   db.alumnos.forEach(a=>{ a.examenes=a.examenes||{}; a.horasEx=a.horasEx||{}; a.resultados=a.resultados||{}; a.historial=a.historial||[]; a.cargos=a.cargos||[]; a.pagos=a.pagos||[]; });
-  db.clases.forEach(c=>{ if(c.estado==null) c.estado=""; });
+  const NT={"Circuito cerrado":"Destreza","Maniobras":"Destreza","Vía pública":"Circulación"};
+  db.clases.forEach(c=>{ if(c.estado==null) c.estado=""; if(NT[c.tipo]) c.tipo=NT[c.tipo]; });
+  Object.values(db.planes||{}).forEach(P=>Object.values(P.resp||{}).forEach(r=>{ if(NT[r.tipo]) r.tipo=NT[r.tipo]; }));
   db.planes=db.planes||{};
   // Bases de datos anteriores: duración en horas → minutos
   db.clases.forEach(c=>{ if(c.durMin==null){ c.durMin=(Number(c.dur)||1)*60; delete c.dur; } });
@@ -1907,22 +2003,52 @@ function fechaLarga(s){ return DIA_LARGO[parse(s).getDay()]+" "+fmt(s); }
 /* Convierte el teléfono al formato internacional que pide WhatsApp (34 + 9 cifras en España) */
 function telWa(t){ let n=String(t||"").replace(/\D/g,""); if(n.startsWith("00")) n=n.slice(2); if(n.length===9) n="34"+n; return n.length>=11?n:""; }
 function firma(){ const c=db.config; return "\n\n"+(c.nombre||"Autoescuela")+(c.tel?" · Tel. "+c.tel:""); }
-const TXT_TIPO_CLASE={"Vía pública":"Clase en vía pública","Circuito cerrado":"Clase en circuito cerrado","Maniobras":"Clase de maniobras","Simulacro examen":"Clase de simulacro de examen"};
-const TXT_EXAMEN={teorico:"Examen teórico",practico:"Examen práctico",comun:"Examen de teórico común",especifico:"Examen de teórico específico",circuito:"Examen en circuito cerrado",via:"Examen en vía pública"};
-function txtBienvenida(a){
-  const c=db.config;
-  return `Hola ${a.nombre} 👋\n¡Te damos la bienvenida a ${c.nombre||"la autoescuela"}! Ya estás dado de alta como alumno para el permiso ${a.permiso}.\n\n`
-    +(true?`📅 Cada miércoles te escribiremos por WhatsApp para preguntarte qué días y a qué hora puedes venir la semana siguiente, y cuántas clases quieres hacer. Contesta así, por favor:\n«lunes desde las 17, jueves a las 18:30, 2 clases»\n\n`:"")
-    +`🕒 Las clases prácticas son por la tarde, de 15:30 a ${hhmm(FIN_DIA)}.\n`
-    +`🎫 Cada clase que hagas se descuenta de tu bono. Si no te presentas a una clase reservada, también se descontará de tu bono, así que si no puedes venir avísanos con antelación.\n\n`
-    +`Te avisaremos por aquí de tus clases y exámenes. ¡Mucha suerte! 🍀`+firma();
-}
+const TXT_TIPO_CLASE={"Circulación":"Clase de circulación","Destreza":"Clase de destreza (maniobras)","Simulacro examen":"Clase de simulacro de examen",
+  "Vía pública":"Clase de circulación","Circuito cerrado":"Clase de destreza (maniobras)","Maniobras":"Clase de destreza (maniobras)"};
+const TXT_EXAMEN={teorico:"Examen teórico",practico:"Examen práctico",comun:"Examen de teórico común",especifico:"Examen de teórico específico",circuito:"Examen de destreza",via:"Examen de circulación"};
+function txtBienvenida(a){ return rellenar("bienvenida",a); }
 function pintarBienvenida(){
   const a=actual&&alumno(actual);
   $("btnBienvenida").classList.toggle("hidden",!a||!!a.bienvenida);
   $("bienvOk").classList.toggle("hidden",!(a&&a.bienvenida));
   if(a&&a.bienvenida) $("bienvOk").textContent="✔ Bienvenida enviada "+a.bienvenida.slice(0,10);
+  const m=a&&a.msgs||{}, verP=!!(a&&teoriaAprobada(a)&&!m.practicas);
+  $("btnPracticas").classList.toggle("hidden",!verP);
+  pintarMsgsEx();
 }
+/* Inicio de prácticas de destreza: una sola vez, cuando aprueba el teórico (común y específico) de moto */
+$("btnPracticas").onclick=()=>enviarPracticas(actual);
+function enviarPracticas(id){
+  const a=alumno(id); if(!a) return;
+  if(!telWa(a.tel)){ alert("El alumno no tiene un teléfono móvil válido en su ficha."); return; }
+  if(!db.config.lugar) alert("Consejo: indica el lugar de prácticas y su ubicación en ⚙️ Autoescuela para que salgan en el mensaje.");
+  waAbrir(a,rellenar("practicas",a),null); a.msgs=a.msgs||{}; a.msgs.practicas=sello(); persistir(); pintarBienvenida();
+}
+/* Mensajes de examen de destreza y circulación (moto): previsión y fecha confirmada */
+function pintarMsgsEx(){
+  const a=actual&&alumno(actual);
+  ["circuito","via"].forEach(k=>{
+    const box=$("msg_"+k); if(!box) return;
+    if(!a||!esMoto(a.permiso)||!EXAMENES[a.permiso].some(x=>x[0]===k)){ box.innerHTML=""; return; }
+    const m=a.msgs||{}, f=F["ex_"+k].value, conf=m["conf_"+k];
+    box.innerHTML=`<button type="button" class="btn wa sm" onclick="msgPrevision('${k}')">📲 ¿Te pido hueco?</button>${m["prev_"+k]?` <span class="sent">✔ ${esc(m["prev_"+k].slice(0,5))}</span>`:""}
+      <button type="button" class="btn wa sm" onclick="msgConfirmado('${k}')" ${f?"":"disabled title=\"Pon primero la fecha\""}>📲 Fecha confirmada</button>${conf&&conf.startsWith(f+"|")?' <span class="sent">✔ enviado</span>':""}`;
+  });
+}
+window.msgPrevision=k=>{
+  const a=alumno(actual); if(!a){ alert("Guarda primero el alumno."); return; }
+  if(!telWa(a.tel)){ alert("El alumno no tiene un teléfono móvil válido en su ficha."); return; }
+  pedirTexto(`Días previstos para el examen de ${NOMBRE_EX[k].toLowerCase()}`,"Ej.: 10 al 14 de noviembre",a.msgs&&a.msgs["dias_"+k]||"",dias=>{
+    waAbrir(a,rellenar("prev_"+k,a,{dias}),null); a.msgs=a.msgs||{}; a.msgs["prev_"+k]=sello(); a.msgs["dias_"+k]=dias; persistir(); pintarMsgsEx();
+  });
+};
+window.msgConfirmado=k=>{
+  const a=alumno(actual); if(!a){ alert("Guarda primero el alumno."); return; }
+  if(!telWa(F.tel.value)){ alert("El alumno no tiene un teléfono móvil válido en su ficha."); return; }
+  if(cambiosFicha&&!guardarAlumno()) return;
+  const f=a.examenes[k]; if(!f){ alert("Pon primero la fecha del examen."); return; }
+  waAbrir(a,rellenar("conf_"+k,a,{fecha:fechaLarga(f)}),null); a.msgs=a.msgs||{}; a.msgs["conf_"+k]=f+"|"+sello(); persistir(); pintarMsgsEx();
+};
 $("btnBienvenida").onclick=()=>{
   const a=alumno(actual); if(!a) return;
   if(!telWa(a.tel)){ alert("El alumno no tiene un teléfono móvil válido en su ficha."); return; }
@@ -1990,14 +2116,24 @@ $("avSig").onclick=()=>{ const x=avItems.find(x=>!db.avisos[x.key]); if(x) x.run
 
 /* Configuración y vaciado */
 $("btnConfig").onclick=()=>{
-  $("cfNombre").value=db.config.nombre||""; $("cfTel").value=db.config.tel||"";
+  $("cfNombre").value=db.config.nombre||""; $("cfTel").value=db.config.tel||""; $("cfLugar").value=db.config.lugar||""; $("cfUbi").value=db.config.ubicacion||"";
   document.querySelector(`input[name=cfFalta][value=${db.config.faltaDescuenta!==false?"si":"no"}]`).checked=true;
   document.querySelector(`input[name=cfBloq][value=${db.config.bloqueoExamen==="profesor"?"profesor":"todos"}]`).checked=true;
   $("mConfig").classList.remove("hidden"); $("cfNombre").focus();
 };
 $("cfCancelar").onclick=()=>$("mConfig").classList.add("hidden");
+$("cfTextos").onclick=()=>{
+  $("txLista").innerHTML=Object.keys(PLANTILLAS_DEF).map(k=>`<div style="margin-bottom:10px"><label><b>${NOMBRE_PLANT[k]}</b></label>
+    <textarea data-k="${k}" style="min-height:120px;font-size:13px">${esc(plantilla(k))}</textarea>
+    <button type="button" class="btn sec sm" onclick="this.previousElementSibling.value=PLANTILLAS_DEF['${k}']">↺ Texto original</button></div>`).join("");
+  $("mTextos").classList.remove("hidden");
+};
+window.PLANTILLAS_DEF=PLANTILLAS_DEF;
+$("txCerrar").onclick=()=>$("mTextos").classList.add("hidden");
+$("txGuardar").onclick=()=>{ db.config.plantillas={}; document.querySelectorAll("#txLista textarea").forEach(t=>{ if(t.value.trim()&&t.value!==PLANTILLAS_DEF[t.dataset.k]) db.config.plantillas[t.dataset.k]=t.value; });
+  persistir(); $("mTextos").classList.add("hidden"); toast("Textos guardados."); };
 $("cfGuardar").onclick=()=>{
-  db.config=Object.assign(db.config,{nombre:$("cfNombre").value.trim()||"Autoescuela",tel:$("cfTel").value.trim(),
+  db.config=Object.assign(db.config,{nombre:$("cfNombre").value.trim()||"Autoescuela",tel:$("cfTel").value.trim(),lugar:$("cfLugar").value.trim(),ubicacion:$("cfUbi").value.trim(),
     faltaDescuenta:document.querySelector("input[name=cfFalta]:checked").value==="si",
     bloqueoExamen:document.querySelector("input[name=cfBloq]:checked").value});
   $("mConfig").classList.add("hidden"); persistir(); pintarPagos(); pintarLista(); pintarAgenda(); toast("Datos de la autoescuela guardados.");
