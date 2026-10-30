@@ -258,10 +258,13 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
 <section id="v-ficha">
   <div class="panel">
     <div class="row" style="justify-content:space-between;margin-bottom:10px">
-      <h2 id="fichaTitulo" style="margin:0">Nuevo alumno</h2>
+      <div class="row" style="gap:10px"><h2 id="fichaTitulo" style="margin:0">Nuevo alumno</h2>
+        <label style="margin:0;font-size:13px;color:var(--ink);display:flex;gap:6px;align-items:center">Autoescuela:
+          <select id="selSede" style="width:auto;padding:5px 8px;font-weight:600"></select></label></div>
       <div class="row">
         <button class="btn sec" id="btnNuevo">➕ Nuevo</button>
         <span id="bienvOk" class="sent hidden"></span>
+        <button class="btn wa hidden" id="btnResena" title="Enhorabuena y enlace de reseñas de su sede (una sola vez)">🎉 Enviar enhorabuena</button>
         <button class="btn wa hidden" id="btnPracticas" title="Lugar, equipación y normas de las prácticas (solo se envía una vez)">🏍️ Enviar info prácticas</button>
         <button class="btn wa hidden" id="btnBienvenida" title="Mensaje de bienvenida al alumno (solo se envía una vez)">👋 Enviar bienvenida</button>
         <button class="btn sec" id="btnImprimir">🖨️ Imprimir ficha</button>
@@ -582,6 +585,8 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
       <div style="grid-column:span 2"><label>Teléfono de contacto (opcional)</label><input id="cfTel" type="tel"></div>
       <div style="grid-column:span 2"><label>Lugar de prácticas de moto</label><input id="cfLugar" placeholder="Ej.: Ciudad Santander"></div>
       <div style="grid-column:span 2"><label>Ubicación (enlace de Google Maps)</label><input id="cfUbi" placeholder="https://maps.app.goo.gl/…"></div>
+      <div style="grid-column:span 2"><label>Sedes y enlaces de reseñas de Google</label>
+        <div id="cfSedes"></div><button type="button" class="btn sec sm" id="cfSedeAdd">➕ Añadir sede</button></div>
       <div style="grid-column:span 2"><button type="button" class="btn sec" id="cfTextos">✉️ Editar textos de los mensajes</button></div>
     </div>
     <p style="margin:14px 0 0;font-size:13px;color:var(--muted)">🔒 Las clases con menos de 24 h de antelación no se pueden cambiar y cuentan como realizadas aunque el alumno falte (salvo justificante médico).</p>
@@ -657,7 +662,7 @@ window.alert=function(msg){
 };
 /* ================== DATOS ================== */
 const LS_KEY = "agendaAutoescuela_v1";
-const VERSION = "v10.3 NOV27";
+const VERSION = "v10.4 NOV27";
 const HORAS = []; for (let m = 8*60; m < 21*60; m += 30) HORAS.push(String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"));   // filas de 30 min: 08:00 … 20:30 (la última termina a las 21:00)
 const EXAMENES = {
   B:  [["teorico","Teórico"],["practico","Práctico"]],
@@ -860,7 +865,20 @@ Examen de Circulación confirmado el día {fecha}; la hora está aún pendiente 
 4. Robo o pérdida del DNI, acreditada con denuncia
 5. Asistencia a urgencias hospitalarias que coincidan en fecha y hora con el examen`
 };
-const NOMBRE_PLANT={bienvenida:"👋 Bienvenida (una sola vez)",practicas:"🏍️ Inicio de prácticas de destreza (tras aprobar el teórico de moto)",
+/* Sedes de la autoescuela, cada una con su enlace de reseñas de Google */
+const SEDES_DEF=[
+  {nombre:"Sector B",resena:"https://www.google.com/search?q=autoescuela-lara-briones-sectorb&ludocid=13706060015020068430&ibp=gwp;0,7&source=g.page.m.we#lpg=cid:CgIgAQ%3D%3D"},
+  {nombre:"Pueblo",resena:"https://share.google/Gp7K8HCLyzSaTTGXQ"}];
+function sedes(){ return db.config.sedes&&db.config.sedes.length?db.config.sedes:SEDES_DEF; }
+function sedeDe(a){ return sedes().find(x=>x.nombre===a.sede)||null; }
+/* Aprobado final: el último examen práctico de su permiso (B práctico · AM destreza · A1/A2 circulación) */
+function aprobadoFinal(a){ const l=EXAMENES[a.permiso]; return !!(l&&(a.resultados||{})[l[l.length-1][0]]==="apto"); }
+PLANTILLAS_DEF.resena=`Buenas y enhorabuena por tu aprobado !!!
+
+Si te acuerdas y crees que lo merecemos …😁 :
+
+{enlace}`;
+const NOMBRE_PLANT={resena:"🎉 Enhorabuena y reseña (al aprobar el carnet; enlace según la sede)",bienvenida:"👋 Bienvenida (una sola vez)",practicas:"🏍️ Inicio de prácticas de destreza (tras aprobar el teórico de moto)",
   prev_circuito:"📅 Destreza · previsión «¿Te pido hueco?»",conf_circuito:"✅ Destreza · fecha confirmada (hora pendiente)",
   prev_practico:"🚗 Coche · práctico · previsión «¿Te pido hueco?»",conf_practico:"🚗 Coche · práctico · fecha confirmada (hora pendiente)",
   prev_via:"📅 Circulación · previsión «¿Te pido hueco?»",conf_via:"✅ Circulación · fecha confirmada (hora pendiente)"};
@@ -1011,7 +1029,7 @@ function pintarFoto(){
 function nuevaFicha(){
   actual=null; F.reset(); fotoData=""; pintarFoto();
   F.alta.value=hoy(); rellenarSelectsFicha("",""); mostrarBloqueExamen(); $("exMsgs").innerHTML=""; pintarSelRes(); pintarHistorial();
-  $("fichaTitulo").textContent="Nuevo alumno"; pintarClasesAlumno(); pintarPagos(); pintarBienvenida(); cambiosFicha=false;
+  pintarSedes(""); $("fichaTitulo").textContent="Nuevo alumno"; pintarClasesAlumno(); pintarPagos(); pintarBienvenida(); cambiosFicha=false;
 }
 function cargarFicha(id){
   const a=alumno(id); if(!a) return;
@@ -1019,7 +1037,7 @@ function cargarFicha(id){
   ["nombre","apellidos","dni","fnac","tel","email","dir","permiso","alta","profesor","vehiculo","obs"].forEach(k=>{ F[k].value=a[k]||""; });
   rellenarSelectsFicha(a.profesor,a.vehiculo);
   Object.keys(NOMBRE_EX).forEach(k=>{ F["ex_"+k].value=(a.examenes&&a.examenes[k])||""; F["res_"+k].value=(a.resultados&&a.resultados[k])||""; F["hora_"+k].value=horaEx(a,k); });
-  F.nuevo.checked=!!a.nuevo;
+  F.nuevo.checked=!!a.nuevo; pintarSedes(a.sede||"");
   fotoData=a.foto||""; pintarFoto(); mostrarBloqueExamen(); pintarSelRes(); pintarHistorial(); validarFicha();
   $("fichaTitulo").textContent=nombreCompleto(a); pintarClasesAlumno(); pintarPagos(); pintarBienvenida(); cambiosFicha=false;
 }
@@ -1050,7 +1068,7 @@ function guardarAlumno(){
     fnac:F.fnac.value, tel:F.tel.value.trim(), email:F.email.value.trim(), dir:F.dir.value.trim(),
     permiso:F.permiso.value, alta:F.alta.value, profesor:F.profesor.value.trim(), vehiculo:F.vehiculo.value.trim(),
     obs:F.obs.value, foto:fotoData, examenes:leerExamenes(), horasEx:leerHoras(), resultados:leerResultados(),
-    nuevo:F.nuevo.checked };
+    nuevo:F.nuevo.checked, sede:$("selSede").value };
   const prev=actual&&alumno(actual); const esNuevo=!prev;
   if(prev&&prev.bienvenida) o.bienvenida=prev.bienvenida;
   if(prev&&prev.msgs) o.msgs=prev.msgs;
@@ -1066,7 +1084,8 @@ function guardarAlumno(){
   $("fichaTitulo").textContent=nombreCompleto(o); pintarClasesAlumno(); pintarPagos(); pintarHistorial();
   cambiosFicha=false; pintarBienvenida(); toast(esNuevo?"Alumno guardado. Puedes enviarle la bienvenida 👋":"Alumno guardado.");
   anularBloqueadas(Object.values(o.examenes).filter(f=>f&&f>=hoy()));
-  if(teoriaAprobada(o)&&!(o.msgs&&o.msgs.practicas)&&!(prev&&teoriaAprobada(prev)))
+  if(aprobadoFinal(o)&&!(o.msgs&&o.msgs.resena)&&!(prev&&aprobadoFinal(prev))) setTimeout(()=>ofrecerResena(o.id),300);
+  else if(teoriaAprobada(o)&&!(o.msgs&&o.msgs.practicas)&&!(prev&&teoriaAprobada(prev)))
     setTimeout(()=>preguntaWa("🏍️ Teórico aprobado",`${esc(nombreCompleto(o))} ya tiene el teórico de moto aprobado.<br>¿Enviarle ahora la información para empezar las prácticas de destreza?`,()=>enviarPracticas(o.id)),300);
   return true;
 }
@@ -1214,7 +1233,7 @@ function pintarLista(){
   $("tLista").innerHTML=`<tr><th></th><th>Alumno</th><th>DNI/NIE</th><th>Permiso</th><th>Teléfono</th><th>Profesor</th><th>Clases<br><small>hechas / quedan</small></th><th>Situación</th><th></th></tr>`+
     (lst.length?lst.map(a=>{ const b=bonoDe(a);
       return `<tr><td>${a.foto?`<img class="mini" src="${a.foto}">`:`<div class="mini"></div>`}</td>
-      <td><a href="#" onclick="abrirFicha('${a.id}');return false"><b>${esc(nombreCompleto(a))}</b></a>${a.nuevo&&esMoto(a.permiso)?'<span class="tag-warn" style="background:#e6f4ec;color:var(--ok);border-color:#9fd3b4">🆕 Nuevo</span>':""}</td>
+      <td><a href="#" onclick="abrirFicha('${a.id}');return false"><b>${esc(nombreCompleto(a))}</b></a>${a.sede?` <small style="color:var(--muted)">· ${esc(a.sede)}</small>`:""}${a.nuevo&&esMoto(a.permiso)?'<span class="tag-warn" style="background:#e6f4ec;color:var(--ok);border-color:#9fd3b4">🆕 Nuevo</span>':""}</td>
       <td>${esc(a.dni)}</td><td><span class="tag t-${a.permiso}">${a.permiso}</span></td><td>${esc(a.tel)}</td><td>${esc(a.profesor)}</td>
       <td>${b.consumidas} / ${b.contratadas?`<b style="color:${b.quedan<=0?"var(--err)":"inherit"}">${b.quedan}</b>`:"—"}</td>
       <td>${situacion(a)}</td>
@@ -1532,6 +1551,7 @@ window.ponerResultado=(id,k,v)=>{
   a.resultados=a.resultados||{}; a.resultados[k]=v; persistir();
   if(actual===id&&!cambiosFicha) cargarFicha(id);
   pintarExamenes(); pintarLista();
+  if(v==="apto"&&aprobadoFinal(a)&&!(a.msgs&&a.msgs.resena)){ ofrecerResena(id); return; }
   if(v==="apto"&&teoriaAprobada(a)&&!(a.msgs&&a.msgs.practicas)){
     preguntaWa("🏍️ Teórico aprobado",`${esc(nombreCompleto(a))} ya tiene el teórico de moto aprobado.<br>¿Enviarle ahora la información para empezar las prácticas de destreza?`,()=>enviarPracticas(id)); return; }
   if((v==="noapto"||v==="nopres")&&confirm(`${nombreCompleto(a)}: ${TXT_EXAMEN[k]} – ${TXT_RES[v]}.\n\n¿Abrir su ficha para poner la nueva fecha?`)) abrirFicha(id);
@@ -1959,6 +1979,9 @@ function normalizar(){
   db.config=db.config||{nombre:"Autoescuela",tel:""};
   if(db.config.faltaDescuenta==null) db.config.faltaDescuenta=true;
   if(!db.config.bloqueoExamen) db.config.bloqueoExamen="todos";
+  if(!db.config.lugar) db.config.lugar="Ciudad Santander";
+  if(!db.config.ubicacion) db.config.ubicacion="https://maps.app.goo.gl/vSFvYUKzbz45hx5V9";
+  if(!db.config.sedes||!db.config.sedes.length) db.config.sedes=SEDES_DEF.map(x=>Object.assign({},x));
   db.alumnos.forEach(a=>{ a.examenes=a.examenes||{}; a.horasEx=a.horasEx||{}; a.resultados=a.resultados||{}; a.historial=a.historial||[]; a.cargos=a.cargos||[]; a.pagos=a.pagos||[]; });
   const NT={"Circuito cerrado":"Destreza","Maniobras":"Destreza","Vía pública":"Circulación"};
   db.clases.forEach(c=>{ if(c.estado==null) c.estado=""; if(NT[c.tipo]) c.tipo=NT[c.tipo]; });
@@ -2079,6 +2102,23 @@ const TXT_TIPO_CLASE={"Circulación":"Clase de circulación","Destreza":"Clase d
   "Vía pública":"Clase de circulación","Circuito cerrado":"Clase de destreza (maniobras)","Maniobras":"Clase de destreza (maniobras)"};
 const TXT_EXAMEN={teorico:"Examen teórico",practico:"Examen práctico",comun:"Examen de teórico común",especifico:"Examen de teórico específico",circuito:"Examen de destreza",via:"Examen de circulación"};
 function txtBienvenida(a){ return rellenar("bienvenida",a); }
+function pintarSedes(val){
+  const l=sedes(); $("selSede").innerHTML='<option value="">— Elegir —</option>'+l.map(x=>`<option>${esc(x.nombre)}</option>`).join("");
+  if(val&&!l.some(x=>x.nombre===val)) $("selSede").innerHTML+=`<option>${esc(val)}</option>`;
+  $("selSede").value=val||"";
+}
+$("selSede").onchange=()=>{ cambiosFicha=true; };
+function ofrecerResena(id){
+  const a=alumno(id); if(!a) return;
+  preguntaWa("🎉 ¡Carnet aprobado!",`${esc(nombreCompleto(a))} ha aprobado ${esc(TXT_EXAMEN[EXAMENES[a.permiso].slice(-1)[0][0]].toLowerCase())}.<br>¿Enviarle la enhorabuena con el enlace de reseñas${a.sede?" de <b>"+esc(a.sede)+"</b>":""}?`,()=>enviarResena(id));
+}
+$("btnResena").onclick=()=>enviarResena(actual);
+function enviarResena(id){
+  const a=alumno(id); if(!a) return;
+  const s=sedeDe(a); if(!s){ alert("Elige primero en su ficha a qué autoescuela pertenece (selector «Autoescuela» junto al nombre) y guarda."); if(actual!==id) abrirFicha(id); return; }
+  if(!telWa(a.tel)){ alert("El alumno no tiene un teléfono móvil válido en su ficha."); return; }
+  waAbrir(a,rellenar("resena",a,{enlace:s.resena,sede:s.nombre}),null); a.msgs=a.msgs||{}; a.msgs.resena=sello(); persistir(); if(actual===id) pintarBienvenida();
+}
 function pintarBienvenida(){
   const a=actual&&alumno(actual);
   $("btnBienvenida").classList.toggle("hidden",!a||!!a.bienvenida);
@@ -2086,6 +2126,7 @@ function pintarBienvenida(){
   if(a&&a.bienvenida) $("bienvOk").textContent="✔ Bienvenida enviada "+a.bienvenida.slice(0,10);
   const m=a&&a.msgs||{}, verP=!!(a&&teoriaAprobada(a)&&!m.practicas);
   $("btnPracticas").classList.toggle("hidden",!verP);
+  $("btnResena").classList.toggle("hidden",!(a&&aprobadoFinal(a)&&!m.resena));
   pintarMsgsEx();
 }
 /* Inicio de prácticas de destreza: una sola vez, cuando aprueba el teórico (común y específico) de moto */
@@ -2188,11 +2229,15 @@ $("avSig").onclick=()=>{ const x=avItems.find(x=>!db.avisos[x.key]); if(x) x.run
 
 /* Configuración y vaciado */
 $("btnConfig").onclick=()=>{
+  pintarCfSedes(sedes());
   $("cfNombre").value=db.config.nombre||""; $("cfTel").value=db.config.tel||""; $("cfLugar").value=db.config.lugar||""; $("cfUbi").value=db.config.ubicacion||"";
   document.querySelector(`input[name=cfBloq][value=${db.config.bloqueoExamen==="profesor"?"profesor":"todos"}]`).checked=true;
   $("mConfig").classList.remove("hidden"); $("cfNombre").focus();
 };
 $("cfCancelar").onclick=()=>$("mConfig").classList.add("hidden");
+function pintarCfSedes(l){ $("cfSedes").innerHTML=l.map(x=>`<div class="row" style="margin-bottom:6px;flex-wrap:nowrap"><input class="sdN" style="width:140px" value="${esc(x.nombre)}" placeholder="Nombre"><input class="sdR" value="${esc(x.resena)}" placeholder="Enlace de reseñas"><button type="button" class="btn del sm" onclick="this.parentElement.remove()">✖</button></div>`).join(""); }
+function leerCfSedes(){ return [...document.querySelectorAll("#cfSedes .row")].map(r=>({nombre:r.querySelector(".sdN").value.trim(),resena:r.querySelector(".sdR").value.trim()})).filter(x=>x.nombre); }
+$("cfSedeAdd").onclick=()=>pintarCfSedes(leerCfSedes().concat([{nombre:"",resena:""}]));
 $("cfTextos").onclick=()=>{
   $("txLista").innerHTML=Object.keys(PLANTILLAS_DEF).map(k=>`<div style="margin-bottom:10px"><label><b>${NOMBRE_PLANT[k]}</b></label>
     <textarea data-k="${k}" style="min-height:120px;font-size:13px">${esc(plantilla(k))}</textarea>
@@ -2204,6 +2249,7 @@ $("txCerrar").onclick=()=>$("mTextos").classList.add("hidden");
 $("txGuardar").onclick=()=>{ db.config.plantillas={}; document.querySelectorAll("#txLista textarea").forEach(t=>{ if(t.value.trim()&&t.value!==PLANTILLAS_DEF[t.dataset.k]) db.config.plantillas[t.dataset.k]=t.value; });
   persistir(); $("mTextos").classList.add("hidden"); toast("Textos guardados."); };
 $("cfGuardar").onclick=()=>{
+  db.config.sedes=leerCfSedes(); if(actual) pintarSedes($("selSede").value);
   db.config=Object.assign(db.config,{nombre:$("cfNombre").value.trim()||"Autoescuela",tel:$("cfTel").value.trim(),lugar:$("cfLugar").value.trim(),ubicacion:$("cfUbi").value.trim(),
     bloqueoExamen:document.querySelector("input[name=cfBloq]:checked").value});
   $("mConfig").classList.add("hidden"); persistir(); pintarPagos(); pintarLista(); pintarAgenda(); toast("Datos de la autoescuela guardados.");
