@@ -661,7 +661,7 @@ window.alert=function(msg){
 };
 /* ================== DATOS ================== */
 const LS_KEY = "agendaAutoescuela_v1";
-const VERSION = "v10.4 NOV27";
+const VERSION = "v10.5 NOV27";
 const HORAS = []; for (let m = 8*60; m < 21*60; m += 30) HORAS.push(String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"));   // filas de 30 min: 08:00 … 20:30 (la última termina a las 21:00)
 const EXAMENES = {
   B:  [["teorico","Teórico"],["practico","Práctico"]],
@@ -1419,7 +1419,7 @@ function guardarBloque(base){
   if(b.contratadas>0&&b.disponibles-u<0) txt+=`\n\n⚠ Con estas clases se supera el bono (quedan ${b.disponibles} sin programar).`;
   if(!confirm(txt+"\n\n¿Programarlas?")) return;
   db.clases.push(...nuevas); persistir(); $("mClase").classList.add("hidden");
-  refrescarListas(); pintarAgenda(); pintarClasesAlumno(); pintarPagos(); toast(nuevas.length+" clases programadas.");
+  refrescarListas(); pintarAgenda(); pintarClasesAlumno(); pintarPagos(); toast(nuevas.length+" clases programadas."); ofrecerPracticasSiFalta(base.alumnoId,nuevas);
   if($("cAvisar").checked){
     const l=nuevas.sort((x,y)=>(x.fecha+x.hora).localeCompare(y.fecha+y.hora)).map(c=>`• ${fechaLarga(c.fecha)}, de ${c.hora} a ${finClase(c)}`).join("\n");
     waAbrir(a,`Hola ${a.nombre} 👋\nTe confirmamos tus próximas clases prácticas de conducción (${TXT_TIPO_CLASE[base.tipo]||base.tipo}):\n\n${l}`
@@ -1443,6 +1443,7 @@ $("cGuardar").onclick=()=>{
   else db.clases.push(c);
   persistir(); $("mClase").classList.add("hidden"); refrescarListas(); pintarAgenda(); pintarClasesAlumno(); pintarPagos(); toast("Clase guardada.");
   if($("cAvisar").checked&&c.estado!=="anulada"&&c.fecha>=hoy()) waClase(c.id);
+  ofrecerPracticasSiFalta(c.alumnoId,[c]);
 };
 $("cBorrar").onclick=()=>{
   if(bloqueada(db.clases.find(x=>x.id===claseEdit))){ alert("Faltan menos de 24 h: la clase no se puede borrar."); return; }
@@ -1938,7 +1939,7 @@ window.plAvisar=id=>{
     :`Hola ${a.nombre} 👋\n⚠️ Ha habido un cambio: finalmente no tienes clases prácticas la semana del ${fmt(lun)}. Te escribiremos el miércoles para la siguiente.`+firma();
   waAbrir(a,t,cl.map(keyClase)); cl.forEach(c=>c.cambio=false);
   const d=new Date(); P.avisados[id]=cl.length?fmt(iso(d))+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"):"sin clases";
-  persistir(); pintarAvisosPlan();
+  persistir(); pintarAvisosPlan(); ofrecerPracticasSiFalta(id,cl);
 };
 /* Recolocar: borra las clases aún no dadas de ese alumno en esa semana para volver a generarlas con su nueva respuesta */
 window.plRecolocar=id=>{
@@ -2123,13 +2124,19 @@ function pintarBienvenida(){
   $("btnBienvenida").classList.toggle("hidden",!a||!!a.bienvenida);
   $("bienvOk").classList.toggle("hidden",!(a&&a.bienvenida));
   if(a&&a.bienvenida) $("bienvOk").textContent="✔ Bienvenida enviada "+a.bienvenida.slice(0,10);
-  const m=a&&a.msgs||{}, verP=!!(a&&teoriaAprobada(a)&&!m.practicas);
+  const m=a&&a.msgs||{}, verP=!!(a&&esMoto(a.permiso)&&!m.practicas);   // disponible siempre en moto hasta que se envíe
   $("btnPracticas").classList.toggle("hidden",!verP);
   $("btnResena").classList.toggle("hidden",!(a&&aprobadoFinal(a)&&!m.resena));
   pintarMsgsEx();
 }
 /* Inicio de prácticas de destreza: una sola vez, cuando aprueba el teórico (común y específico) de moto */
 $("btnPracticas").onclick=()=>enviarPracticas(actual);
+/* Primera clase de destreza de un alumno de moto sin la info de prácticas enviada → se ofrece enviarla (lugar, Maps, equipación…) */
+function ofrecerPracticasSiFalta(id,clases){
+  const a=alumno(id); if(!a||!esMoto(a.permiso)||(a.msgs&&a.msgs.practicas)) return;
+  if(!clases.some(c=>esCircuito(c.tipo)&&c.estado!=="anulada")) return;
+  setTimeout(()=>preguntaWa("🏍️ Primera clase de destreza",`${esc(nombreCompleto(a))} empieza las clases de destreza y aún no ha recibido la información de prácticas (lugar, ubicación de Google Maps y equipación).<br>¿Enviársela ahora?`,()=>enviarPracticas(id)),400);
+}
 function enviarPracticas(id){
   const a=alumno(id); if(!a) return;
   if(!telWa(a.tel)){ alert("El alumno no tiene un teléfono móvil válido en su ficha."); return; }
