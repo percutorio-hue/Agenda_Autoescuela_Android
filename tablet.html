@@ -90,6 +90,7 @@ tr:hover td{background:#f8fafd}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .legend{display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--muted);margin-top:8px}
 .legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px;background:var(--c)}
+body.enRafaga .toast{bottom:100px}
 .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#1d2433;color:#fff;padding:10px 16px;border-radius:8px;z-index:60;font-size:13px}
 .kpis{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
 .kpi{background:#f7f9fc;border:1px solid var(--line);border-radius:8px;padding:8px 14px}
@@ -467,7 +468,7 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
     <div class="plpaso"><span>1</span> Elige los alumnos y pregúntales su disponibilidad (los miércoles)</div>
     <div class="row" style="margin-bottom:6px">
       <button class="btn sec sm" id="plTodos">Marcar todos</button><button class="btn sec sm" id="plNinguno">Ninguno</button>
-      <button class="btn wa sm" id="plPreguntar">📲 Preguntar al siguiente</button>
+      <button class="btn wa sm" id="plPreguntar" title="Envía la pregunta a todos los marcados, uno detrás de otro">▶ Envío en ráfaga</button>
       <span id="plResumen" style="font-size:13px;color:var(--muted)"></span>
     </div>
     <div class="plpaso"><span>2</span> Pega la respuesta de cada uno con «📋 Respuesta» (o márcala a mano) y pon la prioridad (1 = primero)</div>
@@ -560,6 +561,25 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
     <h3>ℹ️ Aviso</h3>
     <p id="mAvisoTxt" style="margin:0;white-space:pre-line"></p>
     <div class="row" style="justify-content:flex-end;margin-top:16px"><button class="btn" id="mAvisoOk">Entendido</button></div>
+  </div>
+</div>
+
+<div class="modal hidden" id="mMier" style="z-index:85">
+  <div class="box" style="width:min(460px,100%)">
+    <h3>📅 Recordatorio de los miércoles</h3>
+    <p id="mMierTxt" style="margin:0"></p>
+    <div class="row" style="justify-content:flex-end;margin-top:16px"><button class="btn sec" id="mMierLuego">Más tarde</button><button class="btn" id="mMierIr">📅 Ir al Plan semanal</button></div>
+  </div>
+</div>
+
+<div id="rafaga" class="hidden" style="position:fixed;left:0;right:0;bottom:0;z-index:60;background:#0b5d3b;color:#fff;padding:12px 16px;box-shadow:0 -4px 14px rgba(0,0,0,.25)">
+  <div class="row" style="justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+    <div id="rfInfo" style="font-size:14px"></div>
+    <div class="row" style="gap:8px">
+      <button class="btn sec sm" id="rfSaltar">⏭ Saltar</button>
+      <button class="btn sec sm" id="rfFin">✖ Terminar</button>
+      <button class="btn wa" id="rfSig" style="font-size:17px;padding:10px 18px"></button>
+    </div>
   </div>
 </div>
 
@@ -669,7 +689,7 @@ window.alert=function(msg){
 };
 /* ================== DATOS ================== */
 const LS_KEY = "agendaAutoescuela_v1";
-const VERSION = "v10.6 NOV27";
+const VERSION = "v10.7 NOV27";
 const HORAS = []; for (let m = 8*60; m < 21*60; m += 30) HORAS.push(String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"));   // filas de 30 min: 08:00 … 20:30 (la última termina a las 21:00)
 const EXAMENES = {
   B:  [["teorico","Teórico"],["practico","Práctico"]],
@@ -1735,10 +1755,40 @@ window.plPreguntar=id=>{
   const d=new Date(); P.preg[id]=fmt(iso(d))+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
   respDe(P,a).inc=true; persistir(); pintarPlan(); comprobarMiercoles();
 };
+/* Envío en ráfaga: abre WhatsApp de cada alumno marcado, uno detrás de otro.
+   Al volver a la app, el botón «Siguiente» abre el del siguiente (WhatsApp no permite enviar solo). */
+let RF=null;
 $("plPreguntar").onclick=()=>{
-  const P=planDe(lunesDe($("plSemana").value)), sig=alumnosPlan().find(a=>respDe(P,a).inc&&!P.preg[a.id]&&a.tel);
-  if(sig) plPreguntar(sig.id); else alert("No queda ningún alumno elegido sin preguntar.");
+  const P=planDe(lunesDe($("plSemana").value)), elegidos=alumnosPlan().filter(a=>respDe(P,a).inc&&!P.preg[a.id]);
+  const cola=elegidos.filter(a=>telWa(a.tel)).map(a=>a.id), sinTel=elegidos.filter(a=>!telWa(a.tel));
+  if(!cola.length){ alert(sinTel.length?"Los alumnos marcados que faltan no tienen un móvil válido:\n"+sinTel.map(nombreCompleto).join("\n"):"No queda ningún alumno marcado sin preguntar.\n\nMarca con ✔ (columna «Incluir») a quién quieres preguntar."); return; }
+  RF={cola,pos:0,env:0,salt:0,sinTel:sinTel.map(nombreCompleto)};
+  pintarRafaga();
 };
+function pintarRafaga(){
+  document.body.style.paddingBottom=RF?"90px":""; document.body.classList.toggle("enRafaga",!!RF);
+  if(!RF){ $("rafaga").classList.add("hidden"); return; }
+  $("rafaga").classList.remove("hidden");
+  const N=RF.cola.length;
+  if(RF.pos>=N){
+    $("rfInfo").innerHTML=`✅ <b>Ráfaga terminada:</b> ${RF.env} enviado(s)${RF.salt?` · ${RF.salt} saltado(s)`:""}${RF.sinTel.length?` · sin móvil: ${esc(RF.sinTel.join(", "))}`:""}`;
+    $("rfSig").textContent="Cerrar"; $("rfSaltar").classList.add("hidden"); $("rfFin").classList.add("hidden"); return;
+  }
+  const a=alumno(RF.cola[RF.pos]);
+  $("rfInfo").innerHTML=RF.pos===0&&!RF.env&&!RF.salt
+    ?`▶ <b>Envío en ráfaga:</b> ${N} alumno(s). En WhatsApp pulsa <b>Enviar</b> y vuelve atrás a la app.`
+    :`✔ Enviado. Pulsa para el siguiente.`;
+  $("rfSig").textContent=`${RF.pos===0&&!RF.env&&!RF.salt?"📲 Empezar":"📲 Siguiente"}: ${a?a.nombre+" "+(a.apellidos||"").split(" ")[0]:"?"} (${RF.pos+1} de ${N})`;
+  $("rfSaltar").classList.remove("hidden"); $("rfFin").classList.remove("hidden");
+}
+$("rfSig").onclick=()=>{
+  if(!RF) return;
+  if(RF.pos>=RF.cola.length){ RF=null; pintarRafaga(); return; }
+  const id=RF.cola[RF.pos]; RF.pos++; RF.env++;
+  plPreguntar(id); pintarRafaga();
+};
+$("rfSaltar").onclick=()=>{ if(!RF) return; RF.pos++; RF.salt++; pintarRafaga(); };
+$("rfFin").onclick=()=>{ RF=null; pintarRafaga(); };
 /* ---------- Lector de respuestas de WhatsApp (sin Internet, por reglas) ----------
    Entiende días («lunes», «de lunes a jueves», «toda la semana», «menos el viernes», «el martes no»),
    horas («desde las 17», «a partir de las 5», «a las 18:30», «a las 6 y media», «de 16 a 18», «hasta las 19», «por la tarde»)
@@ -1976,12 +2026,27 @@ window.plRecolocar=id=>{
 let miercolesPospuesto=false;
 function comprobarMiercoles(){
   const lun=proximoLunes(), P=db.planes&&db.planes[lun];
-  const ver=parse(hoy()).getDay()===3&&!miercolesPospuesto&&db.alumnos.length>0&&!(P&&Object.keys(P.preg||{}).length);
+  const ver=new Date().getDay()===3&&new Date().getHours()>=11&&!miercolesPospuesto&&db.alumnos.length>0&&!(P&&Object.keys(P.preg||{}).length);
   $("avisoMier").classList.toggle("hidden",!ver);
   if(ver) $("avisoMierTxt").innerHTML=`📅 <b>Hoy es miércoles:</b> pregunta a los alumnos su disponibilidad para la semana del lunes ${fmt(lun)}.`;
 }
 $("amIr").onclick=()=>{ $("plSemana").value=proximoLunes(); ver("plan"); };
 $("amLuego").onclick=()=>{ miercolesPospuesto=true; comprobarMiercoles(); };
+/* Ventana de aviso: la primera vez que se abre la app un miércoles a partir de las 11:00 (una vez al día) */
+function avisoMiercoles(){
+  if(document.getElementById("pinGate")) return;          // aún no se ha puesto el PIN
+  const d=new Date(), lun=proximoLunes(), P=db.planes&&db.planes[lun];
+  if(d.getDay()!==3||d.getHours()<11||!db.alumnos.length||(P&&Object.keys(P.preg||{}).length)) return;
+  let ya=""; try{ ya=localStorage.getItem("agendaMierAvisado")||""; }catch(e){}
+  if(ya===hoy()) return;
+  try{ localStorage.setItem("agendaMierAvisado",hoy()); }catch(e){}
+  $("mMierTxt").innerHTML=`Hoy es miércoles: toca <b>pedir disponibilidad</b> a los alumnos para la semana del lunes <b>${fmt(lun)}</b> al viernes ${fmt(addDias(lun,4))}.<br><br>En el Plan semanal marca los alumnos y pulsa <b>«▶ Envío en ráfaga»</b>.`;
+  $("mMier").classList.remove("hidden");
+}
+$("mMierIr").onclick=()=>{ $("mMier").classList.add("hidden"); $("plSemana").value=proximoLunes(); ver("plan"); };
+$("mMierLuego").onclick=()=>$("mMier").classList.add("hidden");
+document.addEventListener("visibilitychange",()=>{ if(!document.hidden){ avisoMiercoles(); comprobarMiercoles(); } });
+setInterval(()=>{ avisoMiercoles(); comprobarMiercoles(); },60000);
 
 /* ================== GENERAL ================== */
 function refrescarListas(){
@@ -2330,7 +2395,7 @@ function hashPin(pin){ const h=s=>{ let x=0x811c9dc5; for(const c of s){ x^=c.ch
     if(k==="borrar") pin=pin.slice(0,-1); else if(k==="limpiar") pin=""; else if(pin.length<PIN_LARGO) pin+=k;
     pintar(); $("pinMsg").textContent="";
     if(pin.length===PIN_LARGO){
-      if(hashPin(pin)===PIN_HASH){ $("pinGate").remove(); document.removeEventListener("keydown",teclado); }
+      if(hashPin(pin)===PIN_HASH){ $("pinGate").remove(); document.removeEventListener("keydown",teclado); avisoMiercoles(); }
       else{ fallos++; $("pinDots").classList.add("mal"); $("pinMsg").textContent="PIN incorrecto"+(fallos>2?" ("+fallos+" intentos)":"");
         setTimeout(()=>{ $("pinDots").classList.remove("mal"); pin=""; pintar(); },400); }
     }
