@@ -690,7 +690,7 @@ window.alert=function(msg){
 };
 /* ================== DATOS ================== */
 const LS_KEY = "agendaAutoescuela_v1";
-const VERSION = "v10.7 NOV27";
+const VERSION = "v10.8 NOV27";
 const HORAS = []; for (let m = 8*60; m < 21*60; m += 30) HORAS.push(String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"));   // filas de 30 min: 08:00 … 20:30 (la última termina a las 21:00)
 const EXAMENES = {
   B:  [["teorico","Teórico"],["practico","Práctico"]],
@@ -1841,7 +1841,9 @@ function interpretarRespuesta(texto,desdeDef){
     else if(m[13]!=null){ const a=pgHora(m[13],m[14],m[15]); if(!fuera(a)) tiempo({d:a,m:"exacta"}); }
     else if(m[16]!=null){ const a=pgHora(m[16],m[17]); if(!fuera(a)) tiempo({d:a,m:"exacta"}); }
     else if(m[18]!=null){ tiempo({d:minutos(desdeDef),m:"desde"}); }
-    else if(m[19]!=null){ todos=true; grupo.push(0,1,2,3,4); excluyendo=/menos/.test(m[19]); }
+    else if(m[19]!=null){ todos=true; excluyendo=/menos/.test(m[19]);
+      if(/resto|demas|otros/.test(m[19])) [0,1,2,3,4].forEach(i=>{ if(dias[i]==null&&!grupo.includes(i)) grupo.push(i); });   // «el resto»: solo los días que aún no tienen hora
+      else grupo.push(0,1,2,3,4); }
     else if(m[20]!=null){ const a=PG_DIA[m[20]], b=PG_DIA[m[21]]; for(let i=Math.min(a,b);i<=Math.max(a,b);i++) (excluyendo?excl.add(i):grupo.push(i)); }
     else if(m[22]!=null){ excluyendo=true; }
     else if(m[23]!=null){ excl.add(PG_DIA[m[23]]); }
