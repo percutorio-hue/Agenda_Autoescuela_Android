@@ -106,12 +106,27 @@ body.enRafaga .toast{bottom:100px}
 .pld label{display:flex;gap:3px;align-items:center;font-size:12px;margin:0;color:var(--ink)}
 .pld input[type=checkbox]{width:auto}
 .pld input[type=time]{width:80px;padding:3px;font-size:12px}
-.plt td:last-child{white-space:normal;min-width:230px}
+
 .pld{margin-bottom:3px}
 .pld input[type=time]:disabled{opacity:.35}
 .plpaso{display:flex;gap:8px;align-items:baseline;margin:14px 0 6px;color:var(--pri);font-weight:600}
 .plpaso span{background:var(--pri);color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;flex:none}
 .plgrupo td{vertical-align:top}
+/* v11.2: cabecera del Plan semanal fija al hacer scroll */
+.plFijo{position:sticky;top:var(--hdrH,60px);z-index:20;background:var(--panel);margin:-16px -16px 0;padding:16px 16px 2px;border-radius:10px 10px 0 0}
+.plt thead th{position:sticky;top:calc(var(--hdrH,60px) + var(--plH,0px));z-index:15;background:#f0f3f8;box-shadow:0 1px 0 var(--line)}
+/* v11.2: días de la semana en horizontal, debajo de cada alumno */
+.plt tbody.plal tr.plA td{border-bottom:0}
+.plt tbody.plal tr.plB td{padding-top:0;padding-bottom:8px}
+.plt tbody.plal:hover td{background:#f8fafd}
+.plt td.pldcell{white-space:normal}
+.pldias{display:flex;flex-wrap:wrap;gap:6px 8px}
+.pldias .pld{flex-direction:row;align-items:center;gap:4px;margin:0;padding:3px 6px;border:1px solid var(--line);border-radius:8px;background:#f7f9fc}
+.pldias .pld label{font-weight:600;min-width:26px}
+.pldias .pld input[type=time]{width:78px}
+.itvfila{display:flex;gap:12px;align-items:center}
+.itvfila input[type=date]{width:50%}
+.itvfila label.chk{white-space:nowrap;font-weight:600}
 .pld select{padding:2px;font-size:11px;width:auto}
 .pld .hh{width:74px}
 .plres{font-size:11px;color:var(--muted);max-width:220px;white-space:normal;display:block;margin-top:2px}
@@ -449,7 +464,7 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
           <select id="vhPermiso"><option value="B">🚗 Coche – permiso B</option><option value="AM">🛵 Ciclomotor – permiso AM</option><option value="A1">🏍️ Moto – permiso A1</option><option value="A2">🏍️ Moto – permiso A2</option></select></div>
         <div><label>Matrícula *</label><input id="vhMatricula" style="text-transform:uppercase"></div>
         <div><label>Marca y modelo *</label><input id="vhModelo"></div>
-        <div><label>Próxima ITV</label><input id="vhItv" type="date"></div>
+        <div><label>Próxima ITV</label><div class="itvfila"><input id="vhItv" type="date"><label class="chk" title="Al marcarla suma un año a la fecha de la próxima ITV (al desmarcarla lo deshace)"><input type="checkbox" id="vhItvPasada"> ITV pasada</label></div></div>
         <div style="grid-column:span 2"><label>Observaciones</label><input id="vhObs"></div>
         <div style="grid-column:span 2"><label class="chk"><input type="checkbox" id="vhActivo" checked> En servicio (aparece para asignar a alumnos y clases)</label></div>
       </div>
@@ -463,6 +478,7 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
 <!-- ============ PLAN MOTOS ============ -->
 <section id="v-plan" class="hidden">
   <div class="panel">
+   <div class="plFijo" id="plFijo">
     <div class="row" style="justify-content:space-between;margin-bottom:6px">
       <h2 style="margin:0">📅 Planificación semanal (coche y motos)</h2>
       <div class="row">
@@ -481,7 +497,8 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
       <span id="plResumen" style="font-size:13px;color:var(--muted)"></span>
     </div>
     <div class="plpaso"><span>2</span> Pega la respuesta de cada uno con «📋 Respuesta» (o márcala a mano) y pon la prioridad (1 = primero)</div>
-    <div class="scroll" style="max-height:none"><table class="plt" id="plTabla"></table></div>
+   </div>
+    <div><table class="plt" id="plTabla"></table></div>
 
     <div class="plpaso"><span>3</span> Genera la propuesta (empieza el lunes a la hora indicada, por orden de prioridad)</div>
     <div class="row"><button class="btn" id="plGenerar">⚙️ Generar propuesta</button></div>
@@ -716,7 +733,7 @@ window.alert=function(msg){
 };
 /* ================== DATOS ================== */
 const LS_KEY = "agendaAutoescuela_v1";
-const VERSION = "v11.1 NOV27";
+const VERSION = "v11.2 NOV26";
 const HORAS = []; for (let m = 8*60; m < 21*60; m += 30) HORAS.push(String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"));   // filas de 30 min: 08:00 … 20:30 (la última termina a las 21:00)
 const EXAMENES = {
   B:  [["teorico","Teórico"],["practico","Práctico"]],
@@ -1793,9 +1810,9 @@ function pintarPlan(){
   const P=planDe(lun), L=alumnosPlan(), desde=$("plDesde").value||"15:30";
   const inc=L.filter(a=>respDe(P,a).inc), preg=inc.filter(a=>P.preg[a.id]).length;
   $("plResumen").textContent=L.length?`${inc.length} elegido(s) · ${preg} preguntado(s) · semana del ${fmt(lun)} al ${fmt(addDias(lun,4))}`:"";
-  $("plTabla").innerHTML=L.length?`<tr><th>Incluir</th><th>Alumno</th><th>Pregunta</th><th>Prioridad</th><th>Clases</th><th>Tipo</th><th>Doble</th><th>Días y horas</th></tr>`+
+  $("plTabla").innerHTML=L.length?`<thead><tr><th>Incluir</th><th>Alumno</th><th>Pregunta</th><th>Prioridad</th><th>Clases</th><th>Tipo</th><th>Doble</th></tr></thead>`+
     L.map(a=>{ const r=respDe(P,a);
-      return `<tr data-al="${a.id}" style="${r.inc?"":"opacity:.55"}">
+      return `<tbody class="plal" data-al="${a.id}" style="${r.inc?"":"opacity:.55"}"><tr class="plA">
         <td><input type="checkbox" data-f="inc" ${r.inc?"checked":""} style="width:auto"></td>
         <td><a href="#" onclick="abrirFicha('${a.id}');return false">${esc(nombreCompleto(a))}</a> <span class="tag t-${a.permiso}">${a.permiso}</span>${a.nuevo?' <span title="Alumno nuevo: va solo">🆕</span>':""}</td>
         <td>${P.preg[a.id]?`<span class="sent" title="${esc(P.preg[a.id])}">✔ preguntado</span>`:""} <button class="btn wa sm" onclick="plPreguntar('${a.id}')" ${a.tel?"":"disabled title=\"Sin teléfono\""}>📲</button>
@@ -1805,20 +1822,20 @@ function pintarPlan(){
         <td><input type="number" min="1" step="1" data-f="prio" value="${r.prio}" placeholder="—"></td>
         <td><input type="number" min="0" max="10" step="1" data-f="n" value="${r.n}"></td>
         <td><select data-f="tipo">${(a.permiso==="AM"?["Destreza"]:esMoto(a.permiso)?["Destreza","Circulación"]:["Circulación","Destreza","Simulacro examen"]).map(t=>`<option ${r.tipo===t?"selected":""}>${t}</option>`).join("")}</select></td>
-        <td><label class="chk" style="font-size:11px" title="${esMoto(a.permiso)?"Clase doble de 1 hora (30+30)":"Clase doble de 1 h 30 (45+45)"}"><input type="checkbox" data-f="doble" ${r.doble?"checked":""} style="width:auto"> ${esMoto(a.permiso)?"1 h":"1 h 30"}</label></td>
-        <td>${DIAS_PL.map((d,i)=>{ const on=r.dias[i]!=null, m=r.modo[i]||"desde";
+        <td><label class="chk" style="font-size:11px" title="${esMoto(a.permiso)?"Clase doble de 1 hora (30+30)":"Clase doble de 1 h 30 (45+45)"}"><input type="checkbox" data-f="doble" ${r.doble?"checked":""} style="width:auto"> ${esMoto(a.permiso)?"1 h":"1 h 30"}</label></td></tr>
+        <tr class="plB"><td colspan="2"></td><td colspan="5" class="pldcell"><div class="pldias">${DIAS_PL.map((d,i)=>{ const on=r.dias[i]!=null, m=r.modo[i]||"desde";
           return `<span class="pld"><label><input type="checkbox" data-d="${i}" ${on?"checked":""}> ${d}</label>
             <select data-m="${i}" ${on?"":"disabled"}><option value="desde" ${m==="desde"?"selected":""}>desde</option><option value="exacta" ${m==="exacta"?"selected":""}>a las</option><option value="entre" ${m==="entre"?"selected":""}>entre</option></select>
             <input type="time" step="900" data-h="${i}" value="${r.dias[i]||desde}" ${on?"":"disabled"}>
-            <input type="time" step="900" class="hh ${m==="entre"&&on?"":"hidden"}" data-hh="${i}" value="${r.hasta[i]||hhmm(FIN_DIA)}"></span>`; }).join("")}</td></tr>`; }).join("")
-    :`<tr><td style="color:var(--muted);padding:16px">No hay alumnos con ese filtro.</td></tr>`;
+            <input type="time" step="900" class="hh ${m==="entre"&&on?"":"hidden"}" data-hh="${i}" value="${r.hasta[i]||hhmm(FIN_DIA)}"></span>`; }).join("")}</div></td></tr></tbody>`; }).join("")
+    :`<tbody><tr><td style="color:var(--muted);padding:16px">No hay alumnos con ese filtro.</td></tr></tbody>`;
   pintarAvisosPlan();
 }
 $("plSemana").onchange=()=>{ plProp=null; $("plPropuesta").innerHTML=""; pintarPlan(); };
 $("plDesde").onchange=pintarPlan;
 $("plFiltro").onchange=()=>{ plProp=null; $("plPropuesta").innerHTML=""; pintarPlan(); };
 $("plTabla").addEventListener("change",e=>{
-  const tr=e.target.closest("tr[data-al]"); if(!tr) return;
+  const tr=e.target.closest("tbody[data-al]"); if(!tr) return;
   const a=alumno(tr.dataset.al), r=respDe(planDe(lunesDe($("plSemana").value)),a), t=e.target;
   if(t.dataset.f==="inc") r.inc=t.checked;
   else if(t.dataset.f==="prio") r.prio=t.value?Math.max(1,parseInt(t.value,10)):"";
@@ -2227,14 +2244,22 @@ const PERM_PROF=["B","AM","A1","A2"];
 function nuevoProf(){ profEdit=null; $("pfTit").textContent="Nuevo profesor"; $("pfNombre").value=""; $("pfTel").value="";
   PERM_PROF.forEach(p=>$("pf"+p).checked=false); $("pfActivo").checked=true; cambiosProf=false; }
 function nuevoVeh(){ vehEdit=null; $("vhTit").textContent="Nuevo vehículo"; $("vhPermiso").value="B"; $("vhModelo").value=""; $("vhMatricula").value="";
-  $("vhItv").value=""; $("vhObs").value=""; $("vhActivo").checked=true; cambiosVeh=false; }
-$("pfNuevo").onclick=()=>{ nuevoProf(); }; $("vhNuevo").onclick=()=>{ nuevoVeh(); };
+  $("vhItv").value=""; $("vhObs").value=""; $("vhActivo").checked=true; $("vhItvPasada").checked=false; cambiosVeh=false; }
+$("pfNuevo").onclick=()=>{ nuevoProf(); };
+// v11.2: «ITV pasada» suma un año a la fecha de la próxima ITV (desmarcar lo deshace)
+function sumarAnios(s,n){ const d=parse(s), dia=d.getDate(); d.setFullYear(d.getFullYear()+n); if(d.getDate()!==dia) d.setDate(0); return iso(d); }
+$("vhItvPasada").addEventListener("change",e=>{
+  const f=$("vhItv").value;
+  if(!f){ e.target.checked=false; toast("Pon primero la fecha de la próxima ITV."); $("vhItv").focus(); return; }
+  $("vhItv").value=sumarAnios(f,e.target.checked?1:-1); cambiosVeh=true;
+  toast(e.target.checked?"Próxima ITV: "+fmt($("vhItv").value)+". Pulsa «Guardar vehículo».":"Fecha de ITV restaurada.");
+}); $("vhNuevo").onclick=()=>{ nuevoVeh(); };
 ["pfNombre","pfTel","pfB","pfAM","pfA1","pfA2","pfActivo"].forEach(i=>["input","change"].forEach(ev=>$(i).addEventListener(ev,()=>cambiosProf=true)));
 ["vhPermiso","vhModelo","vhMatricula","vhItv","vhObs","vhActivo"].forEach(i=>["input","change"].forEach(ev=>$(i).addEventListener(ev,()=>cambiosVeh=true)));
 window.editarProf=id=>{ const p=db.profesores.find(x=>x.id===id); if(!p) return; profEdit=id; $("pfTit").textContent="Editar profesor";
   $("pfNombre").value=p.nombre; $("pfTel").value=p.tel||""; PERM_PROF.forEach(k=>$("pf"+k).checked=p.permisos.includes(k)); $("pfActivo").checked=p.activo!==false; cambiosProf=false; $("pfNombre").focus(); };
 window.editarVeh=id=>{ const v=db.vehiculos.find(x=>x.id===id); if(!v) return; vehEdit=id; $("vhTit").textContent="Editar vehículo";
-  $("vhPermiso").value=v.permiso; $("vhModelo").value=v.modelo; $("vhMatricula").value=v.matricula; $("vhItv").value=v.itv||""; $("vhObs").value=v.obs||""; $("vhActivo").checked=v.activo!==false; cambiosVeh=false; $("vhModelo").focus(); };
+  $("vhPermiso").value=v.permiso; $("vhModelo").value=v.modelo; $("vhMatricula").value=v.matricula; $("vhItv").value=v.itv||""; $("vhObs").value=v.obs||""; $("vhActivo").checked=v.activo!==false; $("vhItvPasada").checked=false; cambiosVeh=false; $("vhModelo").focus(); };
 function guardarProf(){
   const nombre=$("pfNombre").value.trim().replace(/\s+/g," "); if(!nombre){ alert("Escribe el nombre del profesor."); return false; }
   const permisos=PERM_PROF.filter(k=>$("pf"+k).checked); if(!permisos.length){ alert("Marca al menos un permiso que imparta."); return false; }
@@ -2579,6 +2604,12 @@ function hashPin(pin){ const h=s=>{ let x=0x811c9dc5; for(const c of s){ x^=c.ch
 })();
 
 $("verApp").textContent=VERSION;
+// v11.2: alturas de la cabecera y del bloque fijo del Plan semanal (para que no se solapen al hacer scroll)
+(function(){ const raiz=document.documentElement, hdr=document.querySelector("header"), pf=$("plFijo");
+  const medir=()=>{ raiz.style.setProperty("--hdrH",hdr.offsetHeight+"px"); raiz.style.setProperty("--plH",(pf?pf.offsetHeight:0)+"px"); };
+  medir(); window.addEventListener("resize",medir);
+  if(window.ResizeObserver){ const ro=new ResizeObserver(medir); ro.observe(hdr); if(pf) ro.observe(pf); }
+})();
 (async()=>{
   await cargarDatos(); normalizar();
   if(purgarEjemplos()) persistir();
