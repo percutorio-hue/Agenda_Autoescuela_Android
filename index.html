@@ -716,7 +716,7 @@ window.alert=function(msg){
 };
 /* ================== DATOS ================== */
 const LS_KEY = "agendaAutoescuela_v1";
-const VERSION = "v11.0 NOV27";
+const VERSION = "v11.1 NOV27";
 const HORAS = []; for (let m = 8*60; m < 21*60; m += 30) HORAS.push(String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"));   // filas de 30 min: 08:00 … 20:30 (la última termina a las 21:00)
 const EXAMENES = {
   B:  [["teorico","Teórico"],["practico","Práctico"]],
@@ -968,11 +968,15 @@ function sedeDe(a){ return sedes().find(x=>x.nombre===a.sede)||null; }
 /* Aprobado final: el último examen práctico de su permiso (B práctico · AM destreza · A1/A2 circulación) */
 function aprobadoFinal(a){ const l=EXAMENES[a.permiso]; return !!(l&&(a.resultados||{})[l[l.length-1][0]]==="apto"); }
 PLANTILLAS_DEF.rec_clase=`Hola {alumno} 👋
-Te recuerdo que tienes clase práctica {cuando} a las {hora} ({clase}).
-Si te surge algún imprevisto, avísame cuanto antes. ¡Nos vemos!`;
+Te recuerdo que tienes clase práctica de {clase} {cuando} a las {hora}.
+Si te surge algún imprevisto, avísame cuanto antes. ¡Nos vemos!
+
+_Este es un WhatsApp recordatorio, por favor no responder si no es necesario._`;
 PLANTILLAS_DEF.rec_examen=`Hola {alumno} 👋
 Te recuerdo que {cuando} tienes el {examen}, a las {hora}.
-No olvides el DNI/NIE original y en vigor{equipo}. ¡Mucha suerte! 🍀`;
+No olvides el DNI/NIE original y en vigor{equipo}. ¡Mucha suerte! 🍀
+
+_Este es un WhatsApp recordatorio, por favor no responder si no es necesario._`;
 PLANTILLAS_DEF.resena=`Buenas y enhorabuena por tu aprobado !!!
 
 Si te acuerdas y crees que lo merecemos …😁 :
@@ -2072,7 +2076,7 @@ function pintarAvisosPlan(){
     .sort((x,y)=>nombreCompleto(alumno(x)).localeCompare(nombreCompleto(alumno(y)),"es"));
   const borradas=Object.keys(P.avisados).filter(id=>!ids.includes(id)&&alumno(id)&&P.avisados[id]!=="sin clases");
   $("plAvisos").innerHTML=(ids.length||borradas.length)?`<table><tr><th>Alumno</th><th>Clases de la semana</th><th>Aviso</th><th></th></tr>`+
-    ids.map(id=>{ const a=alumno(id), cl=clasesSemana(id,lun), ok=cl.every(c=>db.avisos[keyClase(c)]), cambio=!ok&&!!P.avisados[id];
+    ids.map(id=>{ const a=alumno(id), cl=clasesAvisar(id,lun), ok=cl.every(c=>db.avisos[keyClase(c)]), cambio=!ok&&!!P.avisados[id];
       return `<tr><td>${esc(nombreCompleto(a))} <span class="tag t-${a.permiso}">${a.permiso}</span></td>
         <td>${cl.map(c=>`${diaSem(c.fecha)} ${fmt(c.fecha).slice(0,5)} ${c.hora}${compartible(c)&&grupoDe(c).length>1?" 👥":""}`).join(" · ")}</td>
         <td>${ok?'<span class="sent">✔ avisado</span>':cambio?'<span class="pend">🔁 cambio pendiente de avisar</span>':'<span class="pend">pendiente</span>'}</td>
@@ -2097,9 +2101,12 @@ window.plEditar=cid=>{
   $("peQuitar").onclick=()=>{ plProp.nuevas=plProp.nuevas.filter(x=>x.id!==cid); $("mPlEdit").classList.add("hidden"); pintarPropuesta(); };
   $("peSi").onclick=()=>{ if(chk().err.length) return; c.fecha=$("peDia").value; c.hora=$("peHora").value; $("mPlEdit").classList.add("hidden"); pintarPropuesta(); toast("Cita cambiada en la propuesta."); };
 };
-window.plAvisar=id=>{
-  const lun=lunesDe($("plSemana").value||proximoLunes()), P=planDe(lun); P.avisados=P.avisados||{};
-  const a=alumno(id), cl=clasesSemana(id,lun), cambio=!!P.avisados[id];
+/* Un solo WhatsApp con todas las clases de la semana (desde hoy). Se usa en el Plan semanal y en la pestaña Avisos */
+function clasesAvisar(id,lun){ return clasesSemana(id,lun).filter(c=>c.fecha>=hoy()); }
+window.plAvisar=id=>avisarSemana(id,lunesDe($("plSemana").value||proximoLunes()));
+function avisarSemana(id,lun){
+  const P=planDe(lun); P.avisados=P.avisados||{};
+  const a=alumno(id), cl=clasesAvisar(id,lun), cambio=!!P.avisados[id]||cl.some(c=>c.cambio);
   const l=cl.map(c=>`• ${fechaLarga(c.fecha)}, de ${c.hora} a ${finClase(c)} · ${TXT_TIPO_CLASE[c.tipo]||c.tipo}`).join("\n");
   const prof=[...new Set(cl.map(c=>c.profesor).filter(Boolean))].join(", ");
   const t=cl.length
@@ -2108,8 +2115,8 @@ window.plAvisar=id=>{
     :`Hola ${a.nombre} 👋\n⚠️ Ha habido un cambio: finalmente no tienes clases prácticas la semana del ${fmt(lun)}. Te escribiremos el miércoles para la siguiente.`+firma();
   waAbrir(a,t,cl.map(keyClase)); cl.forEach(c=>c.cambio=false);
   const d=new Date(); P.avisados[id]=cl.length?fmt(iso(d))+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"):"sin clases";
-  persistir(); pintarAvisosPlan(); ofrecerPracticasSiFalta(id,cl);
-};
+  persistir(); pintarAvisosPlan(); pintarAvisos(); ofrecerPracticasSiFalta(id,cl);
+}
 /* Recolocar: borra las clases aún no dadas de ese alumno en esa semana para volver a generarlas con su nueva respuesta */
 window.plRecolocar=id=>{
   const lun=lunesDe($("plSemana").value), a=alumno(id), cl=clasesSemana(id,lun).filter(c=>!c.estado&&!bloqueada(c));
@@ -2402,8 +2409,15 @@ $("avFecha").onchange=()=>{ if($("avFecha").value){ avModo="dia"; pintarAvisos()
 function pintarAvisos(){
   const h=hoy(), f=$("avFecha").value, vale=fe=>avModo==="pend"?fe>=h:fe===f;
   avItems=[];
+  // Clases: UN aviso por alumno y semana con todas sus clases (igual que en el Plan semanal)
+  const grupos={};
   db.clases.filter(c=>vale(c.fecha)&&c.estado!=="anulada").forEach(c=>{ const a=alumno(c.alumnoId); if(!a) return;
-    avItems.push({fecha:c.fecha,ord:c.fecha+c.hora,a,que:"Clase práctica",det:`${c.hora}–${finClase(c)} · ${TXT_TIPO_CLASE[c.tipo]||c.tipo}${c.profesor?" · "+c.profesor:""}`,key:keyClase(c),run:()=>waClase(c.id)}); });
+    const lun=lunesDe(c.fecha), g=grupos[a.id+"|"+lun]=grupos[a.id+"|"+lun]||{a,lun}; });
+  Object.values(grupos).forEach(({a,lun})=>{ const cl=clasesAvisar(a.id,lun); if(!cl.length) return;
+    const keys=cl.map(keyClase), pend=keys.some(k=>!db.avisos[k]);
+    avItems.push({fecha:cl[0].fecha,ord:cl[0].fecha+cl[0].hora,a,que:cl.length>1?`Clases de la semana (${cl.length})`:"Clase práctica",
+      det:cl.map(c=>`${diaSem(c.fecha)} ${fmt(c.fecha).slice(0,5)} ${c.hora}`).join(" · ")+` · ${[...new Set(cl.map(c=>(TXT_TIPO_CLASE[c.tipo]||c.tipo).replace(/^Clase de /,"")))].join(", ")}`,
+      key:pend?keys.find(k=>!db.avisos[k]):keys[0],run:()=>avisarSemana(a.id,lun)}); });
   db.alumnos.forEach(a=>EXAMENES[a.permiso].forEach(([k])=>{ const fe=a.examenes&&a.examenes[k]; if(fe&&vale(fe))
     if(!(a.resultados&&a.resultados[k])) avItems.push({fecha:fe,ord:fe+(horaEx(a,k)||"00"),a,que:"Examen",det:TXT_EXAMEN[k]+(horaEx(a,k)?" · "+horaEx(a,k):" · ⚠ sin hora"),key:keyEx(a,k),run:()=>waExamen(a.id,k)}); }));
   if(avModo==="pend") avItems=avItems.filter(x=>!db.avisos[x.key]);
@@ -2431,7 +2445,7 @@ function itemsRecordatorio(f){
   const r=[];
   db.clases.filter(c=>c.fecha===f&&c.estado!=="anulada").forEach(c=>{ const a=alumno(c.alumnoId); if(!a) return;
     r.push({key:"rc:"+c.id+":"+c.fecha+":"+c.hora,ord:c.hora,a,que:"Clase",det:`${c.hora}–${finClase(c)} · ${TXT_TIPO_CLASE[c.tipo]||c.tipo}`,
-      texto:()=>rellenar("rec_clase",a,{cuando:cuandoTxt(f),hora:c.hora,clase:String(TXT_TIPO_CLASE[c.tipo]||c.tipo).replace(/^Clase de /,"")})}); });
+      texto:()=>rellenar("rec_clase",a,{cuando:cuandoTxt(f),hora:c.hora,clase:({"Destreza":"destreza","Circulación":"circulación","Simulacro examen":"simulacro de examen"})[c.tipo]||String(c.tipo||"").toLowerCase()})}); });
   db.alumnos.forEach(a=>(EXAMENES[a.permiso]||[]).forEach(([k])=>{ if(!(a.examenes&&a.examenes[k]===f)||(a.resultados&&a.resultados[k])) return;
     r.push({key:"re:"+a.id+":"+k+":"+f,ord:horaEx(a,k)||"00:00",a,que:"Examen",det:TXT_EXAMEN[k]+(horaEx(a,k)?" · "+horaEx(a,k):" · ⚠ sin hora"),
       texto:()=>rellenar("rec_examen",a,{cuando:cuandoTxt(f),hora:horaEx(a,k)||"la hora que te indicamos",examen:TXT_EXAMEN[k].replace(/^Examen/,"examen"),
