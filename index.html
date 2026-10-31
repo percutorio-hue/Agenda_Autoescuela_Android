@@ -243,6 +243,10 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
   <input type="file" id="fileDB" accept=".json,.txt,application/json,text/plain" class="hidden">
   <span class="firma-app">Creado por <b>AML</b><br><small id="verApp"></small></span>
 </header>
+<div class="banner hidden" id="errGuardar" style="background:#fde8e8;border-color:#e08080;color:#7a1010;font-weight:600">
+  <span>⚠️ ¡ATENCIÓN! Los últimos cambios NO se han podido guardar en la tablet. Haz ahora una copia con «📤 Enviar copia» o «💾 Guardar base de datos» y avisa para revisarlo.</span><span class="spacer"></span>
+  <button class="btn sm wa" onclick="$('btnEnviar').click()">📤 Enviar copia</button><button class="btn sm" onclick="$('btnGuardar').click()">💾 Guardar</button>
+</div>
 <div class="banner hidden" id="avisoMier" style="background:#e8f4fb;border-color:#9cc8e6;color:#123c5c">
   <span id="avisoMierTxt"></span><span class="spacer"></span>
   <button class="btn sm" id="amIr">📅 Ir al Plan semanal</button><button class="btn sm sec" id="amLuego">Más tarde</button>
@@ -268,6 +272,7 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
         <button class="btn wa hidden" id="btnResena" title="Enhorabuena y enlace de reseñas de su sede (una sola vez)">🎉 Enviar enhorabuena</button>
         <button class="btn wa hidden" id="btnPracticas" title="Lugar, equipación y normas de las prácticas (solo se envía una vez)">🏍️ Enviar info prácticas</button>
         <button class="btn wa hidden" id="btnBienvenida" title="Mensaje de bienvenida al alumno (solo se envía una vez)">👋 Enviar bienvenida</button>
+        <button class="btn sec hidden" id="btnArchivar" title="Quita al alumno del listado, del plan y de los avisos sin borrar sus datos">📦 Archivar</button>
         <button class="btn sec" id="btnImprimir">🖨️ Imprimir ficha</button>
         <button class="btn" id="btnGuardarAlumno">Guardar alumno</button>
       </div>
@@ -311,20 +316,23 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
       <fieldset>
         <legend id="legExam">Fechas de examen – Permiso B</legend>
         <div class="exgrid" id="exB">
-          <div class="exgroup c2"><h4>Teórico</h4><label>Fecha examen teórico · fecha y hora</label><div class="exfh"><input type="date" name="ex_teorico"><input type="time" name="hora_teorico" step="300" title="Hora de la cita del examen"></div>
-            <select name="res_teorico" class="exres"><option value="">Resultado: pendiente</option><option value="apto">✔ Apto</option><option value="noapto">✖ No apto</option><option value="nopres">No presentado</option></select>
-            <div class="exhist" id="hist_teorico"></div></div>
+          <div class="exgroup c2"><h4>Teórico</h4><label>Teórico</label><div class="exfh hidden"><input type="date" name="ex_teorico"><input type="time" name="hora_teorico" step="300"></div>
+            <label class="chk teochk"><input type="checkbox" data-teo="teorico" style="width:auto"> ✔ Aprobado</label>
+            <select name="res_teorico" class="exres hidden"><option value="">Resultado: pendiente</option><option value="apto">✔ Apto</option><option value="noapto">✖ No apto</option><option value="nopres">No presentado</option></select>
+            <div class="exhist hidden" id="hist_teorico"></div></div>
           <div class="exgroup c2"><h4>Práctico</h4><label>Fecha examen práctico · fecha y hora</label><div class="exfh"><input type="date" name="ex_practico"><input type="time" name="hora_practico" step="300" title="Hora de la cita del examen"></div>
             <select name="res_practico" class="exres"><option value="">Resultado: pendiente</option><option value="apto">✔ Apto</option><option value="noapto">✖ No apto</option><option value="nopres">No presentado</option></select>
             <div class="exhist" id="hist_practico"></div><div class="row" id="msg_practico" style="margin-top:6px;gap:4px"></div></div>
         </div>
         <div class="exgrid hidden" id="exA">
-          <div class="exgroup"><h4>Teórico</h4><label>Común · fecha y hora</label><div class="exfh"><input type="date" name="ex_comun"><input type="time" name="hora_comun" step="300" title="Hora de la cita del examen"></div>
-            <select name="res_comun" class="exres"><option value="">Resultado: pendiente</option><option value="apto">✔ Apto</option><option value="noapto">✖ No apto</option><option value="nopres">No presentado</option></select>
-            <div class="exhist" id="hist_comun"></div></div>
-          <div class="exgroup"><h4>Teórico</h4><label>Específico · fecha y hora</label><div class="exfh"><input type="date" name="ex_especifico"><input type="time" name="hora_especifico" step="300" title="Hora de la cita del examen"></div>
-            <select name="res_especifico" class="exres"><option value="">Resultado: pendiente</option><option value="apto">✔ Apto</option><option value="noapto">✖ No apto</option><option value="nopres">No presentado</option></select>
-            <div class="exhist" id="hist_especifico"></div></div>
+          <div class="exgroup"><h4>Teórico</h4><label>Común</label><div class="exfh hidden"><input type="date" name="ex_comun"><input type="time" name="hora_comun" step="300"></div>
+            <label class="chk teochk"><input type="checkbox" data-teo="comun" style="width:auto"> ✔ Aprobado</label>
+            <select name="res_comun" class="exres hidden"><option value="">Resultado: pendiente</option><option value="apto">✔ Apto</option><option value="noapto">✖ No apto</option><option value="nopres">No presentado</option></select>
+            <div class="exhist hidden" id="hist_comun"></div></div>
+          <div class="exgroup"><h4>Teórico</h4><label>Específico</label><div class="exfh hidden"><input type="date" name="ex_especifico"><input type="time" name="hora_especifico" step="300"></div>
+            <label class="chk teochk"><input type="checkbox" data-teo="especifico" style="width:auto"> ✔ Aprobado</label>
+            <select name="res_especifico" class="exres hidden"><option value="">Resultado: pendiente</option><option value="apto">✔ Apto</option><option value="noapto">✖ No apto</option><option value="nopres">No presentado</option></select>
+            <div class="exhist hidden" id="hist_especifico"></div></div>
           <div class="exgroup"><h4>Práctico</h4><label>Destreza (maniobras) · fecha y hora</label><div class="exfh"><input type="date" name="ex_circuito"><input type="time" name="hora_circuito" step="300" title="Hora de la cita del examen"></div>
             <select name="res_circuito" class="exres"><option value="">Resultado: pendiente</option><option value="apto">✔ Apto</option><option value="noapto">✖ No apto</option><option value="nopres">No presentado</option></select>
             <div class="exhist" id="hist_circuito"></div><div class="row" id="msg_circuito" style="margin-top:6px;gap:4px"></div></div>
@@ -359,6 +367,7 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
       <div class="row">
         <input id="buscar" placeholder="Buscar nombre, DNI, teléfono…" style="width:240px">
         <select id="filtroPermiso" style="width:130px"><option value="">Todos</option><option>B</option><option>AM</option><option>A1</option><option>A2</option></select>
+        <select id="filtroArch" style="width:150px"><option value="">Alumnos activos</option><option value="arch">📦 Archivados</option></select>
         <button class="btn sec" id="btnCSV">⬇️ Exportar CSV</button>
         <button class="btn del" id="btnVaciar">🗑️ Vaciar todo</button>
       </div>
@@ -406,8 +415,7 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
         </select>
         <select id="exTipo" style="width:170px">
           <option value="">Todos los tipos</option>
-          <option value="teorico">B · Teórico</option><option value="practico">B · Práctico</option>
-          <option value="comun">Moto · Teórico común</option><option value="especifico">Moto · Teórico específico</option>
+          <option value="practico">B · Práctico</option>
           <option value="circuito">Moto · Destreza</option><option value="via">Moto · Circulación</option>
         </select>
       </div>
@@ -499,6 +507,15 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
     <p style="color:var(--muted);margin:0 0 10px;font-size:13px" id="avDesc"></p>
     <p style="color:var(--muted);margin:0 0 10px;font-size:13px"> Cada botón abre WhatsApp con el mensaje ya escrito para ese alumno; solo hay que pulsar <b>Enviar</b>. Queda marcado como «avisado».</p>
     <div class="scroll"><table id="tAvisos"></table></div>
+    <details id="recBox" style="margin-top:16px;border:1px solid var(--line,#dde3ea);border-radius:8px;padding:8px 12px">
+      <summary style="cursor:pointer;font-weight:600" id="recSum">🔔 Recordatorio del día anterior (opcional)</summary>
+      <p style="color:var(--muted);font-size:13px;margin:8px 0">Un recordatorio corto a cada alumno con clase o examen ese día, para que no se olvide. <b>Es voluntario:</b> no cuenta como pendiente. Quita el ✔ a quien no quieras recordar.</p>
+      <div class="row" style="margin-bottom:8px">
+        <span style="font-size:13px">Día</span><input type="date" id="recFecha" style="width:160px">
+        <button class="btn wa" id="recRafaga">▶ Recordar en ráfaga</button>
+      </div>
+      <div class="scroll"><table id="tRec"></table></div>
+    </details>
   </div>
 </section>
 </main>
@@ -609,6 +626,15 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
         <div id="cfSedes"></div><button type="button" class="btn sec sm" id="cfSedeAdd">➕ Añadir sede</button></div>
       <div style="grid-column:span 2"><button type="button" class="btn sec" id="cfTextos">✉️ Editar textos de los mensajes</button></div>
     </div>
+    <details style="margin-top:12px"><summary style="cursor:pointer;font-weight:600">🔑 Cambiar PIN de acceso</summary>
+      <div class="g2" style="margin-top:8px">
+        <div style="grid-column:span 2"><label>PIN actual</label><input id="cfPinAct" type="password" inputmode="numeric" maxlength="4" autocomplete="off"></div>
+        <div><label>PIN nuevo (4 cifras)</label><input id="cfPinNue" type="password" inputmode="numeric" maxlength="4" autocomplete="off"></div>
+        <div><label>Repite el PIN nuevo</label><input id="cfPinRep" type="password" inputmode="numeric" maxlength="4" autocomplete="off"></div>
+      </div>
+      <p style="margin:6px 0 0;font-size:12px;color:var(--muted)">Déjalo en blanco si no quieres cambiarlo. El PIN va dentro de las copias de seguridad: al abrir una copia en otra tablet, se usa el PIN de esa copia.</p>
+    </details>
+    <p id="cfEspacio" style="margin:10px 0 0;font-size:12px;color:var(--muted)"></p>
     <p style="margin:14px 0 0;font-size:13px;color:var(--muted)">🔒 Las clases con menos de 24 h de antelación no se pueden cambiar y cuentan como realizadas aunque el alumno falte (salvo justificante médico).</p>
     <div style="margin-top:12px">
       <label>Mañana de un examen práctico</label>
@@ -690,7 +716,7 @@ window.alert=function(msg){
 };
 /* ================== DATOS ================== */
 const LS_KEY = "agendaAutoescuela_v1";
-const VERSION = "v10.8 NOV27";
+const VERSION = "v11.0 NOV27";
 const HORAS = []; for (let m = 8*60; m < 21*60; m += 30) HORAS.push(String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"));   // filas de 30 min: 08:00 … 20:30 (la última termina a las 21:00)
 const EXAMENES = {
   B:  [["teorico","Teórico"],["practico","Práctico"]],
@@ -723,9 +749,43 @@ function alumno(id){ return db.alumnos.find(a=>a.id===id); }
 function toast(t){ const e=document.createElement("div"); e.className="toast"; e.textContent=t; document.body.appendChild(e); setTimeout(()=>e.remove(),2600); }
 
 /* Persistencia: copia automática en el navegador (si la directiva lo permite) + fichero JSON */
+/* Los datos se guardan en IndexedDB (mucho más espacio que localStorage, que se llena con ~100 fotos).
+   Si el navegador no tiene IndexedDB se usa localStorage. Si algo no se puede guardar, sale un aviso rojo. */
+const IDB_NOMBRE="agendaAutoescuela", IDB_ALMACEN="datos";
+let idb=null, datosListos=false, idbTimer=null;
+function idbAbrir(){ return new Promise((ok,ko)=>{ try{ if(!window.indexedDB) return ko("sin IndexedDB");
+  const r=indexedDB.open(IDB_NOMBRE,1); r.onupgradeneeded=()=>r.result.createObjectStore(IDB_ALMACEN); r.onsuccess=()=>ok(r.result); r.onerror=()=>ko(r.error);
+  r.onblocked=()=>ko("bloqueado"); }catch(e){ ko(e); } }); }
+function idbLeer(){ return new Promise((ok,ko)=>{ try{ const q=idb.transaction(IDB_ALMACEN).objectStore(IDB_ALMACEN).get("db"); q.onsuccess=()=>ok(q.result); q.onerror=()=>ko(q.error); }catch(e){ ko(e); } }); }
+function idbEscribir(txt){ return new Promise((ok,ko)=>{ try{ const t=idb.transaction(IDB_ALMACEN,"readwrite"); t.objectStore(IDB_ALMACEN).put(txt,"db");
+  t.oncomplete=()=>ok(); t.onerror=()=>ko(t.error); t.onabort=()=>ko(t.error||"abortado"); }catch(e){ ko(e); } }); }
+function errorAlGuardar(mal){ const b=$("errGuardar"); if(b) b.classList.toggle("hidden",!mal); }
+function guardarYa(){
+  clearTimeout(idbTimer); idbTimer=null;
+  if(!datosListos) return;
+  let txt; try{ txt=JSON.stringify(db); }catch(e){ errorAlGuardar(true); return; }
+  try{ localStorage.setItem("agendaPin",db.config&&db.config.pinHash||""); }catch(e){}
+  if(idb) idbEscribir(txt).then(()=>errorAlGuardar(false)).catch(()=>errorAlGuardar(true));
+  else { try{ localStorage.setItem(LS_KEY,txt); errorAlGuardar(false); }catch(e){ errorAlGuardar(true); } }
+}
 function persistir(){
   sinGuardar = true;
-  try{ localStorage.setItem(LS_KEY, JSON.stringify(db)); }catch(e){}
+  if(!datosListos) return;                      // nunca se graba antes de haber leído los datos guardados
+  clearTimeout(idbTimer); idbTimer=setTimeout(guardarYa,120);
+}
+document.addEventListener("visibilitychange",()=>{ if(document.hidden&&idbTimer) guardarYa(); });
+window.addEventListener("pagehide",()=>{ if(idbTimer) guardarYa(); });
+async function cargarDatos(){
+  try{
+    idb=await idbAbrir();
+    const t=await idbLeer();
+    if(t){ const o=JSON.parse(t); if(o&&o.alumnos) db=o; }
+    else if(cargarLocal()){ await idbEscribir(JSON.stringify(db)); try{ localStorage.removeItem(LS_KEY); }catch(e){} }      // traslado automático desde la versión anterior (y se libera el espacio viejo)
+  }catch(e){ idb=null; cargarLocal(); }
+  datosListos=true;
+}
+async function espacioUsado(){
+  try{ const e=await navigator.storage.estimate(); return (e.usage/1048576).toFixed(1)+" MB usados de "+Math.round(e.quota/1048576)+" MB disponibles"; }catch(x){ return ""; }
 }
 function cargarLocal(){
   try{ const t=localStorage.getItem(LS_KEY); if(t){ const o=JSON.parse(t); if(o&&o.alumnos){ db=o; return true; } } }catch(e){}
@@ -759,7 +819,7 @@ $("fileDB").onchange=e=>{
       const o=JSON.parse(r.result);
       if(!o||!Array.isArray(o.alumnos)||!Array.isArray(o.clases)) throw 0;
       if(db.alumnos.length && !db.ejemplo && !confirm("Se sustituirán los datos actuales por los del fichero. ¿Continuar?")) return;
-      db=o; normalizar(); purgarEjemplos(); copiaPospuesta=false; persistir(); sinGuardar=false; nuevaFicha(); refrescarTodo(); toast("Cargados "+db.alumnos.length+" alumnos y "+db.clases.length+" clases.");
+      const pinPrevio=db.config&&db.config.pinHash; db=o; if(db.config&&!db.config.pinHash&&pinPrevio) db.config.pinHash=pinPrevio; normalizar(); purgarEjemplos(); copiaPospuesta=false; persistir(); sinGuardar=false; nuevaFicha(); refrescarTodo(); toast("Cargados "+db.alumnos.length+" alumnos y "+db.clases.length+" clases.");
     }catch(x){ alert("El fichero no es una base de datos válida de la agenda."); }
   };
   r.readAsText(f); e.target.value="";
@@ -793,7 +853,7 @@ function ver(v,forzar){
   if(v==="plan") pintarPlan();
   if(v==="medios") pintarMedios();
   if(v==="ficha") rellenarSelectsFicha(F.profesor.value,F.vehiculo.value);   // recoge profesores/vehículos dados de alta después
-  if(v==="lista") pintarLista(); if(v==="agenda") pintarAgenda(); if(v==="examenes") pintarExamenes(); if(v==="avisos") pintarAvisos();
+  if(v==="lista") pintarLista(); if(v==="agenda") pintarAgenda(); if(v==="examenes") pintarExamenes(); if(v==="avisos"){ pintarAvisos(); pintarRecordatorios(); }
 }
 
 /* ================== FICHA ================== */
@@ -814,7 +874,7 @@ function mostrarBloqueExamen(){
   $("exB").classList.toggle("hidden",esA); $("exA").classList.toggle("hidden",!esA);
   F.ex_via.closest(".exgroup").classList.toggle("hidden",p==="AM");
   $("boxNuevo").classList.toggle("hidden",!esMoto(p)); if(!esMoto(p)) F.nuevo.checked=false;   // en coche la clase ya es individual
-  $("legExam").textContent="Fechas de examen – Permiso "+p+(p==="AM"?" (ciclomotor)":esA?" (motocicleta)":" (coche)");
+  $("legExam").textContent="Exámenes – Permiso "+p+(p==="AM"?" (ciclomotor)":esA?" (motocicleta)":" (coche)");
 }
 F.addEventListener("input",e=>{ cambiosFicha=true; if(e.target.name&&e.target.name.startsWith("ex_")) validarFicha(); });
 F.addEventListener("change",e=>{
@@ -833,6 +893,12 @@ F.addEventListener("change",e=>{
   }
 });
 const TXT_RES={apto:"Apto",noapto:"No apto",nopres:"No presentado"};
+/* Los teóricos solo se marcan como aprobados (sin fecha ni hora): la app se centra en las prácticas y sus exámenes */
+const TEORICOS=["teorico","comun","especifico"];
+function esTeorico(k){ return TEORICOS.includes(k); }
+function pintarTeoricos(){ document.querySelectorAll("input[data-teo]").forEach(c=>{ c.checked=F["res_"+c.dataset.teo].value==="apto"; }); }
+F.addEventListener("change",e=>{ const k=e.target.dataset&&e.target.dataset.teo; if(!k) return;
+  F["res_"+k].value=e.target.checked?"apto":""; F["ex_"+k].value=""; F["hora_"+k].value=""; pintarSelRes(); validarFicha(); });
 /* ---------- Plantillas de mensajes (editables en ⚙️ Autoescuela → ✉️ Textos) ----------
    Marcas: {alumno} {profesor} {tipo} {autoescuela} {lugar} {ubicacion} {dias} {fecha} */
 const PLANTILLAS_DEF={
@@ -901,12 +967,18 @@ function sedes(){ return db.config.sedes&&db.config.sedes.length?db.config.sedes
 function sedeDe(a){ return sedes().find(x=>x.nombre===a.sede)||null; }
 /* Aprobado final: el último examen práctico de su permiso (B práctico · AM destreza · A1/A2 circulación) */
 function aprobadoFinal(a){ const l=EXAMENES[a.permiso]; return !!(l&&(a.resultados||{})[l[l.length-1][0]]==="apto"); }
+PLANTILLAS_DEF.rec_clase=`Hola {alumno} 👋
+Te recuerdo que tienes clase práctica {cuando} a las {hora} ({clase}).
+Si te surge algún imprevisto, avísame cuanto antes. ¡Nos vemos!`;
+PLANTILLAS_DEF.rec_examen=`Hola {alumno} 👋
+Te recuerdo que {cuando} tienes el {examen}, a las {hora}.
+No olvides el DNI/NIE original y en vigor{equipo}. ¡Mucha suerte! 🍀`;
 PLANTILLAS_DEF.resena=`Buenas y enhorabuena por tu aprobado !!!
 
 Si te acuerdas y crees que lo merecemos …😁 :
 
 {enlace}`;
-const NOMBRE_PLANT={resena:"🎉 Enhorabuena y reseña (al aprobar el carnet; enlace según la sede)",bienvenida:"👋 Bienvenida (una sola vez)",practicas:"🏍️ Inicio de prácticas de destreza (tras aprobar el teórico de moto)",
+const NOMBRE_PLANT={rec_clase:"🔔 Recordatorio de clase (día anterior, opcional)",rec_examen:"🔔 Recordatorio de examen (día anterior, opcional; {equipo} = equipación en exámenes prácticos de moto)",resena:"🎉 Enhorabuena y reseña (al aprobar el carnet; enlace según la sede)",bienvenida:"👋 Bienvenida (una sola vez)",practicas:"🏍️ Inicio de prácticas de destreza (tras aprobar el teórico de moto)",
   prev_circuito:"📅 Destreza · previsión «¿Te pido hueco?»",conf_circuito:"✅ Destreza · fecha confirmada (hora pendiente)",
   prev_practico:"🚗 Coche · práctico · previsión «¿Te pido hueco?»",conf_practico:"🚗 Coche · práctico · fecha confirmada (hora pendiente)",
   prev_via:"📅 Circulación · previsión «¿Te pido hueco?»",conf_via:"✅ Circulación · fecha confirmada (hora pendiente)"};
@@ -921,7 +993,7 @@ function teoriaAprobada(a){ const r=a.resultados||{}; return esMoto(a.permiso)&&
 function horaEx(a,k){ return (a&&a.horasEx&&a.horasEx[k])||""; }
 function leerHoras(){ const o={}; EXAMENES[F.permiso.value].forEach(([k])=>{ o[k]=F["hora_"+k].value||""; }); return o; }
 function rtag(r){ return r?`<span class="rt rt-${r}">${r==="apto"?"✔ ":r==="noapto"?"✖ ":""}${TXT_RES[r]}</span>`:""; }
-function pintarSelRes(){ Object.keys(NOMBRE_EX).forEach(k=>{ const el=F["res_"+k]; el.className="exres"+(el.value?" r-"+el.value:""); }); }
+function pintarSelRes(){ Object.keys(NOMBRE_EX).forEach(k=>{ const el=F["res_"+k]; el.className="exres"+(el.value?" r-"+el.value:"")+(esTeorico(k)?" hidden":""); }); pintarTeoricos(); }
 function leerResultados(){ const o={}; EXAMENES[F.permiso.value].forEach(([k])=>{ o[k]=F["res_"+k].value||""; }); return o; }
 /* Intentos anteriores de cada examen (y aviso de lo que pasará al historial al guardar) */
 function pintarHistorial(){
@@ -982,12 +1054,15 @@ function leerExamenes(){
 /* Devuelve {err:[], warn:[]} */
 function comprobarExamenes(permiso, ex, idAlumno, res, horas, prof){
   res=res||{};
-  const err=[], warn=[], lista=EXAMENES[permiso].map(([k,n])=>({k,n,f:ex[k]})).filter(x=>x.f);
+  const err=[], warn=[], lista=EXAMENES[permiso].filter(([k])=>!esTeorico(k)).map(([k,n])=>({k,n,f:ex[k]})).filter(x=>x.f);
   // 1. Ninguna fecha puede coincidir con otra del mismo alumno
   for(let i=0;i<lista.length;i++) for(let j=i+1;j<lista.length;j++)
     if(lista[i].f===lista[j].f) err.push(`«${lista[i].n}» y «${lista[j].n}» coinciden el ${fmt(lista[i].f)}. Deben ir en fechas distintas.`);
   // 2. Orden lógico: teórico antes que práctico (moto: común → específico → destreza → circulación)
-  const orden=EXAMENES[permiso];
+  const orden=EXAMENES[permiso].filter(([k])=>!esTeorico(k));
+  const teoPend=EXAMENES[permiso].filter(([k])=>esTeorico(k)&&res[k]!=="apto");
+  const primPract=orden.map(([k])=>ex[k]).filter(Boolean).sort()[0];
+  if(teoPend.length&&primPract&&primPract>=hoy()) warn.push(`Tiene fecha de examen práctico pero falta marcar como aprobado: ${teoPend.map(x=>x[1]).join(" y ")}.`);
   for(let i=0;i<orden.length;i++) for(let j=i+1;j<orden.length;j++){
     const a=ex[orden[i][0]], b=ex[orden[j][0]];
     if(a&&b&&b<a) err.push(`«${orden[j][1]}» (${fmt(b)}) no puede ser anterior a «${orden[i][1]}» (${fmt(a)}).`);
@@ -1003,7 +1078,7 @@ function comprobarExamenes(permiso, ex, idAlumno, res, horas, prof){
     if(b) err.push(`El ${fmt(f)} ya hay examen de ${NOMBRE_EX[otro].toLowerCase()} de moto (${nombreCompleto(b)}): destreza y circulación de moto no pueden ser el mismo día.`);
   });
   // 3b. Resultados coherentes con la fecha
-  EXAMENES[permiso].forEach(([k,n])=>{
+  EXAMENES[permiso].forEach(([k,n])=>{ if(esTeorico(k)) return;
     if(res[k]&&!ex[k]) err.push(`«${n}» tiene resultado pero no tiene fecha.`);
     else if(res[k]&&ex[k]>hoy()) err.push(`«${n}» es el ${fmt(ex[k])}: no se puede poner resultado a un examen que aún no se ha celebrado.`);
   });
@@ -1067,13 +1142,14 @@ function cargarFicha(id){
   Object.keys(NOMBRE_EX).forEach(k=>{ F["ex_"+k].value=(a.examenes&&a.examenes[k])||""; F["res_"+k].value=(a.resultados&&a.resultados[k])||""; F["hora_"+k].value=horaEx(a,k); });
   F.nuevo.checked=!!a.nuevo; pintarSedes(a.sede||"");
   fotoData=a.foto||""; pintarFoto(); mostrarBloqueExamen(); pintarSelRes(); pintarHistorial(); validarFicha();
-  $("fichaTitulo").textContent=nombreCompleto(a); pintarClasesAlumno(); pintarPagos(); pintarBienvenida(); cambiosFicha=false;
+  $("fichaTitulo").textContent=nombreCompleto(a)+(a.archivado?" · 📦 archivado":""); pintarClasesAlumno(); pintarPagos(); pintarBienvenida(); cambiosFicha=false;
 }
 function abrirFicha(id){
   if(!alumno(id)) return;
   const ir=()=>{ cargarFicha(id); ver("ficha",true); };
   const p=pendientesDe(vista); if(p) pedirGuardar(p,ir); else ir();
 }
+$("btnArchivar").onclick=()=>{ const a=alumno(actual); if(a) archivarAlumno(a.id,!a.archivado); };
 $("btnNuevo").onclick=()=>{ const p=pendientesDe("ficha"); if(p) pedirGuardar(p,nuevaFicha); else nuevaFicha(); };
 $("btnGuardarAlumno").onclick=guardarAlumno;
 
@@ -1179,7 +1255,7 @@ $("btnImprimir").onclick=()=>{
   if(!actual){ alert("Guarda primero el alumno."); return; }
   const a=alumno(actual);
   const ex=EXAMENES[a.permiso].map(([k,n])=>{ const hi=(a.historial||[]).filter(h=>h.k===k).map(h=>fmt(h.fecha)+" "+TXT_RES[h.res]);
-    return `<tr><th>${n}</th><td>${a.examenes[k]?diaSem(a.examenes[k])+" "+fmt(a.examenes[k])+(horaEx(a,k)?" · "+horaEx(a,k):""):"—"}</td><td>${TXT_RES[(a.resultados||{})[k]]||""}</td><td>${hi.length?"Anteriores: "+hi.join(", "):""}</td></tr>`; }).join("");
+    return `<tr><th>${n}</th><td>${esTeorico(k)?"":a.examenes[k]?diaSem(a.examenes[k])+" "+fmt(a.examenes[k])+(horaEx(a,k)?" · "+horaEx(a,k):""):"—"}</td><td>${TXT_RES[(a.resultados||{})[k]]||""}</td><td>${hi.length?"Anteriores: "+hi.join(", "):""}</td></tr>`; }).join("");
   const b=bonoDe(a);
   const cl=db.clases.filter(c=>c.alumnoId===a.id).sort((x,y)=>(x.fecha+x.hora).localeCompare(y.fecha+y.hora));
   $("printArea").innerHTML=`${a.foto?`<img class="pfoto" src="${a.foto}">`:`<div class="pfoto"></div>`}
@@ -1256,6 +1332,7 @@ function situacion(a){
   for(const [k] of EXAMENES[a.permiso]){
     if(r[k]==="apto") continue;
     const f=ex[k];
+    if(esTeorico(k)) return `<span style="color:var(--muted)">Pendiente: ${EX_CORTO[k]}</span>`;
     if(!f) return `<span style="color:var(--muted)">Sin fecha: ${EX_CORTO[k]}</span>`;
     if(r[k]) return `${rtag(r[k])} ${EX_CORTO[k]}<br><small style="color:var(--err)">falta nueva fecha</small>`;
     if(f<h) return `<span class="rt rt-falta">⏳ ${EX_CORTO[k]}</span><br><small>falta resultado (${fmt(f)})</small>`;
@@ -1263,15 +1340,17 @@ function situacion(a){
   }
   return `<span class="rt rt-apto">✔ Todo aprobado</span>`;
 }
+function activos(){ return db.alumnos.filter(a=>!a.archivado); }
 function pintarLista(){
-  const q=$("buscar").value.toLowerCase().trim(), fp=$("filtroPermiso").value;
-  const lst=db.alumnos.filter(a=>(!fp||a.permiso===fp)&&(!q||[a.nombre,a.apellidos,a.dni,a.tel,a.email,a.profesor].join(" ").toLowerCase().includes(q)))
+  const q=$("buscar").value.toLowerCase().trim(), fp=$("filtroPermiso").value, verArch=$("filtroArch").value==="arch";
+  const lst=db.alumnos.filter(a=>!!a.archivado===verArch&&(!fp||a.permiso===fp)&&(!q||[a.nombre,a.apellidos,a.dni,a.tel,a.email,a.profesor].join(" ").toLowerCase().includes(q)))
     .sort((a,b)=>nombreCompleto(a).localeCompare(nombreCompleto(b),"es"));
-  const cnt=p=>db.alumnos.filter(a=>a.permiso===p).length;
-  $("kpis").innerHTML=`<div class="kpi"><b>${db.alumnos.length}</b><span>Alumnos</span></div>
+  const cnt=p=>activos().filter(a=>a.permiso===p).length, nArch=db.alumnos.length-activos().length;
+  $("kpis").innerHTML=`<div class="kpi"><b>${activos().length}</b><span>Alumnos activos</span></div>
     <div class="kpi"><b>${cnt("B")}</b><span>Permiso B</span></div><div class="kpi"><b>${cnt("AM")}</b><span>AM</span></div><div class="kpi"><b>${cnt("A1")}</b><span>A1</span></div>
     <div class="kpi"><b>${cnt("A2")}</b><span>A2</span></div><div class="kpi"><b>${db.clases.filter(c=>c.fecha>=hoy()&&c.estado!=="anulada").length}</b><span>Clases programadas</span></div>
-    ${(()=>{ const sm=db.clases.filter(c=>c.fecha<hoy()&&!c.estado).length; return `<div class="kpi ${sm?"mal":""}" ${sm?`onclick="verSinMarcar()" style="cursor:pointer" title="Pulsa para ver y marcar"`:""}><b>${sm}</b><span>Clases sin marcar asistencia${sm?" 👆":""}</span></div>`; })()}`;
+    ${(()=>{ const sm=db.clases.filter(c=>c.fecha<hoy()&&!c.estado).length; return `<div class="kpi ${sm?"mal":""}" ${sm?`onclick="verSinMarcar()" style="cursor:pointer" title="Pulsa para ver y marcar"`:""}><b>${sm}</b><span>Clases sin marcar asistencia${sm?" 👆":""}</span></div>`; })()}
+    <div class="kpi" onclick="$('filtroArch').value='${verArch?"":"arch"}';pintarLista()" style="cursor:pointer" title="Pulsa para ver ${verArch?"los activos":"los archivados"}"><b>${nArch}</b><span>📦 Archivados 👆</span></div>`;
   $("tLista").innerHTML=`<tr><th></th><th>Alumno</th><th>DNI/NIE</th><th>Permiso</th><th>Teléfono</th><th>Profesor</th><th>Clases<br><small>hechas / quedan</small></th><th>Situación</th><th></th></tr>`+
     (lst.length?lst.map(a=>{ const b=bonoDe(a);
       return `<tr><td>${a.foto?`<img class="mini" src="${a.foto}">`:`<div class="mini"></div>`}</td>
@@ -1279,9 +1358,23 @@ function pintarLista(){
       <td>${esc(a.dni)}</td><td><span class="tag t-${a.permiso}">${a.permiso}</span></td><td>${esc(a.tel)}</td><td>${esc(a.profesor)}</td>
       <td>${b.consumidas} / ${b.contratadas?`<b style="color:${b.quedan<=0?"var(--err)":"inherit"}">${b.quedan}</b>`:"—"}</td>
       <td>${situacion(a)}</td>
-      <td class="row"><button class="btn del sm" onclick="borrarAlumno('${a.id}')">Borrar</button></td></tr>`;}).join("")
-    :`<tr><td colspan="9" style="color:var(--muted);text-align:center;padding:20px">No hay alumnos${q||fp?" con ese filtro":""}.</td></tr>`);
+      <td class="row" style="flex-wrap:nowrap">${a.archivado?`<button class="btn sec sm" onclick="archivarAlumno('${a.id}',false)" title="Archivado el ${fmt(a.archivado)}">♻️ Recuperar</button>`:`<button class="btn sec sm" onclick="archivarAlumno('${a.id}',true)" title="Archivar (no se borra)">📦</button>`}<button class="btn del sm" onclick="borrarAlumno('${a.id}')">Borrar</button></td></tr>`;}).join("")
+    :`<tr><td colspan="9" style="color:var(--muted);text-align:center;padding:20px">${verArch?"No hay alumnos archivados":"No hay alumnos"}${q||fp?" con ese filtro":""}.</td></tr>`);
 }
+$("filtroArch").onchange=pintarLista;
+/* Archivar: el alumno desaparece del listado, plan, avisos y selección de clases, pero se conservan todos sus datos */
+window.archivarAlumno=(id,archivar)=>{
+  const a=alumno(id); if(!a) return;
+  if(archivar){
+    const fut=db.clases.filter(c=>c.alumnoId===id&&c.fecha>=hoy()&&c.estado!=="anulada"&&!c.estado).length;
+    if(!confirm(`¿Archivar a ${nombreCompleto(a)}?\n\nDesaparece del listado, del plan semanal y de los avisos. No se borra nada: lo verás en «📦 Archivados» y podrás recuperarlo.`+(fut?`\n\n⚠️ Tiene ${fut} clase(s) pendiente(s); se mantienen en la agenda.`:""))) return;
+    a.archivado=hoy();
+    if(a.foto&&confirm("¿Quitar también su foto para ahorrar espacio en la tablet?\n(El resto de datos se conserva.)")) a.foto="";
+    toast("Alumno archivado.");
+  } else { delete a.archivado; toast("Alumno recuperado."); }
+  persistir(); if(actual===id) cargarFicha(id); pintarLista(); pintarPlanSiVisible(); pintarAvisos(); pintarRecordatorios();
+};
+function pintarPlanSiVisible(){ if(vista==="plan") pintarPlan(); }
 $("btnCSV").onclick=()=>{
   const cab=["Apellidos","Nombre","DNI","F.Nacimiento","Teléfono","Email","Dirección","Permiso","Alta","Profesor","Vehículo",
     "Ex.Teórico B","Res.","Ex.Práctico B","Res.","Ex.Teórico común","Res.","Ex.Teórico específico","Res.","Ex.Destreza","Res.","Ex.Circulación","Res.",
@@ -1355,7 +1448,8 @@ function rellenarSelectsClase(permiso,p,v){
 function abrirClase(id, pre){
   claseEdit=id;
   const sel=$("cAlumno");
-  sel.innerHTML='<option value="">— Selecciona alumno —</option>'+db.alumnos.slice().sort((a,b)=>nombreCompleto(a).localeCompare(nombreCompleto(b),"es"))
+  const idCl=id&&(db.clases.find(x=>x.id===id)||{}).alumnoId;
+  sel.innerHTML='<option value="">— Selecciona alumno —</option>'+db.alumnos.filter(a=>!a.archivado||a.id===idCl||(pre&&a.id===pre.alumnoId)).sort((a,b)=>nombreCompleto(a).localeCompare(nombreCompleto(b),"es"))
     .map(a=>`<option value="${a.id}">${esc(nombreCompleto(a))} · ${a.permiso}</option>`).join("");
   const c=id?db.clases.find(x=>x.id===id):Object.assign({fecha:hoy(),hora:"08:00",tipo:"Circulación",profesor:"",vehiculo:"",obs:""},pre||{});
   const a=alumno(c.alumnoId);
@@ -1669,10 +1763,10 @@ $("acLuego").onclick=()=>{ copiaPospuesta=true; comprobarCopia(); };
 const DIAS_PL=["L","M","X","J","V"];
 function proximoLunes(){ return addDias(lunesDe(hoy()),7); }
 function planDe(lun){ db.planes[lun]=db.planes[lun]||{preg:{},resp:{}}; return db.planes[lun]; }
-function alumnosMoto(){ return db.alumnos.filter(a=>esMoto(a.permiso)).sort((a,b)=>nombreCompleto(a).localeCompare(nombreCompleto(b),"es")); }
+function alumnosMoto(){ return activos().filter(a=>esMoto(a.permiso)).sort((a,b)=>nombreCompleto(a).localeCompare(nombreCompleto(b),"es")); }
 /* Alumnos que entran en el plan según el filtro (coche y motos, solo motos o solo coche) */
 function alumnosPlan(){ const f=($("plFiltro")&&$("plFiltro").value)||"todos";
-  return db.alumnos.filter(a=>f==="todos"||(f==="moto"?esMoto(a.permiso):a.permiso==="B"))
+  return activos().filter(a=>f==="todos"||(f==="moto"?esMoto(a.permiso):a.permiso==="B"))
     .sort((a,b)=>(a.permiso==="B")-(b.permiso==="B")||nombreCompleto(a).localeCompare(nombreCompleto(b),"es")); }
 function tipoPorDefecto(a){ return a.permiso==="B"?"Circulación":a.permiso==="AM"?"Destreza":(a.resultados||{}).circuito==="apto"?"Circulación":"Destreza"; }
 function durPlan(a,r){ return esMoto(a.permiso)?(r.doble?60:30):(r.doble?90:45); }
@@ -1763,30 +1857,30 @@ $("plPreguntar").onclick=()=>{
   const P=planDe(lunesDe($("plSemana").value)), elegidos=alumnosPlan().filter(a=>respDe(P,a).inc&&!P.preg[a.id]);
   const cola=elegidos.filter(a=>telWa(a.tel)).map(a=>a.id), sinTel=elegidos.filter(a=>!telWa(a.tel));
   if(!cola.length){ alert(sinTel.length?"Los alumnos marcados que faltan no tienen un móvil válido:\n"+sinTel.map(nombreCompleto).join("\n"):"No queda ningún alumno marcado sin preguntar.\n\nMarca con ✔ (columna «Incluir») a quién quieres preguntar."); return; }
-  RF={cola,pos:0,env:0,salt:0,sinTel:sinTel.map(nombreCompleto)};
-  pintarRafaga();
+  iniciarRafaga(cola.map(id=>{ const a=alumno(id); return {nombre:a.nombre+" "+(a.apellidos||"").split(" ")[0],abrir:()=>plPreguntar(id)}; }),sinTel.map(nombreCompleto),"Envío en ráfaga");
 };
+function iniciarRafaga(items,sinTel,titulo){ RF={cola:items,pos:0,env:0,salt:0,sinTel:sinTel||[],titulo:titulo||"Envío en ráfaga"}; pintarRafaga(); }
 function pintarRafaga(){
   document.body.style.paddingBottom=RF?"90px":""; document.body.classList.toggle("enRafaga",!!RF);
   if(!RF){ $("rafaga").classList.add("hidden"); return; }
   $("rafaga").classList.remove("hidden");
   const N=RF.cola.length;
   if(RF.pos>=N){
-    $("rfInfo").innerHTML=`✅ <b>Ráfaga terminada:</b> ${RF.env} enviado(s)${RF.salt?` · ${RF.salt} saltado(s)`:""}${RF.sinTel.length?` · sin móvil: ${esc(RF.sinTel.join(", "))}`:""}`;
+    $("rfInfo").innerHTML=`✅ <b>${esc(RF.titulo)}: terminado.</b> ${RF.env} enviado(s)${RF.salt?` · ${RF.salt} saltado(s)`:""}${RF.sinTel.length?` · sin móvil: ${esc(RF.sinTel.join(", "))}`:""}`;
     $("rfSig").textContent="Cerrar"; $("rfSaltar").classList.add("hidden"); $("rfFin").classList.add("hidden"); return;
   }
-  const a=alumno(RF.cola[RF.pos]);
+  const it=RF.cola[RF.pos];
   $("rfInfo").innerHTML=RF.pos===0&&!RF.env&&!RF.salt
-    ?`▶ <b>Envío en ráfaga:</b> ${N} alumno(s). En WhatsApp pulsa <b>Enviar</b> y vuelve atrás a la app.`
+    ?`▶ <b>${esc(RF.titulo)}:</b> ${N} alumno(s). En WhatsApp pulsa <b>Enviar</b> y vuelve atrás a la app.`
     :`✔ Enviado. Pulsa para el siguiente.`;
-  $("rfSig").textContent=`${RF.pos===0&&!RF.env&&!RF.salt?"📲 Empezar":"📲 Siguiente"}: ${a?a.nombre+" "+(a.apellidos||"").split(" ")[0]:"?"} (${RF.pos+1} de ${N})`;
+  $("rfSig").textContent=`${RF.pos===0&&!RF.env&&!RF.salt?"📲 Empezar":"📲 Siguiente"}: ${it.nombre} (${RF.pos+1} de ${N})`;
   $("rfSaltar").classList.remove("hidden"); $("rfFin").classList.remove("hidden");
 }
 $("rfSig").onclick=()=>{
   if(!RF) return;
   if(RF.pos>=RF.cola.length){ RF=null; pintarRafaga(); return; }
-  const id=RF.cola[RF.pos]; RF.pos++; RF.env++;
-  plPreguntar(id); pintarRafaga();
+  const it=RF.cola[RF.pos]; RF.pos++; RF.env++;
+  it.abrir(); pintarRafaga();
 };
 $("rfSaltar").onclick=()=>{ if(!RF) return; RF.pos++; RF.salt++; pintarRafaga(); };
 $("rfFin").onclick=()=>{ RF=null; pintarRafaga(); };
@@ -2060,8 +2154,8 @@ function refrescarListas(){
   fp.innerHTML='<option value="">Todos los profesores</option>'+P.map(p=>`<option value="${esc(p.toLowerCase())}">${esc(p)}</option>`).join("");
   fp.value=cur;
 }
-function refrescarTodo(){ refrescarListas(); rellenarSelectsFicha(F.profesor.value,F.vehiculo.value); pintarLista(); pintarAgenda(); pintarExamenes(); pintarAvisos(); actualizarBadge(); comprobarCopia(); comprobarMiercoles(); }
-function refrescarVistas(){ pintarClasesAlumno(); pintarExamenes(); pintarAvisos(); }
+function refrescarTodo(){ refrescarListas(); rellenarSelectsFicha(F.profesor.value,F.vehiculo.value); pintarLista(); pintarAgenda(); pintarExamenes(); pintarAvisos(); pintarRecordatorios(); actualizarBadge(); comprobarCopia(); comprobarMiercoles(); }
+function refrescarVistas(){ pintarClasesAlumno(); pintarExamenes(); pintarAvisos(); if($("recBox").open) pintarRecordatorios(); }
 window.abrirFicha=abrirFicha; window.borrarAlumno=borrarAlumno;
 function normalizar(){
   if(db.profesores) db.profesores.forEach(p=>{ p.permisos=(p.permisos||[]).filter(x=>["B","AM","A1","A2"].includes(x)); if(!p.permisos.length) p.permisos=["B"]; });
@@ -2069,6 +2163,12 @@ function normalizar(){
   db.config=db.config||{nombre:"Autoescuela",tel:""};
   if(db.config.faltaDescuenta==null) db.config.faltaDescuenta=true;
   if(!db.config.bloqueoExamen) db.config.bloqueoExamen="todos";
+  if(!db.config.pinHash){ let h=""; try{ h=localStorage.getItem("agendaPin")||""; }catch(e){} db.config.pinHash=h||PIN_HASH; }
+  try{ localStorage.setItem("agendaPin",db.config.pinHash); }catch(e){}
+  db.recordados=db.recordados||{};
+  db.alumnos.forEach(a=>TEORICOS.forEach(k=>{ if(a.examenes) delete a.examenes[k]; if(a.horasEx) delete a.horasEx[k];
+    if(a.resultados&&a.resultados[k]&&a.resultados[k]!=="apto") delete a.resultados[k];
+    if(a.historial) a.historial=a.historial.filter(h=>h.k!==k); }));
   if(!db.config.lugar) db.config.lugar="Ciudad Santander";
   if(!db.config.ubicacion) db.config.ubicacion="https://maps.app.goo.gl/vSFvYUKzbz45hx5V9";
   if(!db.config.sedes||!db.config.sedes.length) db.config.sedes=SEDES_DEF.map(x=>Object.assign({},x));
@@ -2170,7 +2270,7 @@ function pintarMedios(){
   const P=db.profesores.slice().sort((a,b)=>a.nombre.localeCompare(b.nombre,"es"));
   $("tProf").innerHTML=`<tr><th>Profesor</th><th>Teléfono</th><th>Permisos</th><th>Alumnos</th><th>Clases pend.</th><th></th></tr>`+
     (P.length?P.map(p=>`<tr class="${p.activo===false?"inactivo":""}"><td><b>${esc(p.nombre)}</b>${p.activo===false?"<br><small>No activo</small>":""}</td><td>${esc(p.tel)}</td><td>${tags(p.permisos)}</td>
-      <td>${db.alumnos.filter(a=>a.profesor===p.nombre).length}</td><td>${db.clases.filter(c=>c.profesor===p.nombre&&c.fecha>=h).length}</td>
+      <td>${activos().filter(a=>a.profesor===p.nombre).length}</td><td>${db.clases.filter(c=>c.profesor===p.nombre&&c.fecha>=h).length}</td>
       <td class="row"><button class="btn sec sm" onclick="editarProf('${p.id}')">Editar</button><button class="btn del sm" onclick="borrarProf('${p.id}')">Borrar</button></td></tr>`).join("")
     :`<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:16px">Sin profesores. Rellena el formulario de arriba.</td></tr>`);
   const V=db.vehiculos.slice().sort((a,b)=>(a.permiso+a.modelo).localeCompare(b.permiso+b.modelo,"es"));
@@ -2211,6 +2311,8 @@ function enviarResena(id){
 }
 function pintarBienvenida(){
   const a=actual&&alumno(actual);
+  $("btnArchivar").classList.toggle("hidden",!a);
+  if(a) $("btnArchivar").textContent=a.archivado?"♻️ Recuperar":"📦 Archivar";
   $("btnBienvenida").classList.toggle("hidden",!a||!!a.bienvenida);
   $("bienvOk").classList.toggle("hidden",!(a&&a.bienvenida));
   if(a&&a.bienvenida) $("bienvOk").textContent="✔ Bienvenida enviada "+a.bienvenida.slice(0,10);
@@ -2321,6 +2423,49 @@ function pintarAvisos(){
     :`<tr><td colspan="7" style="color:var(--muted);text-align:center;padding:20px">${avModo==="pend"?"✔ No hay nada pendiente de avisar.":"No hay clases ni exámenes ese día."}</td></tr>`);
 }
 
+/* ---------- Recordatorio del día anterior (opcional) ---------- */
+function proximoDiaClase(){ let f=addDias(hoy(),1); while([0,6].includes(parse(f).getDay())) f=addDias(f,1); return f; }
+function cuandoTxt(f){ return f===addDias(hoy(),1)?"mañana, "+DIA_LARGO[parse(f).getDay()]+" "+fmt(f).slice(0,5):"el "+DIA_LARGO[parse(f).getDay()]+" "+fmt(f).slice(0,5); }
+let recItems=[], recQuitar=new Set();
+function itemsRecordatorio(f){
+  const r=[];
+  db.clases.filter(c=>c.fecha===f&&c.estado!=="anulada").forEach(c=>{ const a=alumno(c.alumnoId); if(!a) return;
+    r.push({key:"rc:"+c.id+":"+c.fecha+":"+c.hora,ord:c.hora,a,que:"Clase",det:`${c.hora}–${finClase(c)} · ${TXT_TIPO_CLASE[c.tipo]||c.tipo}`,
+      texto:()=>rellenar("rec_clase",a,{cuando:cuandoTxt(f),hora:c.hora,clase:String(TXT_TIPO_CLASE[c.tipo]||c.tipo).replace(/^Clase de /,"")})}); });
+  db.alumnos.forEach(a=>(EXAMENES[a.permiso]||[]).forEach(([k])=>{ if(!(a.examenes&&a.examenes[k]===f)||(a.resultados&&a.resultados[k])) return;
+    r.push({key:"re:"+a.id+":"+k+":"+f,ord:horaEx(a,k)||"00:00",a,que:"Examen",det:TXT_EXAMEN[k]+(horaEx(a,k)?" · "+horaEx(a,k):" · ⚠ sin hora"),
+      texto:()=>rellenar("rec_examen",a,{cuando:cuandoTxt(f),hora:horaEx(a,k)||"la hora que te indicamos",examen:TXT_EXAMEN[k].replace(/^Examen/,"examen"),
+        equipo:EX_MOTO_PRACT.includes(k)?" y toda la equipación obligatoria (casco, guantes, chaqueta, pantalón y botas)":""})}); }));
+  // un alumno con varias clases seguidas el mismo día recibe un solo recordatorio (el de la primera)
+  const vistos=new Set();
+  return r.sort((x,y)=>x.ord.localeCompare(y.ord)).filter(x=>{ if(x.que!=="Clase") return true; if(vistos.has(x.a.id)) return false; vistos.add(x.a.id); return true; });
+}
+function pintarRecordatorios(){
+  if(!$("recFecha").value) $("recFecha").value=proximoDiaClase();
+  const f=$("recFecha").value; recItems=itemsRecordatorio(f);
+  const pend=recItems.filter(x=>!db.recordados[x.key]).length;
+  const nMan=itemsRecordatorio(proximoDiaClase()).filter(x=>!db.recordados[x.key]).length;
+  $("recSum").textContent="🔔 Recordatorio del día anterior (opcional)"+(nMan?` · ${nMan} para ${cuandoTxt(proximoDiaClase()).split(",")[0]}`:"");
+  const sel=recItems.filter(x=>!db.recordados[x.key]&&!recQuitar.has(x.key)&&telWa(x.a.tel)).length;
+  $("recRafaga").textContent=`▶ Recordar en ráfaga (${sel})`; $("recRafaga").disabled=!sel;
+  $("tRec").innerHTML=recItems.length?`<tr><th></th><th>Hora</th><th>Alumno</th><th>Recordar</th><th>Estado</th><th></th></tr>`+recItems.map((x,i)=>`<tr>
+      <td><input type="checkbox" style="width:auto" ${db.recordados[x.key]||recQuitar.has(x.key)?"":"checked"} ${db.recordados[x.key]?"disabled":""} onchange="recMarcar(${i},this.checked)"></td>
+      <td>${esc(x.ord==="00:00"?"—":x.ord)}</td><td>${esc(nombreCompleto(x.a))} <span class="tag t-${x.a.permiso}">${x.a.permiso}</span></td>
+      <td><b>${x.que}</b> · ${esc(x.det)}</td><td>${db.recordados[x.key]?`<span class="sent">✔ recordado</span>`:telWa(x.a.tel)?"":'<span class="pend">sin móvil</span>'}</td>
+      <td><button class="btn wa sm" onclick="recEnviar(${i})" ${telWa(x.a.tel)?"":"disabled"}>📲</button></td></tr>`).join("")
+    :`<tr><td style="color:var(--muted);padding:12px">No hay clases ni exámenes ese día.</td></tr>`;
+}
+window.recMarcar=(i,v)=>{ const x=recItems[i]; if(!x) return; if(v) recQuitar.delete(x.key); else recQuitar.add(x.key); pintarRecordatorios(); };
+window.recEnviar=i=>{ const x=recItems[i]; if(!x) return; const k=x.key;
+  waAbrir(x.a,x.texto(),null); db.recordados[k]=sello(); persistir(); pintarRecordatorios(); };
+$("recFecha").onchange=pintarRecordatorios;
+$("recBox").addEventListener("toggle",pintarRecordatorios);
+$("recRafaga").onclick=()=>{
+  const cola=recItems.filter(x=>!db.recordados[x.key]&&!recQuitar.has(x.key)&&telWa(x.a.tel));
+  if(!cola.length) return;
+  iniciarRafaga(cola.map(x=>({nombre:x.a.nombre+" "+(x.a.apellidos||"").split(" ")[0],abrir:()=>{ const i=recItems.findIndex(y=>y.key===x.key); if(i>=0) recEnviar(i); else { waAbrir(x.a,x.texto(),null); db.recordados[x.key]=sello(); persistir(); } }})),
+    recItems.filter(x=>!db.recordados[x.key]&&!recQuitar.has(x.key)&&!telWa(x.a.tel)).map(x=>nombreCompleto(x.a)),"Recordatorios");
+};
 $("avSig").onclick=()=>{ const x=avItems.find(x=>!db.avisos[x.key]); if(x) x.run(); };
 
 /* Configuración y vaciado */
@@ -2328,6 +2473,8 @@ $("btnConfig").onclick=()=>{
   pintarCfSedes(sedes());
   $("cfNombre").value=db.config.nombre||""; $("cfTel").value=db.config.tel||""; $("cfLugar").value=db.config.lugar||""; $("cfUbi").value=db.config.ubicacion||"";
   document.querySelector(`input[name=cfBloq][value=${db.config.bloqueoExamen==="profesor"?"profesor":"todos"}]`).checked=true;
+  ["cfPinAct","cfPinNue","cfPinRep"].forEach(i=>$(i).value="");
+  $("cfEspacio").textContent=""; espacioUsado().then(t=>{ if(t) $("cfEspacio").textContent="💾 Datos de la app en esta tablet: "+t+(idb?"":" (modo antiguo)"); });
   $("mConfig").classList.remove("hidden"); $("cfNombre").focus();
 };
 $("cfCancelar").onclick=()=>$("mConfig").classList.add("hidden");
@@ -2345,10 +2492,18 @@ $("txCerrar").onclick=()=>$("mTextos").classList.add("hidden");
 $("txGuardar").onclick=()=>{ db.config.plantillas={}; document.querySelectorAll("#txLista textarea").forEach(t=>{ if(t.value.trim()&&t.value!==PLANTILLAS_DEF[t.dataset.k]) db.config.plantillas[t.dataset.k]=t.value; });
   persistir(); $("mTextos").classList.add("hidden"); toast("Textos guardados."); };
 $("cfGuardar").onclick=()=>{
+  const pa=$("cfPinAct").value.trim(), pn=$("cfPinNue").value.trim(), pr=$("cfPinRep").value.trim();
+  let pinCambiado=false;
+  if(pa||pn||pr){
+    if(hashPin(pa)!==pinGuardado()){ alert("El PIN actual no es correcto."); return; }
+    if(!/^\d{4}$/.test(pn)){ alert("El PIN nuevo tiene que tener 4 cifras."); return; }
+    if(pn!==pr){ alert("El PIN nuevo y su repetición no coinciden."); return; }
+    db.config.pinHash=hashPin(pn); try{ localStorage.setItem("agendaPin",db.config.pinHash); }catch(e){} pinCambiado=true;
+  }
   db.config.sedes=leerCfSedes(); if(actual) pintarSedes($("selSede").value);
   db.config=Object.assign(db.config,{nombre:$("cfNombre").value.trim()||"Autoescuela",tel:$("cfTel").value.trim(),lugar:$("cfLugar").value.trim(),ubicacion:$("cfUbi").value.trim(),
     bloqueoExamen:document.querySelector("input[name=cfBloq]:checked").value});
-  $("mConfig").classList.add("hidden"); persistir(); pintarPagos(); pintarLista(); pintarAgenda(); toast("Datos de la autoescuela guardados.");
+  $("mConfig").classList.add("hidden"); persistir(); pintarPagos(); pintarLista(); pintarAgenda(); toast(pinCambiado?"Guardado. PIN cambiado: úsalo la próxima vez que abras la app.":"Datos de la autoescuela guardados.");
 };
 $("btnVaciar").onclick=()=>{
   if(!confirm((db.ejemplo?"¿Quitar todos los DATOS DE EJEMPLO?\n(Se conservan los profesores y vehículos que hayas dado de alta tú.)":"¿Borrar TODOS los alumnos, clases y avisos?\n(Se conservan los profesores y vehículos.)")+"\n\nConsejo: antes pulsa «Guardar base de datos» para tener copia.")) return;
@@ -2386,8 +2541,9 @@ if("serviceWorker" in navigator && (location.protocol==="https:"||location.hostn
 }
 
 /* ================== PIN DE ACCESO ==================
-   Se pide cada vez que se abre la app. Para cambiar el PIN hay que generar una versión nueva. */
-const PIN_HASH="fb3b8d00", PIN_LARGO=4;
+   Se pide cada vez que se abre la app. Se cambia en ⚙️ Autoescuela → «Cambiar PIN» (viaja con las copias de seguridad). */
+const PIN_HASH="fb3b8d00", PIN_LARGO=4;   // PIN de fábrica: 5555 (se puede cambiar en ⚙️ Autoescuela)
+function pinGuardado(){ let h=""; try{ h=localStorage.getItem("agendaPin")||""; }catch(e){} return h||(db.config&&db.config.pinHash)||PIN_HASH; }
 function hashPin(pin){ const h=s=>{ let x=0x811c9dc5; for(const c of s){ x^=c.charCodeAt(0); x=Math.imul(x,16777619)>>>0; } return x.toString(16); };
   let v="AML·agenda·"+pin; for(let i=0;i<500;i++) v=h(v+i); return v; }
 (function(){
@@ -2398,7 +2554,7 @@ function hashPin(pin){ const h=s=>{ let x=0x811c9dc5; for(const c of s){ x^=c.ch
     if(k==="borrar") pin=pin.slice(0,-1); else if(k==="limpiar") pin=""; else if(pin.length<PIN_LARGO) pin+=k;
     pintar(); $("pinMsg").textContent="";
     if(pin.length===PIN_LARGO){
-      if(hashPin(pin)===PIN_HASH){ $("pinGate").remove(); document.removeEventListener("keydown",teclado); avisoMiercoles(); }
+      if(hashPin(pin)===pinGuardado()){ $("pinGate").remove(); document.removeEventListener("keydown",teclado); avisoMiercoles(); }
       else{ fallos++; $("pinDots").classList.add("mal"); $("pinMsg").textContent="PIN incorrecto"+(fallos>2?" ("+fallos+" intentos)":"");
         setTimeout(()=>{ $("pinDots").classList.remove("mal"); pin=""; pintar(); },400); }
     }
@@ -2408,10 +2564,12 @@ function hashPin(pin){ const h=s=>{ let x=0x811c9dc5; for(const c of s){ x^=c.ch
   document.addEventListener("keydown",teclado);
 })();
 
-cargarLocal(); normalizar();
-if(purgarEjemplos()) persistir();
 $("verApp").textContent=VERSION;
-sinGuardar=false; nuevaFicha(); refrescarTodo();
+(async()=>{
+  await cargarDatos(); normalizar();
+  if(purgarEjemplos()) persistir();
+  sinGuardar=false; nuevaFicha(); refrescarTodo(); avisoMiercoles();
+})();
 </script>
 </body>
 </html>
