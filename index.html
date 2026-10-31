@@ -238,7 +238,7 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
   <button class="hdrbtn" id="btnConfig" title="Nombre y teléfono de la autoescuela para la firma de los WhatsApp">⚙️ Autoescuela</button>
   <button class="hdrbtn" id="btnGuardar" title="Descarga un fichero .json con toda la base de datos">💾 Guardar base de datos</button>
   <button class="hdrbtn" id="btnAbrir" title="Carga un fichero .json guardado anteriormente">📂 Abrir</button>
-  <button class="hdrbtn" id="btnEnviar" title="Envía la copia a Google Drive, correo, WhatsApp…">📤 Enviar copia</button>
+  <button class="hdrbtn" id="btnEnviar" title="Copia de seguridad de todos los datos para guardarla fuera de la tablet (Drive, correo, WhatsApp). No se lee: se recupera con «📂 Abrir»">📤 Enviar copia</button>
   <input type="file" id="fileDB" accept=".json,.txt,application/json,text/plain" class="hidden">
   <span class="firma-app">Creado por <b>AML</b><br><small id="verApp"></small></span>
 </header>
@@ -611,6 +611,14 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
   </div>
 </div>
 
+<div class="modal hidden" id="mSinMarcar">
+  <div class="box" style="width:min(760px,100%)">
+    <h3>❔ Clases sin marcar asistencia</h3>
+    <div class="scroll" style="max-height:60vh"><table id="tSinMarcar"></table></div>
+    <div class="row" style="justify-content:flex-end;margin-top:14px"><button class="btn" id="smCerrar">Cerrar</button></div>
+  </div>
+</div>
+
 <div class="modal hidden" id="mTxt">
   <div class="box" style="width:min(460px,100%)">
     <h3 id="mTxtTit"></h3><input id="mTxtIn">
@@ -662,7 +670,7 @@ window.alert=function(msg){
 };
 /* ================== DATOS ================== */
 const LS_KEY = "agendaAutoescuela_v1";
-const VERSION = "v10.5 NOV27";
+const VERSION = "v10.6 NOV27";
 const HORAS = []; for (let m = 8*60; m < 21*60; m += 30) HORAS.push(String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"));   // filas de 30 min: 08:00 … 20:30 (la última termina a las 21:00)
 const EXAMENES = {
   B:  [["teorico","Teórico"],["practico","Práctico"]],
@@ -717,7 +725,7 @@ $("btnGuardar").onclick=()=>{
    Android no deja compartir ficheros .json, así que se envía como .txt (el botón «Abrir» acepta los dos). */
 function ficheroCopia(){ return new File([JSON.stringify(db,null,1)],"Autoescuela_copia_"+selloFecha()+".txt",{type:"text/plain"}); }
 $("btnEnviar").onclick=async()=>{
-  try{ await navigator.share({files:[ficheroCopia()],title:"Copia Agenda Autoescuela",text:"Copia de seguridad de la Agenda Autoescuela"}); marcarCopia(); sinGuardar=false; toast("Copia enviada."); }
+  try{ await navigator.share({files:[ficheroCopia()],title:"Copia Agenda Autoescuela",text:"Copia de seguridad de la Agenda Autoescuela. No hace falta abrirla: guárdala (Drive, correo…). Para recuperar los datos, en la app pulsa «📂 Abrir» y elige este fichero."}); marcarCopia(); sinGuardar=false; toast("Copia enviada."); }
   catch(e){ if(e&&e.name!=="AbortError") alert("No se ha podido compartir la copia: "+e.message+"\nUsa «Guardar base de datos»."); }
 };
 try{ if(!(navigator.canShare&&navigator.canShare({files:[ficheroCopia()]}))) $("btnEnviar").classList.add("hidden"); }
@@ -1102,6 +1110,7 @@ function anularBloqueadas(fechas){
 function borrarAlumno(id){
   const a=alumno(id); const nc=db.clases.filter(c=>c.alumnoId===id).length;
   if(!confirm(`¿Borrar a ${nombreCompleto(a)}${nc?` y sus ${nc} clase(s) programada(s)`:""}?`)) return;
+  if(!confirm(`⚠️ SEGUNDA CONFIRMACIÓN\n\nSe borrará definitivamente a ${nombreCompleto(a)} con sus clases, exámenes y bonos.\nEsta acción NO se puede deshacer.\n\n¿Borrar de verdad?`)) return;
   db.alumnos=db.alumnos.filter(x=>x.id!==id); db.clases=db.clases.filter(c=>c.alumnoId!==id);
   if(actual===id) nuevaFicha(); persistir(); pintarLista(); refrescarListas();
 }
@@ -1123,6 +1132,19 @@ function pintarClasesAlumno(){
     <td>${c.fecha>=h&&c.estado!=="anulada"?estadoAviso(keyClase(c)):""}</td>
     <td class="row"><button class="btn sec sm" onclick="editarClase('${c.id}')">Editar</button>${c.fecha>=h&&c.estado!=="anulada"?`<button class="btn wa sm" title="Avisar por WhatsApp" onclick="waClase('${c.id}')">📲</button>`:""}</td></tr>`).join("")}</table></div>`
     : '<p style="color:var(--muted);margin:0">Sin clases programadas.</p>';
+}
+/* Ventana con las clases pasadas sin marcar, agrupadas por alumno, para marcarlas ahí mismo */
+window.verSinMarcar=()=>{ pintarSinMarcar(); $("mSinMarcar").classList.remove("hidden"); };
+$("smCerrar").onclick=()=>{ $("mSinMarcar").classList.add("hidden"); pintarLista(); };
+function pintarSinMarcar(){
+  const cl=db.clases.filter(c=>c.fecha<hoy()&&!c.estado&&alumno(c.alumnoId))
+    .sort((x,y)=>nombreCompleto(alumno(x.alumnoId)).localeCompare(nombreCompleto(alumno(y.alumnoId)),"es")||(x.fecha+x.hora).localeCompare(y.fecha+y.hora));
+  let ult="";
+  $("tSinMarcar").innerHTML=cl.length?`<tr><th>Alumno</th><th>Fecha</th><th>Hora</th><th>Clase</th><th>Asistencia</th></tr>`+cl.map(c=>{ const a=alumno(c.alumnoId), nuevo=a.id!==ult; ult=a.id;
+    return `<tr${nuevo?' style="border-top:2px solid var(--pri2)"':""}><td>${nuevo?`<a href="#" onclick="$('mSinMarcar').classList.add('hidden');abrirFicha('${a.id}');return false"><b>${esc(nombreCompleto(a))}</b></a> <span class="tag t-${a.permiso}">${a.permiso}</span>`:""}</td>
+      <td>${diaSem(c.fecha)} ${fmt(c.fecha)}</td><td>${c.hora}–${finClase(c)}</td><td>${esc(c.tipo)}</td>
+      <td><select class="selmini" onchange="marcarClase('${c.id}',this.value);pintarSinMarcar()"><option value="">❔ Sin marcar</option><option value="realizada">✔ Realizada</option><option value="falta">✖ Falta</option><option value="anulada">⊘ Anulada</option></select></td></tr>`; }).join("")
+    :'<tr><td style="color:var(--ok);padding:14px">✔ No queda ninguna clase por marcar.</td></tr>';
 }
 window.marcarClase=(id,v)=>{
   const c=db.clases.find(x=>x.id===id); if(!c) return;
@@ -1229,7 +1251,7 @@ function pintarLista(){
   $("kpis").innerHTML=`<div class="kpi"><b>${db.alumnos.length}</b><span>Alumnos</span></div>
     <div class="kpi"><b>${cnt("B")}</b><span>Permiso B</span></div><div class="kpi"><b>${cnt("AM")}</b><span>AM</span></div><div class="kpi"><b>${cnt("A1")}</b><span>A1</span></div>
     <div class="kpi"><b>${cnt("A2")}</b><span>A2</span></div><div class="kpi"><b>${db.clases.filter(c=>c.fecha>=hoy()&&c.estado!=="anulada").length}</b><span>Clases programadas</span></div>
-    ${(()=>{ const sm=db.clases.filter(c=>c.fecha<hoy()&&!c.estado).length; return `<div class="kpi ${sm?"mal":""}"><b>${sm}</b><span>Clases sin marcar asistencia</span></div>`; })()}`;
+    ${(()=>{ const sm=db.clases.filter(c=>c.fecha<hoy()&&!c.estado).length; return `<div class="kpi ${sm?"mal":""}" ${sm?`onclick="verSinMarcar()" style="cursor:pointer" title="Pulsa para ver y marcar"`:""}><b>${sm}</b><span>Clases sin marcar asistencia${sm?" 👆":""}</span></div>`; })()}`;
   $("tLista").innerHTML=`<tr><th></th><th>Alumno</th><th>DNI/NIE</th><th>Permiso</th><th>Teléfono</th><th>Profesor</th><th>Clases<br><small>hechas / quedan</small></th><th>Situación</th><th></th></tr>`+
     (lst.length?lst.map(a=>{ const b=bonoDe(a);
       return `<tr><td>${a.foto?`<img class="mini" src="${a.foto}">`:`<div class="mini"></div>`}</td>
@@ -1237,7 +1259,7 @@ function pintarLista(){
       <td>${esc(a.dni)}</td><td><span class="tag t-${a.permiso}">${a.permiso}</span></td><td>${esc(a.tel)}</td><td>${esc(a.profesor)}</td>
       <td>${b.consumidas} / ${b.contratadas?`<b style="color:${b.quedan<=0?"var(--err)":"inherit"}">${b.quedan}</b>`:"—"}</td>
       <td>${situacion(a)}</td>
-      <td class="row"><button class="btn sec sm" onclick="abrirFicha('${a.id}')">Abrir</button><button class="btn del sm" onclick="borrarAlumno('${a.id}')">Borrar</button></td></tr>`;}).join("")
+      <td class="row"><button class="btn del sm" onclick="borrarAlumno('${a.id}')">Borrar</button></td></tr>`;}).join("")
     :`<tr><td colspan="9" style="color:var(--muted);text-align:center;padding:20px">No hay alumnos${q||fp?" con ese filtro":""}.</td></tr>`);
 }
 $("btnCSV").onclick=()=>{
@@ -1932,7 +1954,7 @@ window.plEditar=cid=>{
 window.plAvisar=id=>{
   const lun=lunesDe($("plSemana").value||proximoLunes()), P=planDe(lun); P.avisados=P.avisados||{};
   const a=alumno(id), cl=clasesSemana(id,lun), cambio=!!P.avisados[id];
-  const l=cl.map(c=>`• ${fechaLarga(c.fecha)}, de ${c.hora} a ${finClase(c)} · ${TXT_TIPO_CLASE[c.tipo]||c.tipo}${compartible(c)&&grupoDe(c).length>1?" (compartida)":""}`).join("\n");
+  const l=cl.map(c=>`• ${fechaLarga(c.fecha)}, de ${c.hora} a ${finClase(c)} · ${TXT_TIPO_CLASE[c.tipo]||c.tipo}`).join("\n");
   const prof=[...new Set(cl.map(c=>c.profesor).filter(Boolean))].join(", ");
   const t=cl.length
     ?`Hola ${a.nombre} 👋\n`+(cambio?`⚠️ *Ha habido un cambio* en tus clases prácticas de la semana del ${fmt(lun)}. Quedan así:`:`Estas son tus clases prácticas de la semana del ${fmt(lun)}:`)
@@ -2178,7 +2200,7 @@ $("btnBienvenida").onclick=()=>{
 };
 function txtClase(c){
   const a=alumno(c.alumnoId);
-  return `Hola ${a.nombre} 👋\n`+(c.cambio?`⚠️ *CAMBIO DE CLASE.* Tu clase queda así:`:`Te confirmamos tu clase práctica de conducción:`)+`\n📅 ${fechaLarga(c.fecha)}\n🕗 De ${c.hora} a ${finClase(c)}\n🚦 ${TXT_TIPO_CLASE[c.tipo]||("Clase de "+String(c.tipo||"").toLowerCase())}`+(compartible(c)&&grupoDe(c).length>1?" (compartida)":"")
+  return `Hola ${a.nombre} 👋\n`+(c.cambio?`⚠️ *CAMBIO DE CLASE.* Tu clase queda así:`:`Te confirmamos tu clase práctica de conducción:`)+`\n📅 ${fechaLarga(c.fecha)}\n🕗 De ${c.hora} a ${finClase(c)}\n🚦 ${TXT_TIPO_CLASE[c.tipo]||("Clase de "+String(c.tipo||"").toLowerCase())}`
     +(c.profesor?`\n👤 Profesor: ${c.profesor}`:"")+(c.vehiculo?`\n🔑 Vehículo: ${c.vehiculo}`:"")
     +`\n\nSi no puedes asistir, avísanos con antelación, por favor.`+firma();
 }
