@@ -2104,10 +2104,38 @@ $("plGenerar").onclick=()=>{
   // 1º) los que solo pueden en un día y hora concretos; 2º) el resto por rondas y prioridad (del lunes 15:30 al viernes 21:00)
   const pend=lista.filter(x=>x.falta>0);
   if(!pend.length){ plProp=null; pintarPropuesta(); alert("Todos los alumnos elegidos ya tienen sus clases de esa semana.\nSi has cambiado la respuesta de alguno, pulsa «🔄 Recolocar» en su fila y vuelve a generar."); return; }
-  const unicos=pend.filter(x=>opcionUnica(x.r)), resto=pend.filter(x=>!opcionUnica(x.r));
+  // v11.3: a igual prioridad, primero los que tienen MENOS opciones («a las 17» antes que «desde las 17»)
+  pend.forEach(x=>{ const dur=durPlan(x.a,x.r); x.flex=Object.keys(x.r.dias).reduce((s,d)=>s+huecosDia(x.r,+d,desde,dur).length,0); });
+  const porFlex=(x,y)=>(Number(x.r.prio)||999)-(Number(y.r.prio)||999)||x.flex-y.flex||nombreCompleto(x.a).localeCompare(nombreCompleto(y.a),"es");
+  const unicos=pend.filter(x=>opcionUnica(x.r)).sort(porFlex), resto=pend.filter(x=>!opcionUnica(x.r)).sort(porFlex);
   unicos.forEach(x=>colocar(x));
   const maxN=Math.max(0,...resto.map(x=>x.falta));
   for(let ronda=0;ronda<maxN;ronda++) for(const x of resto){ if(x.falta>ronda) colocar(x); }
+  // v11.3: reajuste automático. Si alguien se queda sin hueco, se prueba a mover a otro alumno más flexible
+  // que le esté quitando la hora (profesor, moto o alumno nuevo) a otro hueco que también le valga.
+  const necesita=x=>opcionUnica(x.r)?1:x.falta, fijos=new Set(unicos.map(x=>x.a.id));
+  const reparar=x=>{
+    const {a,r}=x, dur=durPlan(a,r);
+    for(const d of Object.keys(r.dias).map(Number)){
+      const f=addDias(lun,d);
+      if(nuevas.concat(db.clases.filter(semana)).some(c=>c.alumnoId===a.id&&c.fecha===f)) continue;
+      for(const t of huecosDia(r,d,desde,dur)){
+        const cand={id:uid(),alumnoId:a.id,fecha:f,hora:hhmm(t),durMin:dur,tipo:r.tipo,profesor:prof,vehiculo:a.vehiculo||"",obs:"",estado:"",plan:lun};
+        if(validarClase(cand,[]).err.length) continue;                               // lo impide una clase ya creada: no se toca
+        const bloq=nuevas.filter(c=>c.fecha===f&&c.alumnoId!==a.id&&solapan(c,cand));
+        if(!bloq.length||bloq.some(c=>fijos.has(c.alumnoId))) continue;
+        const copia=nuevas.slice(), cit=Object.assign({},citadas);
+        const deshacer=()=>{ nuevas.splice(0,nuevas.length,...copia); Object.keys(citadas).forEach(k=>delete citadas[k]); Object.assign(citadas,cit); };
+        bloq.forEach(c=>{ nuevas.splice(nuevas.indexOf(c),1); citadas[c.alumnoId]--; });
+        if(validarClase(cand,nuevas).err.length){ deshacer(); continue; }
+        nuevas.push(cand); citadas[a.id]=(citadas[a.id]||0)+1;
+        if(bloq.every(c=>{ const y=pend.find(z=>z.a.id===c.alumnoId); return y&&colocar(y); })) return true;
+        deshacer();
+      }
+    }
+    return false;
+  };
+  for(let vuelta=0;vuelta<2;vuelta++) pend.slice().sort(porFlex).forEach(x=>{ let g=0; while((citadas[x.a.id]||0)<necesita(x)&&g++<5&&reparar(x)); });
   // v11.3: por qué no hay hueco (primer motivo de cada día que podía)
   const motivo=({a,r})=>{ const dur=durPlan(a,r), l=[];
     Object.keys(r.dias).sort().forEach(d=>{ const f=addDias(lun,+d);
