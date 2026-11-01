@@ -1785,8 +1785,8 @@ function htmlHoja(){
   Object.keys(grupos).forEach(p=>{
     if(!pf) h+=`<h3 style="margin:12px 0 4px">${esc(p)}</h3>`;
     h+=`<table style="width:100%;border-collapse:collapse"><tr><th>Hora</th><th>Alumno</th><th>Teléfono</th><th>Clase</th><th>Vehículo</th><th>Observaciones</th><th>Asistencia</th></tr>`+
-      grupos[p].map(c=>{ const a=alumno(c.alumnoId)||{}; return `<tr><td>${c.hora}–${finClase(c)}</td><td>${esc(nombreCompleto(a))} (${a.permiso||""})</td><td>${esc(a.tel)}</td>
-        <td>${esc(TXT_TIPO_CLASE[c.tipo]||c.tipo)}${compartible(c)&&grupoDe(c).length>1?" 👥":""}</td><td>${esc(c.vehiculo)}</td><td>${esc(c.obs)}</td><td>☐ Sí ☐ Falta</td></tr>`; }).join("")+`</table>`;
+      grupos[p].map(c=>{ const a=alumno(c.alumnoId)||{}; return `<tr><td style="white-space:nowrap">${c.hora}–${finClase(c)}${durDe(c)===2*(esMoto(a.permiso)?30:45)?"<br><b>1+1</b>":""}</td><td>${esc(nombreCompleto(a))} (${a.permiso||""})</td><td>${esc(a.tel)}</td>
+        <td>${esc(TXT_TIPO_CLASE[c.tipo]||c.tipo)}${compartible(c)&&grupoDe(c).length>1?" 👥":""}</td><td>${esc(c.vehiculo)}</td><td>${esc(c.obs)}</td><td style="white-space:nowrap">☐&nbsp;Sí&nbsp;&nbsp;&nbsp;☐&nbsp;Falta</td></tr>`; }).join("")+`</table>`;
   });
   if(ex.length) h+=`<h3 style="margin:14px 0 4px">📝 Exámenes de ese día</h3><ul style="margin:0">`+ex.map(e=>`<li>${horaEx(e.a,e.k)?"<b>"+horaEx(e.a,e.k)+"</b> · ":""}${esc(nombreCompleto(e.a))} (${e.a.permiso}) – ${esc(TXT_EXAMEN[e.k])}</li>`).join("")+`</ul>`;
   return h;
