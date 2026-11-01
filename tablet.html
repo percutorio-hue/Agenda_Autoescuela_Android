@@ -1883,7 +1883,7 @@ function pintarPlan(){
 $("plSemana").onchange=()=>{ plProp=null; $("plPropuesta").innerHTML=""; pintarPlan(); };
 $("plDesde").onchange=pintarPlan;
 $("plFiltro").onchange=()=>{ plProp=null; $("plPropuesta").innerHTML=""; pintarPlan(); };
-$("plTabla").addEventListener("change",e=>{
+function cambioPlan(e){
   const tr=e.target.closest("tbody[data-al]"); if(!tr) return;
   const a=alumno(tr.dataset.al), r=respDe(planDe(lunesDe($("plSemana").value)),a), t=e.target;
   if(t.dataset.f==="inc") r.inc=t.checked;
@@ -1899,7 +1899,10 @@ $("plTabla").addEventListener("change",e=>{
   else if(t.dataset.h!=null){ if(r.dias[t.dataset.h]!=null) r.dias[t.dataset.h]=t.value||"15:30"; }
   tr.style.opacity=r.inc?"":".55";      // sin redibujar la tabla mientras se escribe
   persistir(); pintarResumenPlan();
-});
+}
+["change","input"].forEach(ev=>$("plTabla").addEventListener(ev,e=>{ const t=e.target; if((t.dataset.h!=null||t.dataset.hh!=null)&&!t.value) return; cambioPlan(e); }));
+/* v11.3: antes de recolocar o generar, todo lo que se ve en pantalla queda guardado (Android a veces no confirma el reloj) */
+function sincronizarPlan(){ $("plTabla").querySelectorAll("tbody[data-al] input, tbody[data-al] select").forEach(el=>{ if(el.disabled) return; if((el.dataset.h!=null||el.dataset.hh!=null)&&!el.value) return; cambioPlan({target:el}); }); }
 function pintarResumenPlan(){
   const lun=lunesDe($("plSemana").value), P=planDe(lun), L=alumnosPlan(), inc=L.filter(a=>respDe(P,a).inc);
   $("plResumen").textContent=L.length?`${inc.length} elegido(s) · ${inc.filter(a=>P.preg[a.id]).length} preguntado(s) · semana del ${fmt(lun)} al ${fmt(addDias(lun,4))}`:"";
@@ -2070,6 +2073,7 @@ function huecosDia(r,d,desde,dur){
 /* Una sola opción: un único día y a una hora concreta */
 function opcionUnica(r){ const ks=Object.keys(r.dias); return ks.length===1&&(r.modo[ks[0]]==="exacta"); }
 $("plGenerar").onclick=()=>{
+  sincronizarPlan();
   const lun=lunesDe($("plSemana").value), P=planDe(lun), prof=$("plProf").value, desde=minutos($("plDesde").value||"15:30");
   if(!prof){ alert("Elige el profesor."); return; }
   const porPrio=(x,y)=>(Number(x.r.prio)||999)-(Number(y.r.prio)||999)||nombreCompleto(x.a).localeCompare(nombreCompleto(y.a),"es");
@@ -2104,8 +2108,16 @@ $("plGenerar").onclick=()=>{
   unicos.forEach(x=>colocar(x));
   const maxN=Math.max(0,...resto.map(x=>x.falta));
   for(let ronda=0;ronda<maxN;ronda++) for(const x of resto){ if(x.falta>ronda) colocar(x); }
+  // v11.3: por qué no hay hueco (primer motivo de cada día que podía)
+  const motivo=({a,r})=>{ const dur=durPlan(a,r), l=[];
+    Object.keys(r.dias).sort().forEach(d=>{ const f=addDias(lun,+d);
+      if(nuevas.concat(db.clases.filter(semana)).some(c=>c.alumnoId===a.id&&c.fecha===f)) return;
+      const hs=huecosDia(r,+d,desde,dur); if(!hs.length){ l.push(DIAS_LARGOS[d]+": la hora indicada no cabe en el horario"); return; }
+      const c={id:"x",alumnoId:a.id,fecha:f,hora:hhmm(hs[0]),durMin:dur,tipo:r.tipo,profesor:prof,vehiculo:a.vehiculo||"",obs:"",estado:""};
+      const e=validarClase(c,nuevas).err; if(e.length) l.push(DIAS_LARGOS[d]+(hs.length===1?" "+c.hora:" desde las "+c.hora)+": "+e[0]); });
+    return l; };
   plProp={lun,prof,nuevas,unicos:unicos.map(x=>x.a.id),
-    faltan:pend.filter(x=>(citadas[x.a.id]||0)<(opcionUnica(x.r)?1:x.falta)).map(x=>({a:x.a,pide:opcionUnica(x.r)?1:x.r.n,citadas:(citadas[x.a.id]||0)+(ya[x.a.id]||0),unica:opcionUnica(x.r)}))};
+    faltan:pend.filter(x=>(citadas[x.a.id]||0)<(opcionUnica(x.r)?1:x.falta)).map(x=>({a:x.a,pide:opcionUnica(x.r)?1:x.r.n,citadas:(citadas[x.a.id]||0)+(ya[x.a.id]||0),unica:opcionUnica(x.r),por:motivo(x)}))};
   plCreadas=null; pintarPropuesta();
 };
 function filasPorHueco(cl){
@@ -2123,7 +2135,7 @@ function pintarPropuesta(){
       <td>${gr.map(x=>{ const a=alumno(x.alumnoId); return `${plCreadas?"":`<button class="btn sec sm" style="padding:2px 7px" title="Cambiar esta cita" onclick="plEditar('${x.id}')">✏️</button> `}${esc(nombreCompleto(a))} <span class="tag t-${a.permiso}">${a.permiso}</span>${a.nuevo?" 🆕":""}${(plProp.unicos||[]).includes(a.id)?' <span title="Solo podía este día y hora">📌</span>':""}`; }).join("<br>")}</td></tr>`; }).join("")
       ||`<tr><td colspan="4" style="color:var(--muted)">No se ha podido citar a nadie con esa disponibilidad.</td></tr>`)+`</table>`
     +`<p style="font-size:12px;color:var(--muted);margin:6px 0 0">${[...new Set(nuevas.map(c=>c.alumnoId))].map(id=>{ const r=planDe(plProp.lun).resp[id]; const tot=clasesSemana(id,plProp.lun).length+nuevas.filter(c=>c.alumnoId===id).length; return esc(alumno(id).nombre)+": "+(r&&r.doble?txtClases({n:tot,doble:true})+" de "+txtClases(r):tot+" de "+(r?r.n:"?")); }).join(" · ")}</p>`
-    +(faltan.length?`<div class="msgs"><div class="m-warn">⚠️ Sin hueco suficiente: ${faltan.map(x=>`<b>${esc(nombreCompleto(x.a))}</b> (${x.unica?"solo podía a una hora concreta y ya está ocupada":"pidió "+x.pide+", citadas "+x.citadas})`).join(" · ")}. Revisa su disponibilidad o prográmalas a mano.</div></div>`:"")
+    +(faltan.length?`<div class="msgs"><div class="m-warn">⚠️ Sin hueco suficiente: ${faltan.map(x=>`<b>${esc(nombreCompleto(x.a))}</b> (${x.unica?"solo podía a una hora concreta y ya está ocupada":"pidió "+x.pide+", citadas "+x.citadas})${(x.por||[]).length?`<ul style="margin:4px 0 6px;padding-left:20px">${x.por.map(t=>`<li>${esc(t)}</li>`).join("")}</ul>`:""}`).join("")}Revisa su disponibilidad o prográmalas a mano.</div></div>`:"")
     +(plCreadas?`<p style="color:var(--ok);margin:8px 0 0">✔ Clases creadas. Avísalas en el paso 4.</p>`
       :nuevas.length?`<div class="row" style="margin-top:10px"><button class="btn" id="plCrear">✅ Crear estas clases</button><button class="btn sec" id="plDescartar">Descartar</button></div>`:"");
   if($("plCrear")) $("plCrear").onclick=()=>{
@@ -2190,6 +2202,7 @@ function avisarSemana(id,lun){
 }
 /* Recolocar: borra las clases aún no dadas de ese alumno en esa semana para volver a generarlas con su nueva respuesta */
 window.plRecolocar=id=>{
+  sincronizarPlan();
   const lun=lunesDe($("plSemana").value), a=alumno(id), cl=clasesSemana(id,lun).filter(c=>!c.estado&&!bloqueada(c));
   if(!cl.length){ alert("Ese alumno no tiene clases pendientes esa semana."); return; }
   if(!confirm(`¿Quitar las ${cl.length} clase(s) de ${nombreCompleto(a)} de esa semana para volver a colocarlas con su nueva respuesta?\n\nDespués pulsa «Generar propuesta». Al avisarle, el WhatsApp indicará que ha habido un cambio.`)) return;
