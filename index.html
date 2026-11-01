@@ -120,8 +120,8 @@ body.enRafaga .toast{bottom:100px}
 .plpaso span{background:var(--pri);color:#fff;border-radius:50%;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:12px;flex:none}
 .plgrupo td{vertical-align:top}
 /* v11.2: cabecera del Plan semanal fija al hacer scroll */
-.plFijo{position:sticky;top:var(--hdrH,60px);z-index:20;background:var(--panel);margin:-16px -16px 0;padding:16px 16px 2px;border-radius:10px 10px 0 0}
-.plt thead th{position:sticky;top:calc(var(--hdrH,60px) + var(--plH,0px));z-index:15;background:#f0f3f8;box-shadow:0 1px 0 var(--line)}
+.plFijo{position:sticky;top:var(--hdrH,60px);z-index:20;background:var(--panel);margin:-16px -16px 8px;padding:10px 16px;border-radius:10px 10px 0 0;box-shadow:0 2px 4px rgba(0,0,0,.06)}
+.plt thead th{position:static;background:#f0f3f8}
 /* v11.2: días de la semana en horizontal, debajo de cada alumno */
 .plt tbody.plal tr.plA td{border-bottom:0}
 .plt tbody.plal tr.plB td{padding-top:0;padding-bottom:8px}
@@ -496,6 +496,7 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
         <span style="font-size:13px">desde</span><input type="time" id="plDesde" value="15:30" step="900" style="width:110px">
       </div>
     </div>
+       </div>
     <p style="color:var(--muted);font-size:13px;margin:0">De lunes a viernes, hasta las 21:00. <b>Moto:</b> clases de 30 min (<b>1+1</b> = dos seguidas, 1 h); las de <b>destreza</b> (maniobras) se comparten hasta 3 alumnos; <b>circulación</b> y alumnos 🆕 nuevos van solos. <b>Coche:</b> clases de 45 min (<b>1+1</b> = dos seguidas, 1 h 30), siempre individuales. 📌 = solo podía ese día y hora (se coloca primero).</p>
 
     <div class="plpaso"><span>1</span> Elige los alumnos y pregúntales su disponibilidad (los miércoles)</div>
@@ -505,7 +506,6 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
       <span id="plResumen" style="font-size:13px;color:var(--muted)"></span>
     </div>
     <div class="plpaso"><span>2</span> Pega la respuesta de cada uno con «📋 Respuesta» (o márcala a mano) y pon la prioridad (1 = primero)</div>
-   </div>
     <div><table class="plt" id="plTabla"></table></div>
 
     <div class="plpaso"><span>3</span> Genera la propuesta (empieza el lunes a la hora indicada, por orden de prioridad)</div>
