@@ -1459,6 +1459,14 @@ function opcionesDur(permiso,val){
   return l.map(([v,t])=>`<option value="${v}">${t}</option>`).join("");
 }
 function rellenarDur(permiso,val){ $("cDur").innerHTML=opcionesDur(permiso,val); $("cDur").value=String(val||(esMoto(permiso)?30:45)); }
+/* v11.3: clase 1+1 = dos clases seguidas (moto 30+30, coche 45+45) */
+function esDoble(c){ const a=alumno(c.alumnoId); return !!a&&durDe(c)===2*(esMoto(a.permiso)?30:45); }
+/* v11.3: si se cambia en la agenda una clase de una semana planificada, el Plan semanal se pone al día (1+1 / nº de clases) */
+function sincronizarPlanAlumno(id,fecha){
+  const lun=lunesDe(fecha), P=db.planes&&db.planes[lun]; if(!P||!P.resp||!P.resp[id]) return;
+  const r=P.resp[id], sc=clasesSemana(id,lun); if(!sc.length) return;
+  r.doble=sc.every(esDoble); r.n=Math.max(Number(r.n)||0,sc.length);
+}
 function finClase(c){ return hhmm(minutos(c.hora)+durDe(c)); }
 function ocupaHora(c,h){ const i=minutos(c.hora), f=i+durDe(c), hi=minutos(h); return i<hi+30 && f>hi; }
 function solapan(a,b){ if(a.fecha!==b.fecha) return false; const i1=minutos(a.hora),f1=i1+durDe(a),i2=minutos(b.hora),f2=i2+durDe(b); return i1<f2&&i2<f1; }
@@ -1606,7 +1614,8 @@ $("cGuardar").onclick=()=>{
   const i=db.clases.findIndex(x=>x.id===c.id);
   if(i>=0){ const old=db.clases[i]; c.plan=old.plan; if((db.avisos[keyClase(old)]||old.cambio)&&keyClase(old)!==keyClase(c)) c.cambio=true; db.clases[i]=c; }
   else db.clases.push(c);
-  persistir(); $("mClase").classList.add("hidden"); refrescarListas(); pintarAgenda(); pintarClasesAlumno(); pintarPagos(); toast("Clase guardada.");
+  sincronizarPlanAlumno(c.alumnoId,c.fecha); if(old&&lunesDe(old.fecha)!==lunesDe(c.fecha)) sincronizarPlanAlumno(old.alumnoId,old.fecha);
+  persistir(); $("mClase").classList.add("hidden"); refrescarListas(); pintarAgenda(); pintarClasesAlumno(); pintarPagos(); if(vista==="plan") pintarPlan(); toast("Clase guardada.");
   if($("cAvisar").checked&&c.estado!=="anulada"&&c.fecha>=hoy()) waClase(c.id);
   ofrecerPracticasSiFalta(c.alumnoId,[c]);
 };
@@ -1867,7 +1876,7 @@ function pintarPlan(){
         <td><a href="#" onclick="abrirFicha('${a.id}');return false">${esc(nombreCompleto(a))}</a> <span class="tag t-${a.permiso}">${a.permiso}</span>${a.nuevo?' <span title="Alumno nuevo: va solo">🆕</span>':""}</td>
         <td>${P.preg[a.id]?`<span class="sent" title="${esc(P.preg[a.id])}">✔ preguntado</span>`:""} <button class="btn wa sm" onclick="plPreguntar('${a.id}')" ${a.tel?"":"disabled title=\"Sin teléfono\""}>📲</button>
           <button class="btn sm" onclick="plPegar('${a.id}')" title="Pegar su respuesta de WhatsApp">📋 Respuesta</button>
-          ${clasesSemana(a.id,lun).length?`<button class="btn sec sm" onclick="plRecolocar('${a.id}')" title="Quitar sus clases de esta semana para volver a colocarlas">🔄 Recolocar</button> <small style="color:var(--ok)">${clasesSemana(a.id,lun).length} clase(s) creadas</small>`:""}
+          ${clasesSemana(a.id,lun).length?`<button class="btn sec sm" onclick="plRecolocar('${a.id}')" title="Quitar sus clases de esta semana para volver a colocarlas">🔄 Recolocar</button> <small style="color:var(--ok)" title="Clases que ya están en la agenda esta semana">En agenda: ${clasesSemana(a.id,lun).map(c=>diaSem(c.fecha)+" "+c.hora+"–"+finClase(c)+(esDoble(c)?" (1+1)":"")).join(" · ")}</small>`:""}
           ${r.texto?`<span class="plres ${r.dudosa?"dud":""}" title="${esc(r.texto)}">${r.dudosa?"⚠ Revisar: ":"✔ "}${esc(resumenResp(r))}</span>`:""}</td>
         <td><input type="number" min="1" step="1" data-f="prio" value="${r.prio}" placeholder="—"></td>
         <td><select data-f="cl" title="1+1 = dos clases seguidas el mismo día y a la misma hora">${opcionesClases(r)}</select></td>
@@ -2189,7 +2198,7 @@ function pintarAvisosPlan(){
   $("plAvisos").innerHTML=(ids.length||borradas.length)?`<table><tr><th>Alumno</th><th>Clases de la semana</th><th>Aviso</th><th></th></tr>`+
     ids.map(id=>{ const a=alumno(id), cl=clasesAvisar(id,lun), ok=cl.every(c=>db.avisos[keyClase(c)]), cambio=!ok&&!!P.avisados[id];
       return `<tr><td>${esc(nombreCompleto(a))} <span class="tag t-${a.permiso}">${a.permiso}</span></td>
-        <td>${cl.map(c=>`${diaSem(c.fecha)} ${fmt(c.fecha).slice(0,5)} ${c.hora}${compartible(c)&&grupoDe(c).length>1?" 👥":""}`).join(" · ")}</td>
+        <td>${cl.map(c=>`${diaSem(c.fecha)} ${fmt(c.fecha).slice(0,5)} ${c.hora}–${finClase(c)}${esDoble(c)?" <b>1+1</b>":""}${compartible(c)&&grupoDe(c).length>1?" 👥":""}`).join(" · ")}</td>
         <td>${ok?'<span class="sent">✔ avisado</span>':cambio?'<span class="pend">🔁 cambio pendiente de avisar</span>':'<span class="pend">pendiente</span>'}</td>
         <td><button class="btn wa sm" onclick="plAvisar('${id}')">📲 WhatsApp</button></td></tr>`; }).join("")
     +borradas.map(id=>{ const a=alumno(id); return `<tr><td>${esc(nombreCompleto(a))} <span class="tag t-${a.permiso}">${a.permiso}</span></td><td style="color:var(--err)">Ya no tiene clases esta semana</td>
