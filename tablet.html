@@ -91,6 +91,8 @@ tr:hover td{background:#f8fafd}
 .agenda .chip.blq.alta b,.agenda .chip.blq.alta small{white-space:normal;overflow-wrap:anywhere}
 .agenda .chip.blq.nuevo{border:3px solid #f5c518;box-shadow:0 0 0 1px #b8860b,0 0 6px rgba(245,197,24,.9);padding:1px 3px}
 .agenda .chip.blq.nuevo b::after{content:" ⭐";font-size:10px}
+.agenda .chip.blq.debe{outline:3px solid #111;outline-offset:1px;box-shadow:0 0 0 5px rgba(0,0,0,.25)}
+.agenda .chip.blq.debe b::before{content:"💳 "}
 .agenda .chip.blq .d11{display:inline-block;background:rgba(255,255,255,.3);border-radius:3px;padding:0 3px;font-weight:700}
 /* Modal */
 .modal{position:fixed;inset:0;background:rgba(20,30,50,.45);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
@@ -393,7 +395,6 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
         <select id="filtroPermiso" style="width:130px"><option value="">Todos</option><option>B</option><option>AM</option><option>A1</option><option>A2</option></select>
         <select id="filtroArch" style="width:150px"><option value="">Alumnos activos</option><option value="arch">📦 Archivados</option></select>
         <button class="btn sec" id="btnCSV">⬇️ Exportar CSV</button>
-        <button class="btn del" id="btnVaciar">🗑️ Vaciar todo</button>
       </div>
     </div>
     <div class="kpis" id="kpis"></div>
@@ -422,7 +423,7 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
       <span style="--c:var(--a1)">A1</span>
       <span style="--c:var(--a2)">A2</span>
       <span style="--c:#f0c36d">📝 Examen (arriba, en el día; pulsa para abrir la ficha)</span>
-      <span>✔ realizada · ✖ falta · <s>anulada</s> · ❔ pasada sin marcar asistencia · 👥 clase de destreza compartida · <span style="display:inline-block;border:2px solid #f5c518;box-shadow:0 0 0 1px #b8860b;border-radius:4px;padding:0 4px;color:var(--ink)">⭐ alumno nuevo</span> (va solo)</span>
+      <span>✔ realizada · ✖ falta · <s>anulada</s> · ❔ pasada sin marcar asistencia · 👥 clase de destreza compartida · <span style="display:inline-block;border:2px solid #f5c518;box-shadow:0 0 0 1px #b8860b;border-radius:4px;padding:0 4px;color:var(--ink)">⭐ alumno nuevo</span> (va solo) · <span style="display:inline-block;outline:2px solid #111;outline-offset:1px;border-radius:4px;padding:0 4px;color:var(--ink)">💳 sin bono</span> (debe clases)</span>
       <span>Pulsa una casilla vacía para programar una clase; pulsa una clase para editarla.</span>
     </div>
   </div>
@@ -742,7 +743,7 @@ window.alert=function(msg){
 };
 /* ================== DATOS ================== */
 const LS_KEY = "agendaAutoescuela_v1";
-const VERSION = "v11.4 NOV26";
+const VERSION = "v11.5 NOV26";
 const HORAS = []; for (let m = 8*60; m < 21*60; m += 30) HORAS.push(String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"));   // filas de 30 min: 08:00 … 20:30 (la última termina a las 21:00)
 const EXAMENES = {
   B:  [["teorico","Teórico"],["practico","Práctico"]],
@@ -1311,6 +1312,15 @@ function unidades(c){ const a=alumno(c.alumnoId), base=a&&esMoto(a.permiso)?30:4
    (salvo justificante médico) y cuenta como realizada aunque el alumno no se presente. */
 function inicioClase(c){ const [y,m,d]=c.fecha.split("-").map(Number); return new Date(y,m-1,d,Math.floor(minutos(c.hora)/60),minutos(c.hora)%60).getTime(); }
 function bloqueada(c){ return !!c&&c.estado!=="anulada"&&inicioClase(c)-Date.now()<24*3600e3; }
+/* v11.5: clases sin bono. Se recorren las clases del alumno por fecha: las que pasan de lo comprado quedan «sin bono» */
+function clasesSinBono(a){
+  const contratadas=(a.cargos||[]).reduce((t,x)=>t+(Number(x.clases)||0),0), res=new Set(); if(!contratadas) return res;
+  let usadas=0; db.clases.filter(c=>c.alumnoId===a.id&&c.estado!=="anulada").sort((x,y)=>(x.fecha+x.hora).localeCompare(y.fecha+y.hora))
+    .forEach(c=>{ usadas+=unidades(c); if(usadas>contratadas) res.add(c.id); });
+  return res;
+}
+function deudaDe(a){ const b=bonoDe(a); return b.contratadas?Math.max(0,b.consumidas+b.programadas-b.contratadas):0; }
+function txtDeuda(a){ const d=deudaDe(a); return d?`\n\n💳 Recuerda: con estas clases debes ${d} clase${d>1?"s":""} del bono. Pásate por la autoescuela para renovarlo, por favor.`:""; }
 function bonoDe(a,excluir){
   const cl=db.clases.filter(c=>c.alumnoId===a.id&&c.id!==excluir);
   const contratadas=(a.cargos||[]).reduce((t,x)=>t+(Number(x.clases)||0),0);
@@ -1658,7 +1668,7 @@ function pintarAgenda(){
   let verManana=verMananaMem; if(verManana==null){ verManana=false; try{ verManana=localStorage.getItem("agendaVerManana")==="1"; }catch(e){} }
   const nMan=db.clases.filter(c=>c.estado!=="anulada"&&dias.some(x=>x.f===c.fecha)&&minutos(c.hora)<INICIO_TARDE).length;
   html+=`<tr class="tgl" id="tglManana"><td colspan="${dias.length+1}">${verManana?"▾":"▸"} ☀️ Mañana (08:00 – 15:30)${nMan?` · ${nMan} clase(s) esta semana`:""} — pulsa para ${verManana?"ocultar":"mostrar"}</td></tr>`;
-  const carriles=calcularCarriles(dias,fp,verManana);
+  const carriles=calcularCarriles(dias,fp,verManana), sinBono=new Set(); db.alumnos.forEach(a=>clasesSinBono(a).forEach(id=>sinBono.add(id)));
   HORAS.forEach(h=>{
     const media=h.endsWith(":30"), man=minutos(h)<INICIO_TARDE; html+=`<tr data-h="${h}" class="${media?"":"enpunto"} ${man?"manana"+(verManana?"":" oculta"):""}"><td class="h ${media?"media":""}">${h}</td>`;
     dias.forEach(x=>{
@@ -1666,7 +1676,7 @@ function pintarAgenda(){
       html+=`<td class="cell" data-f="${x.f}" data-h="${h}">`+cl.map(o=>{ const c=o.c, a=alumno(c.alumnoId);
         const est=c.estado?"est-"+c.estado:(c.fecha<hoy()?"est-sinmarcar":""), gr=c.estado!=="anulada"&&compartible(c)?grupoDe(c).length:0;
         const ud=esMoto(a.permiso)?30:45, doble=durDe(c)===2*ud, cont=o.ini>minutos(c.hora);
-        return `<span class="chip blq ${a.permiso} ${est}${a.nuevo?" nuevo":""}" data-id="${c.id}" data-ini="${o.ini}" data-fin="${o.fin}" style="left:calc(${o.carril*100/o.n}% + 2px);width:calc(${100/o.n}% - 4px)" title="${esc(c.estado?TXT_EST[c.estado]+" · ":c.fecha<hoy()?"Asistencia sin marcar · ":"")}${esc(nombreCompleto(a)+" · "+c.hora+"–"+finClase(c)+(doble?" · 1+1 (dos clases seguidas)":"")+(a.nuevo?" · ALUMNO NUEVO (va solo)":"")+" · "+c.tipo+(c.profesor?" · "+c.profesor:"")+(c.vehiculo?" · "+c.vehiculo:""))}"><b>${!c.estado&&bloqueada(c)&&c.fecha>=hoy()?"🔒":""}${gr>1?"👥":""}${cont?"↳ ":""}${esc(a.apellidos.split(" ")[0]+", "+(a.nombre[0]||"")+".")}</b><small>${c.hora}–${finClase(c)} · ${a.permiso} ${TIPO_CORTO[c.tipo]||esc(c.tipo)}${doble?' <span class="d11">1+1</span>':""}</small></span>`;
+        return `<span class="chip blq ${a.permiso} ${est}${a.nuevo?" nuevo":""}${sinBono.has(c.id)?" debe":""}" data-id="${c.id}" data-ini="${o.ini}" data-fin="${o.fin}" style="left:calc(${o.carril*100/o.n}% + 2px);width:calc(${100/o.n}% - 4px)" title="${esc(c.estado?TXT_EST[c.estado]+" · ":c.fecha<hoy()?"Asistencia sin marcar · ":"")}${esc(nombreCompleto(a)+" · "+c.hora+"–"+finClase(c)+(doble?" · 1+1 (dos clases seguidas)":"")+(a.nuevo?" · ALUMNO NUEVO (va solo)":"")+(sinBono.has(c.id)?" · SIN BONO: debe "+deudaDe(a)+" clase(s)":"")+" · "+c.tipo+(c.profesor?" · "+c.profesor:"")+(c.vehiculo?" · "+c.vehiculo:""))}"><b>${!c.estado&&bloqueada(c)&&c.fecha>=hoy()?"🔒":""}${gr>1?"👥":""}${cont?"↳ ":""}${esc(a.apellidos.split(" ")[0]+", "+(a.nombre[0]||"")+".")}</b><small>${c.hora}–${finClase(c)} · ${a.permiso} ${TIPO_CORTO[c.tipo]||esc(c.tipo)}${doble?' <span class="d11">1+1</span>':""}</small></span>`;
       }).join("")+"</td>";
     });
     html+="</tr>";
@@ -1796,7 +1806,7 @@ function htmlHoja(){
   Object.keys(grupos).forEach(p=>{
     if(!pf) h+=`<h3 style="margin:12px 0 4px">${esc(p)}</h3>`;
     h+=`<table style="width:100%;border-collapse:collapse"><tr><th>Hora</th><th>Alumno</th><th>Teléfono</th><th>Clase</th><th>Vehículo</th><th>Observaciones</th><th>Asistencia</th></tr>`+
-      grupos[p].map(c=>{ const a=alumno(c.alumnoId)||{}; return `<tr><td style="white-space:nowrap">${c.hora}–${finClase(c)}${durDe(c)===2*(esMoto(a.permiso)?30:45)?"<br><b>1+1</b>":""}</td><td>${esc(nombreCompleto(a))} (${a.permiso||""})</td><td>${esc(a.tel)}</td>
+      grupos[p].map(c=>{ const a=alumno(c.alumnoId)||{}; return `<tr><td style="white-space:nowrap">${c.hora}–${finClase(c)}${durDe(c)===2*(esMoto(a.permiso)?30:45)?"<br><b>1+1</b>":""}</td><td>${esc(nombreCompleto(a))} (${a.permiso||""})${a.id&&deudaDe(a)?`<br><b>💳 Debe ${deudaDe(a)} clase(s)</b>`:""}</td><td>${esc(a.tel)}</td>
         <td>${esc(TXT_TIPO_CLASE[c.tipo]||c.tipo)}${compartible(c)&&grupoDe(c).length>1?" 👥":""}</td><td>${esc(c.vehiculo)}</td><td>${esc(c.obs)}</td><td style="white-space:nowrap">☐&nbsp;Sí&nbsp;&nbsp;&nbsp;☐&nbsp;Falta</td></tr>`; }).join("")+`</table>`;
   });
   if(ex.length) h+=`<h3 style="margin:14px 0 4px">📝 Exámenes de ese día</h3><ul style="margin:0">`+ex.map(e=>`<li>${horaEx(e.a,e.k)?"<b>"+horaEx(e.a,e.k)+"</b> · ":""}${esc(nombreCompleto(e.a))} (${e.a.permiso}) – ${esc(TXT_EXAMEN[e.k])}</li>`).join("")+`</ul>`;
@@ -2233,7 +2243,7 @@ function avisarSemana(id,lun){
   const prof=[...new Set(cl.map(c=>c.profesor).filter(Boolean))].join(", ");
   const t=cl.length
     ?`Hola ${a.nombre} 👋\n`+(cambio?`⚠️ *Ha habido un cambio* en tus clases prácticas de la semana del ${fmt(lun)}. Quedan así:`:`Estas son tus clases prácticas de la semana del ${fmt(lun)}:`)
-      +`\n\n${l}`+(prof?`\n\n👤 Profesor: ${prof}`:"")+`\n\nSi no puedes asistir a alguna, avísanos con antelación, por favor.`+firma()
+      +`\n\n${l}`+(prof?`\n\n👤 Profesor: ${prof}`:"")+txtDeuda(a)+`\n\nSi no puedes asistir a alguna, avísanos con antelación, por favor.`+firma()
     :`Hola ${a.nombre} 👋\n⚠️ Ha habido un cambio: finalmente no tienes clases prácticas la semana del ${fmt(lun)}. Te escribiremos el miércoles para la siguiente.`+firma();
   waAbrir(a,t,cl.map(keyClase)); cl.forEach(c=>c.cambio=false);
   const d=new Date(); P.avisados[id]=cl.length?fmt(iso(d))+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"):"sin clases";
@@ -2521,7 +2531,7 @@ function txtClase(c){
   const a=alumno(c.alumnoId);
   return `Hola ${a.nombre} 👋\n`+(c.cambio?`⚠️ *CAMBIO DE CLASE.* Tu clase queda así:`:`Te confirmamos tu clase práctica de conducción:`)+`\n📅 ${fechaLarga(c.fecha)}\n🕗 De ${c.hora} a ${finClase(c)}\n🚦 ${TXT_TIPO_CLASE[c.tipo]||("Clase de "+String(c.tipo||"").toLowerCase())}`
     +(c.profesor?`\n👤 Profesor: ${c.profesor}`:"")+(c.vehiculo?`\n🔑 Vehículo: ${c.vehiculo}`:"")
-    +`\n\nSi no puedes asistir, avísanos con antelación, por favor.`+firma();
+    +txtDeuda(a)+`\n\nSi no puedes asistir, avísanos con antelación, por favor.`+firma();
 }
 function txtExamen(a,k){
   return `Hola ${a.nombre} 👋\nTe recordamos tu examen del permiso ${a.permiso}:\n📝 ${TXT_EXAMEN[k]}\n📅 ${fechaLarga(a.examenes[k])}`+(horaEx(a,k)?`\n🕘 Hora de la cita: ${horaEx(a,k)}`:"")
@@ -2662,10 +2672,7 @@ $("cfGuardar").onclick=()=>{
     bloqueoExamen:document.querySelector("input[name=cfBloq]:checked").value});
   $("mConfig").classList.add("hidden"); persistir(); pintarPagos(); pintarLista(); pintarAgenda(); toast(pinCambiado?"Guardado. PIN cambiado: úsalo la próxima vez que abras la app.":"Datos de la autoescuela guardados.");
 };
-$("btnVaciar").onclick=()=>{
-  if(!confirm((db.ejemplo?"¿Quitar todos los DATOS DE EJEMPLO?\n(Se conservan los profesores y vehículos que hayas dado de alta tú.)":"¿Borrar TODOS los alumnos, clases y avisos?\n(Se conservan los profesores y vehículos.)")+"\n\nConsejo: antes pulsa «Guardar base de datos» para tener copia.")) return;
-  db=sinEjemplos(); persistir(); nuevaFicha(); refrescarTodo(); toast("Base de datos vacía.");
-};
+/* v11.5: quitado el botón «Vaciar todo» del Listado (peligroso) */
 
 /* ================== DATOS DE EJEMPLO ================== */
 const EJ_PROF=["Carlos Martín","Pedro Sanz","Ana López","Rosa Iglesias"], EJ_MAT=["1234 LMN","5678 KJH","2468 HGT","9012 MPR","3456 NBC"];
