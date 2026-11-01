@@ -90,6 +90,8 @@ tr:hover td{background:#f8fafd}
 .agenda .chip.blq b{display:block;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .agenda .chip.blq small{display:block;font-size:10.5px;opacity:.95;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .agenda .chip.blq.alta b,.agenda .chip.blq.alta small{white-space:normal;overflow-wrap:anywhere}
+.agenda .chip.blq.nuevo{border:3px solid #f5c518;box-shadow:0 0 0 1px #b8860b,0 0 6px rgba(245,197,24,.9);padding:1px 3px}
+.agenda .chip.blq.nuevo b::after{content:" ⭐";font-size:10px}
 .agenda .chip.blq .d11{display:inline-block;background:rgba(255,255,255,.3);border-radius:3px;padding:0 3px;font-weight:700}
 /* Modal */
 .modal{position:fixed;inset:0;background:rgba(20,30,50,.45);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
@@ -421,7 +423,7 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
       <span style="--c:var(--a1)">A1</span>
       <span style="--c:var(--a2)">A2</span>
       <span style="--c:#f0c36d">📝 Examen (arriba, en el día; pulsa para abrir la ficha)</span>
-      <span>✔ realizada · ✖ falta · <s>anulada</s> · ❔ pasada sin marcar asistencia · 👥 clase de destreza compartida</span>
+      <span>✔ realizada · ✖ falta · <s>anulada</s> · ❔ pasada sin marcar asistencia · 👥 clase de destreza compartida · <span style="display:inline-block;border:2px solid #f5c518;box-shadow:0 0 0 1px #b8860b;border-radius:4px;padding:0 4px;color:var(--ink)">⭐ alumno nuevo</span> (va solo)</span>
       <span>Pulsa una casilla vacía para programar una clase; pulsa una clase para editarla.</span>
     </div>
   </div>
@@ -741,7 +743,7 @@ window.alert=function(msg){
 };
 /* ================== DATOS ================== */
 const LS_KEY = "agendaAutoescuela_v1";
-const VERSION = "v11.3 NOV26";
+const VERSION = "v11.4 NOV26";
 const HORAS = []; for (let m = 8*60; m < 21*60; m += 30) HORAS.push(String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"));   // filas de 30 min: 08:00 … 20:30 (la última termina a las 21:00)
 const EXAMENES = {
   B:  [["teorico","Teórico"],["practico","Práctico"]],
@@ -1665,7 +1667,7 @@ function pintarAgenda(){
       html+=`<td class="cell" data-f="${x.f}" data-h="${h}">`+cl.map(o=>{ const c=o.c, a=alumno(c.alumnoId);
         const est=c.estado?"est-"+c.estado:(c.fecha<hoy()?"est-sinmarcar":""), gr=c.estado!=="anulada"&&compartible(c)?grupoDe(c).length:0;
         const ud=esMoto(a.permiso)?30:45, doble=durDe(c)===2*ud, cont=o.ini>minutos(c.hora);
-        return `<span class="chip blq ${a.permiso} ${est}" data-id="${c.id}" data-ini="${o.ini}" data-fin="${o.fin}" style="left:calc(${o.carril*100/o.n}% + 2px);width:calc(${100/o.n}% - 4px)" title="${esc(c.estado?TXT_EST[c.estado]+" · ":c.fecha<hoy()?"Asistencia sin marcar · ":"")}${esc(nombreCompleto(a)+" · "+c.hora+"–"+finClase(c)+(doble?" · 1+1 (dos clases seguidas)":"")+" · "+c.tipo+(c.profesor?" · "+c.profesor:"")+(c.vehiculo?" · "+c.vehiculo:""))}"><b>${!c.estado&&bloqueada(c)&&c.fecha>=hoy()?"🔒":""}${gr>1?"👥":""}${cont?"↳ ":""}${esc(a.apellidos.split(" ")[0]+", "+(a.nombre[0]||"")+".")}</b><small>${c.hora}–${finClase(c)} · ${a.permiso} ${TIPO_CORTO[c.tipo]||esc(c.tipo)}${doble?' <span class="d11">1+1</span>':""}</small></span>`;
+        return `<span class="chip blq ${a.permiso} ${est}${a.nuevo?" nuevo":""}" data-id="${c.id}" data-ini="${o.ini}" data-fin="${o.fin}" style="left:calc(${o.carril*100/o.n}% + 2px);width:calc(${100/o.n}% - 4px)" title="${esc(c.estado?TXT_EST[c.estado]+" · ":c.fecha<hoy()?"Asistencia sin marcar · ":"")}${esc(nombreCompleto(a)+" · "+c.hora+"–"+finClase(c)+(doble?" · 1+1 (dos clases seguidas)":"")+(a.nuevo?" · ALUMNO NUEVO (va solo)":"")+" · "+c.tipo+(c.profesor?" · "+c.profesor:"")+(c.vehiculo?" · "+c.vehiculo:""))}"><b>${!c.estado&&bloqueada(c)&&c.fecha>=hoy()?"🔒":""}${gr>1?"👥":""}${cont?"↳ ":""}${esc(a.apellidos.split(" ")[0]+", "+(a.nombre[0]||"")+".")}</b><small>${c.hora}–${finClase(c)} · ${a.permiso} ${TIPO_CORTO[c.tipo]||esc(c.tipo)}${doble?' <span class="d11">1+1</span>':""}</small></span>`;
       }).join("")+"</td>";
     });
     html+="</tr>";
