@@ -743,7 +743,7 @@ window.alert=function(msg){
 };
 /* ================== DATOS ================== */
 const LS_KEY = "agendaAutoescuela_v1";
-const VERSION = "v11.5 NOV26";
+const VERSION = "v11.6 NOV26";
 const HORAS = []; for (let m = 8*60; m < 21*60; m += 30) HORAS.push(String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"));   // filas de 30 min: 08:00 … 20:30 (la última termina a las 21:00)
 const EXAMENES = {
   B:  [["teorico","Teórico"],["practico","Práctico"]],
@@ -1314,12 +1314,12 @@ function inicioClase(c){ const [y,m,d]=c.fecha.split("-").map(Number); return ne
 function bloqueada(c){ return !!c&&c.estado!=="anulada"&&inicioClase(c)-Date.now()<24*3600e3; }
 /* v11.5: clases sin bono. Se recorren las clases del alumno por fecha: las que pasan de lo comprado quedan «sin bono» */
 function clasesSinBono(a){
-  const contratadas=(a.cargos||[]).reduce((t,x)=>t+(Number(x.clases)||0),0), res=new Set(); if(!contratadas) return res;
+  const contratadas=(a.cargos||[]).reduce((t,x)=>t+(Number(x.clases)||0),0), res=new Set();   // v11.6: sin bono comprado (0) también cuenta
   let usadas=0; db.clases.filter(c=>c.alumnoId===a.id&&c.estado!=="anulada").sort((x,y)=>(x.fecha+x.hora).localeCompare(y.fecha+y.hora))
     .forEach(c=>{ usadas+=unidades(c); if(usadas>contratadas) res.add(c.id); });
   return res;
 }
-function deudaDe(a){ const b=bonoDe(a); return b.contratadas?Math.max(0,b.consumidas+b.programadas-b.contratadas):0; }
+function deudaDe(a){ const b=bonoDe(a); return Math.max(0,b.consumidas+b.programadas-b.contratadas); }
 function txtDeuda(a){ const d=deudaDe(a); return d?`\n\n💳 Recuerda: con estas clases debes ${d} clase${d>1?"s":""} del bono. Pásate por la autoescuela para renovarlo, por favor.`:""; }
 function bonoDe(a,excluir){
   const cl=db.clases.filter(c=>c.alumnoId===a.id&&c.id!==excluir);
@@ -1574,7 +1574,7 @@ function validarClase(c,extra){
     if(c.estado!=="anulada"&&c.fecha>=hoy()){ const bl=bloqueoDia(c.fecha,c.profesor,c.alumnoId,c.hora); if(bl) err.push(bl); }
     // Bono: clases disponibles (contratadas − consumidas − ya programadas)
     if(a&&c.estado!=="anulada"&&!(extra&&extra.length)){ const b=bonoDe(a,c.id);
-      if(b.contratadas>0&&b.disponibles-unidades(c)<0) warn.push(`Al alumno no le quedan clases del bono (contratadas ${b.contratadas}, hechas ${b.consumidas}, ya programadas ${b.programadas}).`); }
+      if(b.disponibles-unidades(c)<0) warn.push(b.contratadas?`Al alumno no le quedan clases del bono (contratadas ${b.contratadas}, hechas ${b.consumidas}, ya programadas ${b.programadas}).`:`El alumno no tiene clases compradas (bono o clase suelta): quedará debiendo esta clase.`); }
   }
   return {err,warn};
 }
@@ -1601,7 +1601,7 @@ function guardarBloque(base){
   let txt=`Se van a programar ${nuevas.length} clase(s) para ${nombreCompleto(a)}.`;
   if(fallos.length) txt+=`\n\nNo se pueden programar ${fallos.length}:\n• `+fallos.join("\n• ");
   if(avisos.length) txt+=`\n\nAvisos:\n• `+avisos.join("\n• ");
-  if(b.contratadas>0&&b.disponibles-u<0) txt+=`\n\n⚠ Con estas clases se supera el bono (quedan ${b.disponibles} sin programar).`;
+  if(b.disponibles-u<0) txt+=`\n\n⚠ Con estas clases se supera el bono (quedan ${b.disponibles} sin programar).`;
   if(!confirm(txt+"\n\n¿Programarlas?")) return;
   db.clases.push(...nuevas); persistir(); $("mClase").classList.add("hidden");
   refrescarListas(); pintarAgenda(); pintarClasesAlumno(); pintarPagos(); toast(nuevas.length+" clases programadas."); ofrecerPracticasSiFalta(base.alumnoId,nuevas);
