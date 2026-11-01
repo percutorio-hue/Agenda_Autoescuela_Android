@@ -230,6 +230,79 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
   #printArea table td,#printArea table th{border:1px solid #999;padding:5px}
   .pfoto{float:right;width:35mm;height:45mm;border:1px solid #999;object-fit:cover}
 }
+/* ===== v11.7: MÓVIL (pantallas de hasta 700 px, p. ej. teléfonos de 6") ===== */
+@media (max-width:700px){
+  body{font-size:15px}
+  header{padding:6px 8px 4px;gap:6px;padding-right:8px;flex-wrap:wrap}
+  header h1{font-size:16px;flex:1 1 auto;white-space:nowrap}
+  header .spacer{display:none}
+  .hdrbtn{padding:6px 9px;font-size:16px;line-height:1}
+  .hdrbtn .lbl{display:none}
+  .firma-app{position:static;order:5;width:100%;text-align:right;font-size:9.5px;line-height:1.1;white-space:normal;margin-top:-2px}
+  .firma-app br{display:none}.firma-app b{font-size:10px}.firma-app small{font-size:9px;margin-left:4px}
+  nav{order:4;width:100%;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;gap:2px;margin:0 -8px;padding:0 8px}
+  nav::-webkit-scrollbar{display:none}
+  nav button{white-space:nowrap;padding:7px 10px;font-size:14px;flex:none}
+  .badge{order:3}
+  main{padding:8px}
+  .panel{padding:10px;border-radius:8px;margin-bottom:10px}
+  .panel h2{font-size:16px}
+  .row{flex-wrap:wrap}
+  main input:not([type=checkbox]):not([type=radio]),main select{max-width:100%}
+  main .row>input,main .row>select{width:auto!important;flex:1 1 140px;min-width:0}
+  .g2{grid-template-columns:1fr}
+  .g2>div[style*="span 2"]{grid-column:auto!important}
+  .campos,.exgrid{grid-template-columns:1fr!important}.c2,.c4{grid-column:auto!important}
+  .kpis{gap:6px}.kpi{padding:6px 10px;flex:1 1 40%}
+  .btn{padding:9px 12px}
+  .scroll{max-height:none}
+  .modal{padding:6px;align-items:flex-start}
+  .modal .box{padding:12px;max-height:96vh}
+  .toast{left:8px;right:8px;transform:none;text-align:center}
+  /* Plan semanal: cada alumno en tarjeta */
+  .plFijo{position:static;margin:0 0 6px;padding:0;box-shadow:none}
+  #tLista th:nth-child(3),#tLista td:nth-child(3),#tLista th:nth-child(5),#tLista td:nth-child(5),#tLista th:nth-child(6),#tLista td:nth-child(6){display:none}
+  #tLista td,#tLista th{padding:6px 4px}
+  #tLista th:nth-child(1),#tLista td:nth-child(1){display:none}
+  #tAvisos th:nth-child(2),#tAvisos td:nth-child(2),#tAvisos th:nth-child(4),#tAvisos td:nth-child(4){display:none}
+  #tAvisos td,#tAvisos th,#tExam td,#tExam th{padding:6px 4px;font-size:13px}
+  #tAvisos td,#tLista td,#tExam td{white-space:normal}
+  #tAvisos th:nth-child(1),#tAvisos td:nth-child(1){display:none}
+  #tLista td:nth-child(8){max-width:84px;font-size:12px}
+  #tLista td:nth-child(7){font-size:13px}
+  #tLista td.row{display:table-cell}
+  #tLista td:last-child .btn{display:block;width:100%;padding:5px 4px;margin:2px 0}
+  #tLista td:last-child .btn,#tAvisos td:last-child .btn{padding:6px 7px;font-size:12px;margin:1px 0}
+  #tLista td:last-child,#tAvisos td:last-child{width:1%}
+  #tExam th:nth-child(3),#tExam td:nth-child(3),#tExam th:nth-child(6),#tExam td:nth-child(6),#tExam th:nth-child(7),#tExam td:nth-child(7){display:none}
+  .plFijo h2{font-size:15px;margin-bottom:6px!important}
+  .plt,.plt thead,.plt tbody,.plt tr,.plt td{display:block;width:100%}
+  .plt thead{display:none}
+  .plt tbody.plal{border:1px solid var(--line);border-radius:8px;margin:0 0 10px;padding:6px 8px;background:#fff}
+  .plt tbody.plal tr.plA{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px}
+  .plt tbody.plal tr.plA td{width:auto;border:0;padding:2px 0;white-space:normal}
+  .plt tbody.plal tr.plA td:nth-child(2){flex:1 1 70%;font-weight:600}
+  .plt tbody.plal tr.plA td:nth-child(3){flex:1 1 100%;order:9}
+  .plt tbody.plal tr.plA td:nth-child(4)::before{content:"Prioridad ";font-size:12px;color:var(--muted)}
+  .plt tbody.plal tr.plA td:nth-child(5)::before{content:"Clases ";font-size:12px;color:var(--muted)}
+  .plt tbody.plal tr.plB td:first-child{display:none}
+  .plt tbody.plal tr.plB td{border:0;padding:4px 0 0}
+  .pldias{gap:6px}
+  .pldias .pld{flex:1 1 100%;justify-content:flex-start}
+  .pldias .pld select{flex:0 0 auto}
+  .pldias .pld input[type=time]{flex:1 1 auto;width:auto}
+  /* Agenda: un día cada vez */
+  .agenda{max-height:none;overflow:visible}
+  .agenda table{min-width:0}
+  .agenda td.h{width:52px;font-size:12px}
+  .diasMovil{display:flex!important}
+  .agenda .chip.blq{font-size:12px}
+}
+.diasMovil{display:none;gap:4px;margin:0 0 8px;overflow-x:auto}
+.diasMovil button{flex:1 0 auto;border:1px solid var(--line);background:#f0f3f8;border-radius:8px;padding:6px 8px;font:inherit;font-size:13px;color:var(--ink);cursor:pointer;line-height:1.15}
+.diasMovil button small{display:block;font-size:11px;color:var(--muted)}
+.diasMovil button.on{background:var(--pri);color:#fff;border-color:var(--pri)}.diasMovil button.on small{color:#dbe6f5}
+.diasMovil button.hoy{border-color:var(--pri2);border-width:2px}
 </style>
 </head>
 <body>
@@ -262,10 +335,10 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
   </nav>
   <span class="badge hidden" id="badgeEj" title="Datos inventados para probar. Al dar de alta un alumno real te ofrecerá borrarlos.">DATOS DE EJEMPLO</span>
   <div class="spacer"></div>
-  <button class="hdrbtn" id="btnConfig" title="Nombre y teléfono de la autoescuela para la firma de los WhatsApp">⚙️ Autoescuela</button>
-  <button class="hdrbtn" id="btnGuardar" title="Descarga un fichero .json con toda la base de datos">💾 Guardar base de datos</button>
-  <button class="hdrbtn" id="btnAbrir" title="Carga un fichero .json guardado anteriormente">📂 Abrir</button>
-  <button class="hdrbtn" id="btnEnviar" title="Copia de seguridad de todos los datos para guardarla fuera de la tablet (Drive, correo, WhatsApp). No se lee: se recupera con «📂 Abrir»">📤 Enviar copia</button>
+  <button class="hdrbtn" id="btnConfig" title="Nombre y teléfono de la autoescuela para la firma de los WhatsApp">⚙️<span class="lbl"> Autoescuela</span></button>
+  <button class="hdrbtn" id="btnGuardar" title="Descarga un fichero .json con toda la base de datos">💾<span class="lbl"> Guardar base de datos</span></button>
+  <button class="hdrbtn" id="btnAbrir" title="Carga un fichero .json guardado anteriormente">📂<span class="lbl"> Abrir</span></button>
+  <button class="hdrbtn" id="btnEnviar" title="Copia de seguridad de todos los datos para guardarla fuera de la tablet (Drive, correo, WhatsApp). No se lee: se recupera con «📂 Abrir»">📤<span class="lbl"> Enviar copia</span></button>
   <input type="file" id="fileDB" accept=".json,.txt,application/json,text/plain" class="hidden">
   <span class="firma-app">Creado por <b>Antonio ML+IA</b><br><small id="verApp"></small></span>
 </header>
@@ -417,6 +490,7 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
         <select id="filtroProf" style="width:170px"><option value="">Todos los profesores</option></select>
       </div>
     </div>
+    <div class="diasMovil" id="diasMovil"></div>
     <div class="agenda" id="agenda"></div>
     <div class="legend">
       <span style="--c:var(--b)">Permiso B</span>
@@ -744,7 +818,7 @@ window.alert=function(msg){
 };
 /* ================== DATOS ================== */
 const LS_KEY = "agendaAutoescuela_v1";
-const VERSION = "v11.6 NOV26";
+const VERSION = "v11.7 NOV26";
 const HORAS = []; for (let m = 8*60; m < 21*60; m += 30) HORAS.push(String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"));   // filas de 30 min: 08:00 … 20:30 (la última termina a las 21:00)
 const EXAMENES = {
   B:  [["teorico","Teórico"],["practico","Práctico"]],
@@ -1660,7 +1734,15 @@ function cabeceraExamenes(ex){
 }
 function pintarAgenda(){
   $("semFecha").value=lunes;
-  const fp=$("filtroProf").value.toLowerCase(), dias=DIAS.map((d,i)=>({d,f:addDias(lunes,i)})), h0=hoy();
+  const fp=$("filtroProf").value.toLowerCase(), h0=hoy();
+  let dias=DIAS.map((d,i)=>({d,f:addDias(lunes,i)}));
+  // v11.7: en el móvil se ve un día cada vez, con botones para cambiar de día
+  if(MQ_MOVIL.matches){
+    if(diaMovil==null||diaMovil>=dias.length){ const k=dias.findIndex(x=>x.f===h0); diaMovil=k>=0?k:0; }
+    $("diasMovil").innerHTML=dias.map((x,i)=>{ const n=db.clases.filter(c=>c.fecha===x.f&&c.estado!=="anulada"&&(!fp||(c.profesor||"").toLowerCase()===fp)).length;
+      return `<button data-i="${i}" class="${i===diaMovil?"on":""} ${x.f===h0?"hoy":""}">${x.d.slice(0,3)} ${fmt(x.f).slice(0,2)}<small>${n?n+" clase"+(n>1?"s":""):"—"}</small></button>`; }).join("");
+    dias=[dias[diaMovil]];
+  }
   let html="<table><tr><th style='width:70px'>Hora</th>"+dias.map(x=>{
     const ex=examenesDelDia(x.f);
     return `<th class="${x.f===h0?"today":""}">${x.d} ${fmt(x.f).slice(0,5)}${cabeceraBloqueo(x.f)}${cabeceraExamenes(ex)}</th>`;
@@ -1720,6 +1802,9 @@ function posicionarBloques(){
 if(window.ResizeObserver) new ResizeObserver(()=>posicionarBloques()).observe($("agenda"));
 window.addEventListener("resize",posicionarBloques);
 const INICIO_TARDE=15*60+30;
+const MQ_MOVIL=window.matchMedia("(max-width:700px)"); let diaMovil=null;
+$("diasMovil").onclick=e=>{ const b=e.target.closest("button[data-i]"); if(b){ diaMovil=+b.dataset.i; pintarAgenda(); } };
+try{ MQ_MOVIL.addEventListener("change",()=>{ pintarAgenda(); }); }catch(e){ MQ_MOVIL.addListener&&MQ_MOVIL.addListener(()=>pintarAgenda()); }
 const TIPO_CORTO={"Destreza":"DESTR","Circulación":"CIRCU","Simulacro examen":"SIMUL"}; let verMananaMem=null;
 $("agenda").onclick=e=>{
   if(e.target.closest("#tglManana")){ const v=!$("agenda").querySelector("tr.manana:not(.oculta)"); verMananaMem=v;
