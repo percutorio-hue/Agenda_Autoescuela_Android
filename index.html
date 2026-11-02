@@ -818,7 +818,7 @@ window.alert=function(msg){
 };
 /* ================== DATOS ================== */
 const LS_KEY = "agendaAutoescuela_v1";
-const VERSION = "v11.7 NOV26";
+const VERSION = "v11.8 NOV26";
 const HORAS = []; for (let m = 8*60; m < 21*60; m += 30) HORAS.push(String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"));   // filas de 30 min: 08:00 … 20:30 (la última termina a las 21:00)
 const EXAMENES = {
   B:  [["teorico","Teórico"],["practico","Práctico"]],
@@ -1552,7 +1552,8 @@ function esDoble(c){ const a=alumno(c.alumnoId); return !!a&&durDe(c)===2*(esMot
 function sincronizarPlanAlumno(id,fecha){
   const lun=lunesDe(fecha), P=db.planes&&db.planes[lun]; if(!P||!P.resp||!P.resp[id]) return;
   const r=P.resp[id], sc=clasesSemana(id,lun); if(!sc.length) return;
-  r.doble=sc.every(esDoble); r.n=Math.max(Number(r.n)||0,sc.length);
+  const antes=r.doble?(Number(r.n)||0)*2:(Number(r.n)||0), uds=sc.reduce((t,c)=>t+unidades(c),0);   // en clases
+  r.doble=sc.every(esDoble); r.n=r.doble?Math.max(sc.length,Math.ceil(antes/2)):Math.max(antes,uds);
 }
 function finClase(c){ return hhmm(minutos(c.hora)+durDe(c)); }
 function ocupaHora(c,h){ const i=minutos(c.hora), f=i+durDe(c), hi=minutos(h); return i<hi+30 && f>hi; }
@@ -2178,6 +2179,9 @@ function huecosDia(r,d,desde,dur){
   return l;
 }
 /* Una sola opción: un único día y a una hora concreta */
+/* v11.8: cuánto lleva un alumno esa semana. Si pidió 1+1 se cuentan sesiones; si pidió clases sueltas, CLASES
+   (una 1+1 = 2), porque si no hay días suficientes la app junta clases en 1+1. */
+function llevaPlan(id,r,lista){ const l=(lista||[]).filter(c=>c.alumnoId===id); return r&&r.doble?l.length:l.reduce((t,c)=>t+unidades(c),0); }
 function opcionUnica(r){ const ks=Object.keys(r.dias); return ks.length===1&&(r.modo[ks[0]]==="exacta"); }
 $("plGenerar").onclick=()=>{
   sincronizarPlan();
@@ -2186,13 +2190,20 @@ $("plGenerar").onclick=()=>{
   const porPrio=(x,y)=>(Number(x.r.prio)||999)-(Number(y.r.prio)||999)||nombreCompleto(x.a).localeCompare(nombreCompleto(y.a),"es");
   const lista=alumnosPlan().map(a=>({a,r:respDe(P,a)})).filter(x=>x.r.inc&&x.r.n>0&&Object.keys(x.r.dias).length).sort(porPrio);
   if(!lista.length){ alert("No hay alumnos con respuesta anotada (incluidos, con clases y algún día marcado)."); return; }
-  const nuevas=[], citadas={};
+  const nuevas=[], citadas={}, juntadas=new Set();
   // clases ya creadas esa semana (por el plan o a mano): cuentan para lo que pidió cada alumno y no se tocan
   const semana=c=>c.fecha>=lun&&c.fecha<=addDias(lun,4)&&c.estado!=="anulada";
-  const ya={}; db.clases.filter(semana).forEach(c=>ya[c.alumnoId]=(ya[c.alumnoId]||0)+1);
-  lista.forEach(x=>{ x.falta=Math.max(0,x.r.n-(ya[x.a.id]||0)); });
-  const colocar=({a,r})=>{
-    const dur=durPlan(a,r);
+  const creadas=db.clases.filter(semana), ya={}; lista.forEach(x=>{ ya[x.a.id]=llevaPlan(x.a.id,x.r,creadas); });
+  const lleva=x=>llevaPlan(x.a.id,x.r,creadas.concat(nuevas));
+  lista.forEach(x=>{ x.falta=Math.max(0,x.r.n-(ya[x.a.id]||0));
+    // v11.8: si pide más clases que días libres tiene, se reparten 1+1: todos los días con clase y las que sobran juntas
+    const ud=esMoto(x.a.permiso)?30:45, libres=Object.keys(x.r.dias).filter(d=>!creadas.some(c=>c.alumnoId===x.a.id&&c.fecha===addDias(lun,+d))).length;
+    x.durs=null;
+    if(!x.r.doble&&libres>0&&x.falta>libres){ const dobles=Math.min(libres,x.falta-libres); x.durs=Array.from({length:libres},(_,i)=>i<dobles?2*ud:ud); }
+  });
+  const durSig=x=>x.durs?x.durs[citadas[x.a.id]||0]:durPlan(x.a,x.r);
+  const colocar=x=>{
+    const {a,r}=x, dur=durSig(x); if(!dur) return false;
     // días en orden de preferencia: primero los que dejan al menos un día libre entre clases (L-X-V…), y dentro, el más temprano
     const usados=nuevas.concat(db.clases.filter(semana)).filter(c=>c.alumnoId===a.id).map(c=>(parse(c.fecha).getDay()+6)%7);
     const orden=[0,1,2,3,4].filter(d=>r.dias[d]!=null&&!usados.includes(d))
@@ -2202,8 +2213,8 @@ $("plGenerar").onclick=()=>{
       if(nuevas.concat(db.clases.filter(semana)).some(c=>c.alumnoId===a.id&&c.fecha===f)) continue;   // una clase al día por alumno
       for(const t of huecosDia(r,d,desde,dur)){
         const c={id:uid(),alumnoId:a.id,fecha:f,hora:hhmm(t),durMin:dur,tipo:r.tipo,profesor:prof,vehiculo:a.vehiculo||"",obs:"",estado:"",plan:lun};
-        if((citadas[a.id]||0)+(ya[a.id]||0)>=r.n) return false;                                       // tope: las clases que pidió
-        if(!validarClase(c,nuevas).err.length){ nuevas.push(c); citadas[a.id]=(citadas[a.id]||0)+1; return true; }
+        if(llevaPlan(a.id,r,creadas.concat(nuevas))>=r.n) return false;                                // tope: las clases que pidió
+        if(!validarClase(c,nuevas).err.length){ nuevas.push(c); citadas[a.id]=(citadas[a.id]||0)+1; if(dur>durPlan(a,r)) juntadas.add(c.id); return true; }
       }
     }
     return false;
@@ -2212,7 +2223,7 @@ $("plGenerar").onclick=()=>{
   const pend=lista.filter(x=>x.falta>0);
   if(!pend.length){ plProp=null; pintarPropuesta(); alert("Todos los alumnos elegidos ya tienen sus clases de esa semana.\nSi has cambiado la respuesta de alguno, pulsa «🔄 Recolocar» en su fila y vuelve a generar."); return; }
   // v11.3: a igual prioridad, primero los que tienen MENOS opciones («a las 17» antes que «desde las 17»)
-  pend.forEach(x=>{ const dur=durPlan(x.a,x.r); x.flex=Object.keys(x.r.dias).reduce((s,d)=>s+huecosDia(x.r,+d,desde,dur).length,0); });
+  pend.forEach(x=>{ const dur=durSig(x); x.flex=Object.keys(x.r.dias).reduce((s,d)=>s+huecosDia(x.r,+d,desde,dur).length,0); });
   const porFlex=(x,y)=>(Number(x.r.prio)||999)-(Number(y.r.prio)||999)||x.flex-y.flex||nombreCompleto(x.a).localeCompare(nombreCompleto(y.a),"es");
   const unicos=pend.filter(x=>opcionUnica(x.r)).sort(porFlex), resto=pend.filter(x=>!opcionUnica(x.r)).sort(porFlex);
   unicos.forEach(x=>colocar(x));
@@ -2220,9 +2231,9 @@ $("plGenerar").onclick=()=>{
   for(let ronda=0;ronda<maxN;ronda++) for(const x of resto){ if(x.falta>ronda) colocar(x); }
   // v11.3: reajuste automático. Si alguien se queda sin hueco, se prueba a mover a otro alumno más flexible
   // que le esté quitando la hora (profesor, moto o alumno nuevo) a otro hueco que también le valga.
-  const necesita=x=>opcionUnica(x.r)?1:x.falta, fijos=new Set(unicos.map(x=>x.a.id));
+  const faltaX=x=>lleva(x)<x.r.n, fijos=new Set(unicos.map(x=>x.a.id));
   const reparar=x=>{
-    const {a,r}=x, dur=durPlan(a,r);
+    const {a,r}=x, dur=durSig(x); if(!dur) return false;
     for(const d of Object.keys(r.dias).map(Number)){
       const f=addDias(lun,d);
       if(nuevas.concat(db.clases.filter(semana)).some(c=>c.alumnoId===a.id&&c.fecha===f)) continue;
@@ -2235,14 +2246,29 @@ $("plGenerar").onclick=()=>{
         const deshacer=()=>{ nuevas.splice(0,nuevas.length,...copia); Object.keys(citadas).forEach(k=>delete citadas[k]); Object.assign(citadas,cit); };
         bloq.forEach(c=>{ nuevas.splice(nuevas.indexOf(c),1); citadas[c.alumnoId]--; });
         if(validarClase(cand,nuevas).err.length){ deshacer(); continue; }
-        nuevas.push(cand); citadas[a.id]=(citadas[a.id]||0)+1;
+        nuevas.push(cand); citadas[a.id]=(citadas[a.id]||0)+1; if(dur>durPlan(a,r)) juntadas.add(cand.id);
         if(bloq.every(c=>{ const y=pend.find(z=>z.a.id===c.alumnoId); return y&&colocar(y); })) return true;
         deshacer();
       }
     }
     return false;
   };
-  for(let vuelta=0;vuelta<2;vuelta++) pend.slice().sort(porFlex).forEach(x=>{ let g=0; while((citadas[x.a.id]||0)<necesita(x)&&g++<5&&reparar(x)); });
+  for(let vuelta=0;vuelta<2;vuelta++) pend.slice().sort(porFlex).forEach(x=>{ let g=0; while(faltaX(x)&&g++<5&&reparar(x)); });
+  // v11.8: si pidió más clases que días puede, se juntan en 1+1 (dos seguidas) las que ya tiene propuestas,
+  // primero ampliando a la misma hora y si no, buscando otra hora de ese día que encaje con su disponibilidad.
+  pend.filter(x=>!x.r.doble).sort(porFlex).forEach(x=>{
+    const {a,r}=x, ud=esMoto(a.permiso)?30:45;
+    for(const c of nuevas.filter(c=>c.alumnoId===a.id&&durDe(c)===ud).sort((p,q)=>(p.fecha+p.hora).localeCompare(q.fecha+q.hora))){
+      if(lleva(x)>=r.n) break;
+      const d=(parse(c.fecha).getDay()+6)%7, otras=nuevas.filter(z=>z!==c);
+      if(r.dias[d]==null) continue;
+      const hs=huecosDia(r,d,desde,2*ud), horas=(hs.includes(minutos(c.hora))?[minutos(c.hora)]:[]).concat(hs.filter(t=>t!==minutos(c.hora)));
+      for(const t of horas){
+        const c2=Object.assign({},c,{hora:hhmm(t),durMin:2*ud});
+        if(!validarClase(c2,otras).err.length){ Object.assign(c,{hora:c2.hora,durMin:2*ud}); juntadas.add(c.id); break; }
+      }
+    }
+  });
   // v11.3: por qué no hay hueco (primer motivo de cada día que podía)
   const motivo=({a,r})=>{ const dur=durPlan(a,r), l=[];
     Object.keys(r.dias).sort().forEach(d=>{ const f=addDias(lun,+d);
@@ -2252,7 +2278,8 @@ $("plGenerar").onclick=()=>{
       const e=validarClase(c,nuevas).err; if(e.length) l.push(DIAS_LARGOS[d]+(hs.length===1?" "+c.hora:" desde las "+c.hora)+": "+e[0]); });
     return l; };
   plProp={lun,prof,nuevas,unicos:unicos.map(x=>x.a.id),
-    faltan:pend.filter(x=>(citadas[x.a.id]||0)<(opcionUnica(x.r)?1:x.falta)).map(x=>({a:x.a,pide:opcionUnica(x.r)?1:x.r.n,citadas:(citadas[x.a.id]||0)+(ya[x.a.id]||0),unica:opcionUnica(x.r),por:motivo(x)}))};
+    juntadas:[...juntadas],
+    faltan:pend.filter(faltaX).map(x=>({a:x.a,pide:txtClases(x.r),citadas:lleva(x),unica:opcionUnica(x.r),por:motivo(x)}))};
   plCreadas=null; pintarPropuesta();
 };
 function filasPorHueco(cl){
@@ -2269,14 +2296,15 @@ function pintarPropuesta(){
       <td>${esc(TXT_TIPO_CLASE[c.tipo]||c.tipo)}${gr.length>1?` <b>👥 ${gr.length}</b>`:""}</td>
       <td>${gr.map(x=>{ const a=alumno(x.alumnoId); return `${plCreadas?"":`<button class="btn sec sm" style="padding:2px 7px" title="Cambiar esta cita" onclick="plEditar('${x.id}')">✏️</button> `}${esc(nombreCompleto(a))} <span class="tag t-${a.permiso}">${a.permiso}</span>${a.nuevo?" 🆕":""}${(plProp.unicos||[]).includes(a.id)?' <span title="Solo podía este día y hora">📌</span>':""}`; }).join("<br>")}</td></tr>`; }).join("")
       ||`<tr><td colspan="4" style="color:var(--muted)">No se ha podido citar a nadie con esa disponibilidad.</td></tr>`)+`</table>`
-    +`<p style="font-size:12px;color:var(--muted);margin:6px 0 0">${[...new Set(nuevas.map(c=>c.alumnoId))].map(id=>{ const r=planDe(plProp.lun).resp[id]; const tot=clasesSemana(id,plProp.lun).length+nuevas.filter(c=>c.alumnoId===id).length; return esc(alumno(id).nombre)+": "+(r&&r.doble?txtClases({n:tot,doble:true})+" de "+txtClases(r):tot+" de "+(r?r.n:"?")); }).join(" · ")}</p>`
+    +`<p style="font-size:12px;color:var(--muted);margin:6px 0 0">${[...new Set(nuevas.map(c=>c.alumnoId))].map(id=>{ const r=planDe(plProp.lun).resp[id]; const tot=llevaPlan(id,r,clasesSemana(id,plProp.lun).concat(nuevas)); return esc(alumno(id).nombre)+": "+(r&&r.doble?txtClases({n:tot,doble:true})+" de "+txtClases(r):tot+" de "+(r?r.n:"?")+" clases"); }).join(" · ")}</p>`
+    +((plProp.juntadas||[]).length?`<p style="font-size:12px;color:var(--pri);margin:4px 0 0">🔗 ${plProp.juntadas.length} clase(s) juntada(s) en <b>1+1</b> automáticamente: el alumno pidió más clases que días tenía disponibles.</p>`:"")
     +(faltan.length?`<div class="msgs"><div class="m-warn">⚠️ Sin hueco suficiente: ${faltan.map(x=>`<b>${esc(nombreCompleto(x.a))}</b> (${x.unica?"solo podía a una hora concreta y ya está ocupada":"pidió "+x.pide+", citadas "+x.citadas})${(x.por||[]).length?`<ul style="margin:4px 0 6px;padding-left:20px">${x.por.map(t=>`<li>${esc(t)}</li>`).join("")}</ul>`:""}`).join("")}Revisa su disponibilidad o prográmalas a mano.</div></div>`:"")
     +(plCreadas?`<p style="color:var(--ok);margin:8px 0 0">✔ Clases creadas. Avísalas en el paso 4.</p>`
       :nuevas.length?`<div class="row" style="margin-top:10px"><button class="btn" id="plCrear">✅ Crear estas clases</button><button class="btn sec" id="plDescartar">Descartar</button></div>`:"");
   if($("plCrear")) $("plCrear").onclick=()=>{
     // control final: ningún alumno con más clases de las pedidas esa semana
     const P=planDe(plProp.lun), sem=c=>c.fecha>=plProp.lun&&c.fecha<=addDias(plProp.lun,4)&&c.estado!=="anulada";
-    const exceso={}; nuevas.forEach(c=>{ const r=P.resp[c.alumnoId]; const tot=db.clases.filter(x=>x.alumnoId===c.alumnoId&&sem(x)).length+nuevas.filter(x=>x.alumnoId===c.alumnoId).length; if(r&&tot>r.n) exceso[c.alumnoId]=r.n; });
+    const exceso={}; nuevas.forEach(c=>{ const r=P.resp[c.alumnoId]; const tot=llevaPlan(c.alumnoId,r,db.clases.filter(sem).concat(nuevas)); if(r&&tot>r.n) exceso[c.alumnoId]=txtClases(r); });
     if(Object.keys(exceso).length){ alert("Revisa: "+Object.keys(exceso).map(id=>nombreCompleto(alumno(id))+" pidió "+exceso[id]).join(", ")+". Vuelve a generar la propuesta."); return; }
     const bad=nuevas.filter(c=>validarClase(c,nuevas.filter(x=>x!==c)).err.length);
     if(bad.length&&!confirm(bad.length+" clase(s) ya no encajan (alguien ha programado algo mientras tanto). ¿Crear el resto?")) return;
