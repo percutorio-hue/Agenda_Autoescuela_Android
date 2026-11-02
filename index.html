@@ -581,6 +581,8 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
       <button class="btn sec sm" id="plTodos">Marcar todos</button><button class="btn sec sm" id="plNinguno">Ninguno</button>
       <button class="btn wa sm" id="plPreguntar" title="Envía la pregunta a todos los marcados, uno detrás de otro">▶ Envío en ráfaga</button>
       <span id="plResumen" style="font-size:13px;color:var(--muted)"></span>
+      <span class="spacer"></span>
+      <button class="btn" id="plRehacer" style="background:var(--err);color:#fff;font-weight:600" title="Borra el plan y las clases de esta semana para empezarla de cero">🔄 Rehacer plan semanal</button>
     </div>
     <div class="plpaso"><span>2</span> Pega la respuesta de cada uno con «📋 Respuesta» (o márcala a mano) y pon la prioridad (1 = primero)</div>
     <div><table class="plt" id="plTabla"></table></div>
@@ -819,7 +821,7 @@ window.alert=function(msg){
 };
 /* ================== DATOS ================== */
 const LS_KEY = "agendaAutoescuela_v1";
-const VERSION = "v12.0 NOV26";
+const VERSION = "v12.1 NOV26";
 const HORAS = []; for (let m = 8*60; m < 21*60; m += 30) HORAS.push(String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"));   // filas de 30 min: 08:00 … 20:30 (la última termina a las 21:00)
 const EXAMENES = {
   B:  [["teorico","Teórico"],["practico","Práctico"]],
@@ -2336,6 +2338,24 @@ function pintarAvisosPlan(){
         <td><span class="pend">🔁 cambio pendiente de avisar</span></td><td><button class="btn wa sm" onclick="plAvisar('${id}')">📲 WhatsApp</button></td></tr>`; }).join("")+`</table>`
     :'<p style="color:var(--muted);margin:0">Todavía no hay clases creadas esa semana.</p>';
 }
+/* v12.1: «Rehacer plan semanal»: deja la semana como nueva (plan, respuestas, WhatsApp y clases de esa semana).
+   Al borrar las clases, las que se habían descontado del bono vuelven solas al alumno. */
+$("plRehacer").onclick=()=>{
+  const lun=lunesDe($("plSemana").value||proximoLunes()), fin=addDias(lun,6);
+  const cl=db.clases.filter(c=>c.fecha>=lun&&c.fecha<=fin);
+  const dadas=cl.filter(c=>c.estado==="realizada"||c.estado==="falta"||(!c.estado&&bloqueada(c))).length;
+  const al=new Set(cl.map(c=>c.alumnoId)).size, P=db.planes[lun]||{}, preg=Object.keys(P.preg||{}).length;
+  if(!confirm(`🔄 REHACER PLAN SEMANAL\nSemana del ${fmt(lun)} al ${fmt(fin)}\n\nSe borrará:\n• Las ${cl.length} clase(s) de esa semana en «Clases prácticas» (${al} alumno(s))${dadas?`, incluidas ${dadas} ya dada(s), marcada(s) o con menos de 24 h`:""}. Las clases descontadas vuelven al bono de cada alumno.\n• Las respuestas, prioridades y alumnos marcados del plan.\n• El registro de WhatsApp de esa semana: ${preg} pregunta(s) enviada(s) y los avisos de citas.\n\nConsejo: antes haz una copia con «💾 Guardar base de datos».\n\n¿Continuar?`)) return;
+  if(!confirm(`⚠️ SEGUNDA CONFIRMACIÓN\n\n¿Seguro que quieres borrar el plan y las ${cl.length} clase(s) de la semana del ${fmt(lun)}?\n\nNo se puede deshacer.`)) return;
+  const ids=new Set(cl.map(c=>c.id));
+  db.clases=db.clases.filter(c=>!ids.has(c.id));
+  Object.keys(db.avisos||{}).forEach(k=>{ const id=k.split(":")[1]; if(k.startsWith("c:")&&ids.has(id)) delete db.avisos[k]; });
+  Object.keys(db.recordados||{}).forEach(k=>{ if(k.startsWith("rc:")&&ids.has(k.split(":")[1])) delete db.recordados[k]; });
+  db.planes[lun]={preg:{},resp:{}};
+  plProp=null; plCreadas=null; $("plPropuesta").innerHTML="";
+  persistir(); refrescarListas&&refrescarListas(); pintarAgenda(); pintarPlan(); pintarAvisos&&pintarAvisos();
+  toast(`Semana del ${fmt(lun)} rehecha: ${cl.length} clase(s) borradas y plan vacío.`);
+};
 /* v12.0: alumnos con el aviso de la semana pendiente (o con cambio, o que se quedaron sin clases) */
 function pendientesAvisoPlan(lun){
   const P=planDe(lun); P.avisados=P.avisados||{};
