@@ -822,7 +822,7 @@ window.alert=function(msg){
 };
 /* ================== DATOS ================== */
 const LS_KEY = "agendaAutoescuela_v1";
-const VERSION = "v12.2 NOV26";
+const VERSION = "v12.3 NOV26";
 const HORAS = []; for (let m = 8*60; m < 21*60; m += 30) HORAS.push(String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"));   // filas de 30 min: 08:00 … 20:30 (la última termina a las 21:00)
 const EXAMENES = {
   B:  [["teorico","Teórico"],["practico","Práctico"]],
@@ -1591,7 +1591,7 @@ function abrirClase(id, pre){
   $("cEstado").value=c.estado||"";
   $("cRepBox").classList.toggle("hidden",!!id); $("cRepetir").checked=false; $("cRepOpts").classList.add("hidden");
   $("mClaseTit").textContent=id?"Editar clase práctica":"Programar clase práctica";
-  $("cAvisar").checked=!id;
+  $("cAvisar").checked=false;   // v12.3: desmarcado por defecto (el aviso queda pendiente en Plan semanal / Avisos)
   claseOriginal=id?JSON.stringify([c.fecha,c.hora,durDe(c)]):null;
   const lock=!!id&&bloqueada(c);
   ["cAlumno","cFecha","cHora","cDur","cTipo","cProf","cVeh"].forEach(i=>$(i).disabled=lock);
@@ -1610,7 +1610,7 @@ $("cAlumno").onchange=()=>{
 ["cFecha","cHora","cDur","cProf","cVeh","cEstado","cTipo"].forEach(i=>{ $(i).addEventListener("input",comprobarClase); $(i).addEventListener("change",comprobarClase); });
 let claseOriginal=null;
 // al cambiar día, hora o duración de una clase existente, se marca para avisar al alumno del cambio
-["cFecha","cHora","cDur"].forEach(i=>$(i).addEventListener("change",()=>{ if(claseEdit&&JSON.stringify([$("cFecha").value,$("cHora").value,Number($("cDur").value)])!==claseOriginal) $("cAvisar").checked=true; }));
+// v12.3: ya no se marca solo al cambiar fecha u hora; el cambio queda pendiente de avisar en Plan semanal / Avisos
 $("cCancelar").onclick=()=>$("mClase").classList.add("hidden");
 $("mClase").onclick=e=>{ if(e.target.id==="mClase") $("mClase").classList.add("hidden"); };
 
