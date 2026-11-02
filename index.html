@@ -134,6 +134,8 @@ body.enRafaga .toast{bottom:100px}
 .pldias{display:flex;flex-wrap:wrap;gap:6px 8px}
 .pldias .pld{flex-direction:row;align-items:center;gap:4px;margin:0;padding:3px 6px;border:1px solid var(--line);border-radius:8px;background:#f7f9fc}
 .pldias .pld label{font-weight:600;min-width:26px}
+.pldias .pld.cl{background:#e6f4ec;border-color:#5fb383}
+.pldias .pld .clh{font-size:11px;color:var(--ok);font-weight:700;white-space:nowrap}
 .pldias .pld input[type=time]{width:78px}
 .itvfila{display:flex;gap:12px;align-items:center}
 .itvfila input[type=date]{width:50%}
@@ -821,7 +823,7 @@ window.alert=function(msg){
 };
 /* ================== DATOS ================== */
 const LS_KEY = "agendaAutoescuela_v1";
-const VERSION = "v12.1 NOV26";
+const VERSION = "v12.2 NOV26";
 const HORAS = []; for (let m = 8*60; m < 21*60; m += 30) HORAS.push(String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"));   // filas de 30 min: 08:00 … 20:30 (la última termina a las 21:00)
 const EXAMENES = {
   B:  [["teorico","Teórico"],["practico","Práctico"]],
@@ -1555,6 +1557,9 @@ function esDoble(c){ const a=alumno(c.alumnoId); return !!a&&durDe(c)===2*(esMot
 function sincronizarPlanAlumno(id,fecha){
   const lun=lunesDe(fecha), P=db.planes&&db.planes[lun]; if(!P||!P.resp||!P.resp[id]) return;
   const r=P.resp[id], sc=clasesSemana(id,lun); if(!sc.length) return;
+  // v12.2: cada día con clase en la agenda queda marcado en la línea de días del plan («a las HH:MM» si no estaba marcado)
+  r.modo=r.modo||{}; r.hasta=r.hasta||{}; r.dias=r.dias||{}; r.inc=true;
+  sc.forEach(c=>{ const i=Math.round((parse(c.fecha)-parse(lun))/864e5); if(i<0||i>4||r.dias[i]!=null) return; r.dias[i]=c.hora; r.modo[i]="exacta"; delete r.hasta[i]; });
   const antes=r.doble?(Number(r.n)||0)*2:(Number(r.n)||0), uds=sc.reduce((t,c)=>t+unidades(c),0);   // en clases
   r.doble=sc.every(esDoble); r.n=r.doble?Math.max(sc.length,Math.ceil(antes/2)):Math.max(antes,uds);
 }
@@ -1969,6 +1974,7 @@ function pintarPlan(){
   $("plProf").innerHTML=(ps.length?"":'<option value="">— Da de alta un profesor —</option>')+ps.map(n=>`<option>${esc(n)}</option>`).join("");
   if(ps.includes(cur)) $("plProf").value=cur;
   const P=planDe(lun), L=alumnosPlan(), desde=$("plDesde").value||"15:30";
+  { const antes=JSON.stringify(P.resp); L.forEach(a=>{ if(clasesSemana(a.id,lun).length){ respDe(P,a); sincronizarPlanAlumno(a.id,lun); } }); if(JSON.stringify(P.resp)!==antes) persistir(); }   // v12.2
   const inc=L.filter(a=>respDe(P,a).inc), preg=inc.filter(a=>P.preg[a.id]).length;
   $("plResumen").textContent=L.length?`${inc.length} elegido(s) · ${preg} preguntado(s) · semana del ${fmt(lun)} al ${fmt(addDias(lun,4))}`:"";
   $("plTabla").innerHTML=L.length?`<thead><tr><th>Incluir</th><th>Alumno</th><th>Pregunta</th><th>Prioridad</th><th title="1+1 = dos clases seguidas el mismo día">Clases</th><th>Tipo</th></tr></thead>`+
@@ -1983,11 +1989,11 @@ function pintarPlan(){
         <td><input type="number" min="1" step="1" data-f="prio" value="${r.prio}" placeholder="—"></td>
         <td><select data-f="cl" title="1+1 = dos clases seguidas el mismo día y a la misma hora">${opcionesClases(r)}</select></td>
         <td><select data-f="tipo">${(a.permiso==="AM"?["Destreza"]:esMoto(a.permiso)?["Destreza","Circulación"]:["Circulación","Destreza","Simulacro examen"]).map(t=>`<option ${r.tipo===t?"selected":""}>${t}</option>`).join("")}</select></td></tr>
-        <tr class="plB"><td colspan="2"></td><td colspan="4" class="pldcell"><div class="pldias">${DIAS_PL.map((d,i)=>{ const on=r.dias[i]!=null, m=r.modo[i]||"desde";
-          return `<span class="pld"><label><input type="checkbox" data-d="${i}" ${on?"checked":""}> ${d}</label>
+        <tr class="plB"><td colspan="2"></td><td colspan="4" class="pldcell"><div class="pldias">${(()=>{ const clD={}; clasesSemana(a.id,lun).forEach(c=>{ const i=Math.round((parse(c.fecha)-parse(lun))/864e5); (clD[i]=clD[i]||[]).push(c.hora); }); return DIAS_PL.map((d,i)=>{ const on=r.dias[i]!=null, m=r.modo[i]||"desde";
+          return `<span class="pld ${clD[i]?"cl":""}" ${clD[i]?`title="En agenda: ${clD[i].join(", ")}"`:""}>${clD[i]?`<span class="clh">🗓️ ${clD[i].join(" ")}</span>`:""}<label><input type="checkbox" data-d="${i}" ${on?"checked":""}> ${d}</label>
             <select data-m="${i}" ${on?"":"disabled"}><option value="desde" ${m==="desde"?"selected":""}>desde</option><option value="exacta" ${m==="exacta"?"selected":""}>a las</option><option value="entre" ${m==="entre"?"selected":""}>entre</option></select>
             <input type="time" step="900" data-h="${i}" value="${r.dias[i]||desde}" ${on?"":"disabled"}>
-            <input type="time" step="900" class="hh ${m==="entre"&&on?"":"hidden"}" data-hh="${i}" value="${r.hasta[i]||hhmm(FIN_DIA)}"></span>`; }).join("")}</div></td></tr></tbody>`; }).join("")
+            <input type="time" step="900" class="hh ${m==="entre"&&on?"":"hidden"}" data-hh="${i}" value="${r.hasta[i]||hhmm(FIN_DIA)}"></span>`; }).join(""); })()}</div></td></tr></tbody>`; }).join("")
     :`<tbody><tr><td style="color:var(--muted);padding:16px">No hay alumnos con ese filtro.</td></tr></tbody>`;
   pintarAvisosPlan();
 }
@@ -2100,9 +2106,10 @@ function interpretarRespuesta(texto,desdeDef){
     `\\b${D}\\b`,                                                                              // 24 día
     `\\b(\\d+|un|una|dos|tres|cuatro|cinco|seis)\\s+(?:clases?|practicas?|horas?\\s+de\\s+clase)\\b`,   // 25 nº clases
     `([,;.]|\\by\\b|\\bo\\b|\\bel\\b|\\blos\\b|\\bni\\b)`,                                             // 26 separadores (no cortan la exclusión)
-    `\\b(1[3-9]|20)\\b`                                                                        // 27 hora suelta: «lunes 17» → a las 17:00
+    `\\b(1[3-9]|20)\\b`,                                                                       // 27 hora suelta: «lunes 17» → a las 17:00
+    `\\b(igual|lo\\s+mismo|a\\s+la\\s+misma\\s+hora)\\b`                                             // 28 v12.2: «y el jueves igual» → misma hora que el anterior
   ].join("|"),"g");
-  const dias={}, modo={}, hasta={}, dudas=[], excl=new Set(); let grupo=[], suelto=null, excluyendo=false, n=null, m, todos=false;
+  const dias={}, modo={}, hasta={}, dudas=[], excl=new Set(); let grupo=[], suelto=null, excluyendo=false, n=null, m, todos=false, igualUsado=false;
   let ultimo=null;   // último grupo de días con su hora, para «a las 5 o a las 6»
   const asigna=(g,tm)=>g.forEach(i=>{ dias[i]=hhmm(tm.d); modo[i]=tm.m; if(tm.h) hasta[i]=hhmm(tm.h); else delete hasta[i]; });
   const tiempo=tm=>{
@@ -2128,6 +2135,7 @@ function interpretarRespuesta(texto,desdeDef){
     else if(m[24]!=null){ const i=PG_DIA[m[24]]; if(excluyendo) excl.add(i); else grupo.push(i); }
     else if(m[25]!=null){ n=isNaN(+m[25])?PG_NUM[m[25]]:+m[25]; }
     else if(m[27]!=null){ const a=pgHora(m[27]); if(!fuera(a)) tiempo({d:a,m:"exacta"}); }
+    else if(m[28]!=null){ if(grupo.length&&ultimo){ asigna(grupo,ultimo.tm); ultimo={g:grupo.slice(),tm:ultimo.tm}; grupo=[]; igualUsado=true; } }
     // m[26]: separador, no hace nada
   }
   if(grupo.length) asigna(grupo,suelto||{d:minutos(desdeDef),m:"desde"});
@@ -2144,7 +2152,8 @@ function interpretarRespuesta(texto,desdeDef){
     const otras=(t.match(/\b(otra|otras|una\s+mas|otra\s+mas)\b/g)||[]).length;
     if(otras&&Object.keys(dias).length>1){ doble=false; n=2*n+otras; } }
   else if(n!=null) doble=false;
-  if(/\b(igual|quizas?|a lo mejor|puede que|depende|no se|ya te (digo|confirmo)|si no|sino|mejor|aunque|tal vez)\b/.test(t)) dudas.push("La respuesta tiene condiciones o dudas: revísala.");
+  const td=igualUsado?t.replace(/\b(igual|lo mismo)\b/g," "):t;
+  if(/\b(igual|quizas?|a lo mejor|puede que|depende|no se|ya te (digo|confirmo)|te confirmo|si no|sino|mejor|aunque|tal vez)\b/.test(td)) dudas.push("La respuesta tiene condiciones o dudas: revísala.");
   return {dias,modo,hasta,n,doble,dudas};
 }
 let pgAlumno=null;
