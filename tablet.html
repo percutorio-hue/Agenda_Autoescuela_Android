@@ -566,7 +566,7 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
     <div class="row" style="justify-content:space-between;margin-bottom:6px">
       <h2 style="margin:0">📅 Planificación semanal (coche y motos)</h2>
       <div class="row">
-        <select id="plFiltro" style="width:170px"><option value="todos">🚗+🏍️ Coche y motos</option><option value="moto">🏍️ Solo motos</option><option value="B">🚗 Solo coche (B)</option></select>
+        <select id="plFiltro" style="width:170px"><option value="moto" selected>🏍️ Solo motos</option><option value="B">🚗 Solo coche (B)</option><option value="todos">🚗+🏍️ Coche y motos</option></select>
         <span style="font-size:13px">Semana del lunes</span><input type="date" id="plSemana" style="width:160px">
         <select id="plProf" style="width:190px"></select>
         <span style="font-size:13px">desde</span><input type="time" id="plDesde" value="15:30" step="900" style="width:110px">
@@ -588,6 +588,7 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
     <div class="row"><button class="btn" id="plGenerar">⚙️ Generar propuesta</button></div>
     <div id="plPropuesta" style="margin-top:10px"></div>
     <div class="plpaso"><span>4</span> Avisos de la semana: cada alumno recibe sus clases; si algo cambia, vuelve a quedar pendiente</div>
+    <div class="row" style="margin-bottom:6px"><button class="btn wa sm" id="plAvRafaga" title="Envía uno detrás de otro los avisos de clases pendientes (y los cambios) de esta semana">▶ Envío en ráfaga de las citas</button><span id="plAvRes" style="font-size:13px;color:var(--muted)"></span></div>
     <div id="plAvisos"></div>
   </div>
 </section>
@@ -817,7 +818,7 @@ window.alert=function(msg){
 };
 /* ================== DATOS ================== */
 const LS_KEY = "agendaAutoescuela_v1";
-const VERSION = "v11.9 NOV26";
+const VERSION = "v12.0 NOV26";
 const HORAS = []; for (let m = 8*60; m < 21*60; m += 30) HORAS.push(String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"));   // filas de 30 min: 08:00 … 20:30 (la última termina a las 21:00)
 const EXAMENES = {
   B:  [["teorico","Teórico"],["practico","Práctico"]],
@@ -2323,6 +2324,7 @@ function pintarAvisosPlan(){
   const ids=[...new Set(db.clases.filter(c=>c.fecha>=lun&&c.fecha<=addDias(lun,4)&&c.estado!=="anulada").map(c=>c.alumnoId))].filter(id=>!!alumno(id))
     .sort((x,y)=>nombreCompleto(alumno(x)).localeCompare(nombreCompleto(alumno(y)),"es"));
   const borradas=Object.keys(P.avisados).filter(id=>!ids.includes(id)&&alumno(id)&&P.avisados[id]!=="sin clases");
+  { const np=pendientesAvisoPlan(lun).length; $("plAvRes").textContent=np?np+" alumno(s) con citas pendientes de avisar":(ids.length?"✔ Todas las citas avisadas":""); $("plAvRafaga").disabled=!np; }
   $("plAvisos").innerHTML=(ids.length||borradas.length)?`<table><tr><th>Alumno</th><th>Clases de la semana</th><th>Aviso</th><th></th></tr>`+
     ids.map(id=>{ const a=alumno(id), cl=clasesAvisar(id,lun), ok=cl.every(c=>db.avisos[keyClase(c)]), cambio=!ok&&!!P.avisados[id];
       return `<tr><td>${esc(nombreCompleto(a))} <span class="tag t-${a.permiso}">${a.permiso}</span></td>
@@ -2333,6 +2335,20 @@ function pintarAvisosPlan(){
         <td><span class="pend">🔁 cambio pendiente de avisar</span></td><td><button class="btn wa sm" onclick="plAvisar('${id}')">📲 WhatsApp</button></td></tr>`; }).join("")+`</table>`
     :'<p style="color:var(--muted);margin:0">Todavía no hay clases creadas esa semana.</p>';
 }
+/* v12.0: alumnos con el aviso de la semana pendiente (o con cambio, o que se quedaron sin clases) */
+function pendientesAvisoPlan(lun){
+  const P=planDe(lun); P.avisados=P.avisados||{};
+  const ids=[...new Set(db.clases.filter(c=>c.fecha>=lun&&c.fecha<=addDias(lun,4)&&c.estado!=="anulada").map(c=>c.alumnoId))].filter(id=>!!alumno(id));
+  const pend=ids.filter(id=>{ const cl=clasesAvisar(id,lun); return cl.length&&!cl.every(c=>db.avisos[keyClase(c)]); });
+  const borradas=Object.keys(P.avisados).filter(id=>!ids.includes(id)&&alumno(id)&&P.avisados[id]!=="sin clases");
+  return pend.concat(borradas).sort((x,y)=>nombreCompleto(alumno(x)).localeCompare(nombreCompleto(alumno(y)),"es"));
+}
+$("plAvRafaga").onclick=()=>{
+  const lun=lunesDe($("plSemana").value||proximoLunes()), l=pendientesAvisoPlan(lun);
+  const cola=l.filter(id=>telWa(alumno(id).tel)), sinTel=l.filter(id=>!telWa(alumno(id).tel)).map(id=>nombreCompleto(alumno(id)));
+  if(!cola.length){ alert(sinTel.length?"Los alumnos pendientes no tienen un móvil válido:\n"+sinTel.join("\n"):"No hay citas pendientes de avisar esta semana."); return; }
+  iniciarRafaga(cola.map(id=>{ const a=alumno(id); return {nombre:a.nombre+" "+(a.apellidos||"").split(" ")[0],abrir:()=>avisarSemana(id,lun)}; }),sinTel,"Envío de citas en ráfaga");
+};
 /* El profesor puede proponer otra cita para un alumno antes de crear las clases */
 window.plEditar=cid=>{
   const c=plProp&&plProp.nuevas.find(x=>x.id===cid); if(!c) return; const a=alumno(c.alumnoId);
