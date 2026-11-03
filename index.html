@@ -823,7 +823,7 @@ window.alert=function(msg){
 };
 /* ================== DATOS ================== */
 const LS_KEY = "agendaAutoescuela_v1";
-const VERSION = "v12.3 NOV26";
+const VERSION = "v12.4 NOV26";
 const HORAS = []; for (let m = 8*60; m < 21*60; m += 30) HORAS.push(String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"));   // filas de 30 min: 08:00 … 20:30 (la última termina a las 21:00)
 const EXAMENES = {
   B:  [["teorico","Teórico"],["practico","Práctico"]],
@@ -2754,7 +2754,11 @@ function pintarAvisos(){
 
 /* ---------- Recordatorio del día anterior (opcional) ---------- */
 function proximoDiaClase(){ let f=addDias(hoy(),1); while([0,6].includes(parse(f).getDay())) f=addDias(f,1); return f; }
-function cuandoTxt(f){ return f===addDias(hoy(),1)?"mañana, "+DIA_LARGO[parse(f).getDay()]+" "+fmt(f).slice(0,5):"el "+DIA_LARGO[parse(f).getDay()]+" "+fmt(f).slice(0,5); }
+/* v12.4: «mañana martes 10/11» si es el día siguiente; «el próximo lunes 09/11» si se envía el viernes o el fin de semana para el lunes */
+function cuandoTxt(f){ const dd=DIA_LARGO[parse(f).getDay()]+" "+fmt(f).slice(0,5);
+  if(f===addDias(hoy(),1)) return "mañana "+dd;
+  if(f===proximoDiaClase()&&parse(f).getDay()===1) return "el próximo "+dd;
+  return "el "+dd; }
 let recItems=[], recQuitar=new Set();
 function itemsRecordatorio(f){
   const r=[];
@@ -2774,7 +2778,7 @@ function pintarRecordatorios(){
   const f=$("recFecha").value; recItems=itemsRecordatorio(f);
   const pend=recItems.filter(x=>!db.recordados[x.key]).length;
   const nMan=itemsRecordatorio(proximoDiaClase()).filter(x=>!db.recordados[x.key]).length;
-  $("recSum").textContent="🔔 Recordatorio del día anterior (opcional)"+(nMan?` · ${nMan} para ${cuandoTxt(proximoDiaClase()).split(",")[0]}`:"");
+  $("recSum").textContent="🔔 Recordatorio del día anterior (opcional)"+(nMan?` · ${nMan} para ${cuandoTxt(proximoDiaClase())}`:"");
   const sel=recItems.filter(x=>!db.recordados[x.key]&&!recQuitar.has(x.key)&&telWa(x.a.tel)).length;
   $("recRafaga").textContent=`▶ Recordar en ráfaga (${sel})`; $("recRafaga").disabled=!sel;
   $("tRec").innerHTML=recItems.length?`<tr><th></th><th>Hora</th><th>Alumno</th><th>Recordar</th><th>Estado</th><th></th></tr>`+recItems.map((x,i)=>`<tr>
