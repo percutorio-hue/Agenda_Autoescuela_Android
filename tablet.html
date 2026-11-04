@@ -134,6 +134,10 @@ body.enRafaga .toast{bottom:100px}
 .pldias .pld{flex-direction:row;align-items:center;gap:4px;margin:0;padding:3px 6px;border:1px solid var(--line);border-radius:8px;background:#f7f9fc}
 .pldias .pld label{font-weight:600;min-width:26px}
 .pldias .pld.cl{background:#e6f4ec;border-color:#5fb383}
+.pldias .pld.ko{background:#fdecec;border-color:#e39a9a}
+.pldias .pld .koh{font-size:11px;color:#b42318;font-weight:700;white-space:nowrap}
+.plt tbody.plal.inc td{background:#fff6f6}
+.incbox .m-warn li{margin:2px 0}
 .pldias .pld .clh{font-size:11px;color:var(--ok);font-weight:700;white-space:nowrap}
 .pldias .pld input[type=time]{width:78px}
 .itvfila{display:flex;gap:12px;align-items:center}
@@ -502,6 +506,7 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
       <span>✔ realizada · ✖ falta · <s>anulada</s> · ❔ pasada sin marcar asistencia · 👥 clase de destreza compartida · <span style="display:inline-block;border:2px solid #f5c518;box-shadow:0 0 0 1px #b8860b;border-radius:4px;padding:0 4px;color:var(--ink)">⭐ alumno nuevo</span> (va solo) · <span style="display:inline-block;outline:2px solid #111;outline-offset:1px;border-radius:4px;padding:0 4px;color:var(--ink)">💳 sin bono</span> (debe clases)</span>
       <span>Pulsa una casilla vacía para programar una clase; pulsa una clase para editarla.</span>
     </div>
+    <div id="agIncid" class="incbox" style="margin-top:10px"></div>
   </div>
 </section>
 
@@ -591,6 +596,7 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
     <div class="plpaso"><span>3</span> Genera la propuesta (empieza el lunes a la hora indicada, por orden de prioridad)</div>
     <div class="row"><button class="btn" id="plGenerar">⚙️ Generar propuesta</button></div>
     <div id="plPropuesta" style="margin-top:10px"></div>
+    <div id="plIncid" class="incbox"></div>
     <div class="plpaso"><span>4</span> Avisos de la semana: cada alumno recibe sus clases; si algo cambia, vuelve a quedar pendiente</div>
     <div class="row" style="margin-bottom:6px"><button class="btn wa sm" id="plAvRafaga" title="Envía uno detrás de otro los avisos de clases pendientes (y los cambios) de esta semana">▶ Envío en ráfaga de las citas</button><span id="plAvRes" style="font-size:13px;color:var(--muted)"></span></div>
     <div id="plAvisos"></div>
@@ -822,7 +828,7 @@ window.alert=function(msg){
 };
 /* ================== DATOS ================== */
 const LS_KEY = "agendaAutoescuela_v1";
-const VERSION = "v12.4 NOV26";
+const VERSION = "v12.5 NOV26";
 const HORAS = []; for (let m = 8*60; m < 21*60; m += 30) HORAS.push(String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"));   // filas de 30 min: 08:00 … 20:30 (la última termina a las 21:00)
 const EXAMENES = {
   B:  [["teorico","Teórico"],["practico","Práctico"]],
@@ -1741,7 +1747,7 @@ function cabeceraExamenes(ex){
     +(ex.length>max?`<span class="exmas" title="${esc(ex.slice(max).map(e=>nombreCompleto(e.a)+" – "+TXT_EXAMEN[e.k]).join("\n"))}">+${ex.length-max} más</span>`:"")+`</div>`;
 }
 function pintarAgenda(){
-  $("semFecha").value=lunes;
+  $("semFecha").value=lunes; pintarIncidAgenda();
   const fp=$("filtroProf").value.toLowerCase(), h0=hoy();
   let dias=DIAS.map((d,i)=>({d,f:addDias(lunes,i)}));
   // v11.7: en el móvil se ve un día cada vez, con botones para cambiar de día
@@ -1978,7 +1984,8 @@ function pintarPlan(){
   $("plResumen").textContent=L.length?`${inc.length} elegido(s) · ${preg} preguntado(s) · semana del ${fmt(lun)} al ${fmt(addDias(lun,4))}`:"";
   $("plTabla").innerHTML=L.length?`<thead><tr><th>Incluir</th><th>Alumno</th><th>Pregunta</th><th>Prioridad</th><th title="1+1 = dos clases seguidas el mismo día">Clases</th><th>Tipo</th></tr></thead>`+
     L.map(a=>{ const r=respDe(P,a);
-      return `<tbody class="plal" data-al="${a.id}" style="${r.inc?"":"opacity:.55"}"><tr class="plA">
+      const inc=semanaGenerada(lun)&&r.inc&&r.n>0&&Object.keys(r.dias||{}).length&&llevaPlan(a.id,r,clasesSemana(a.id,lun))<r.n, koD=inc?diasPlanAlumno(a,r,lun):{};
+      return `<tbody class="plal ${inc?"inc":""}" data-al="${a.id}" style="${r.inc?"":"opacity:.55"}"><tr class="plA">
         <td><input type="checkbox" data-f="inc" ${r.inc?"checked":""} style="width:auto"></td>
         <td><a href="#" onclick="abrirFicha('${a.id}');return false">${esc(nombreCompleto(a))}</a> <span class="tag t-${a.permiso}">${a.permiso}</span>${a.nuevo?' <span title="Alumno nuevo: va solo">🆕</span>':""}</td>
         <td>${P.preg[a.id]?`<span class="sent" title="${esc(P.preg[a.id])}">✔ preguntado</span>`:""} <button class="btn wa sm" onclick="plPreguntar('${a.id}')" ${a.tel?"":"disabled title=\"Sin teléfono\""}>📲</button>
@@ -1989,12 +1996,13 @@ function pintarPlan(){
         <td><select data-f="cl" title="1+1 = dos clases seguidas el mismo día y a la misma hora">${opcionesClases(r)}</select></td>
         <td><select data-f="tipo">${(a.permiso==="AM"?["Destreza"]:esMoto(a.permiso)?["Destreza","Circulación"]:["Circulación","Destreza","Simulacro examen"]).map(t=>`<option ${r.tipo===t?"selected":""}>${t}</option>`).join("")}</select></td></tr>
         <tr class="plB"><td colspan="2"></td><td colspan="4" class="pldcell"><div class="pldias">${(()=>{ const clD={}; clasesSemana(a.id,lun).forEach(c=>{ const i=Math.round((parse(c.fecha)-parse(lun))/864e5); (clD[i]=clD[i]||[]).push(c.hora); }); return DIAS_PL.map((d,i)=>{ const on=r.dias[i]!=null, m=r.modo[i]||"desde";
-          return `<span class="pld ${clD[i]?"cl":""}" ${clD[i]?`title="En agenda: ${clD[i].join(", ")}"`:""}>${clD[i]?`<span class="clh">🗓️ ${clD[i].join(" ")}</span>`:""}<label><input type="checkbox" data-d="${i}" ${on?"checked":""}> ${d}</label>
+          const ko=!clD[i]&&koD[i]&&!koD[i].libre;
+          return `<span class="pld ${clD[i]?"cl":ko?"ko":""}" ${clD[i]?`title="En agenda: ${clD[i].join(", ")}"`:koD[i]?`title="${esc(koD[i].txt)}"`:""}>${clD[i]?`<span class="clh">🗓️ ${clD[i].join(" ")}</span>`:ko?`<span class="koh">⛔ ocupado</span>`:koD[i]&&koD[i].libre?`<span class="clh" style="color:var(--pri)">🟢 libre ${koD[i].libre}</span>`:""}<label><input type="checkbox" data-d="${i}" ${on?"checked":""}> ${d}</label>
             <select data-m="${i}" ${on?"":"disabled"}><option value="desde" ${m==="desde"?"selected":""}>desde</option><option value="exacta" ${m==="exacta"?"selected":""}>a las</option><option value="entre" ${m==="entre"?"selected":""}>entre</option></select>
             <input type="time" step="900" data-h="${i}" value="${r.dias[i]||desde}" ${on?"":"disabled"}>
             <input type="time" step="900" class="hh ${m==="entre"&&on?"":"hidden"}" data-hh="${i}" value="${r.hasta[i]||hhmm(FIN_DIA)}"></span>`; }).join(""); })()}</div></td></tr></tbody>`; }).join("")
     :`<tbody><tr><td style="color:var(--muted);padding:16px">No hay alumnos con ese filtro.</td></tr></tbody>`;
-  pintarAvisosPlan();
+  pintarAvisosPlan(); pintarIncidPlan();
 }
 $("plSemana").onchange=()=>{ plProp=null; $("plPropuesta").innerHTML=""; pintarPlan(); };
 $("plDesde").onchange=pintarPlan;
@@ -2294,8 +2302,47 @@ $("plGenerar").onclick=()=>{
   plProp={lun,prof,nuevas,unicos:unicos.map(x=>x.a.id),
     juntadas:[...juntadas],
     faltan:pend.filter(faltaX).map(x=>({a:x.a,pide:txtClases(x.r),citadas:lleva(x),unica:opcionUnica(x.r),por:motivo(x)}))};
+  P.generado=true; P.prof=prof; P.desde=$("plDesde").value||"15:30"; persistir();
   plCreadas=null; pintarPropuesta();
 };
+/* v12.5: incidencias del plan EN VIVO. Un alumno es incidencia mientras le falten clases de las que pidió en una semana ya
+   generada. Para cada día que pidió y no tiene clase se mira ahora mismo si hay hueco libre o qué lo impide. Al darle la cita
+   (en el plan o a mano en la agenda) desaparece solo de la lista. */
+function semanaGenerada(lun){ const P=db.planes&&db.planes[lun]; return !!(P&&(P.generado||db.clases.some(c=>c.plan===lun))); }
+function diasPlanAlumno(a,r,lun){
+  const P=planDe(lun), desde=minutos(P.desde||$("plDesde").value||"15:30"), prof=P.prof||a.profesor||"", dur=durPlan(a,r), o={};
+  Object.keys(r.dias||{}).forEach(d=>{ const f=addDias(lun,+d);
+    if(db.clases.some(c=>c.alumnoId===a.id&&c.fecha===f&&c.estado!=="anulada")) return;
+    const hs=huecosDia(r,+d,desde,dur);
+    if(!hs.length){ o[d]={libre:null,txt:"la hora indicada no cabe en el horario"}; return; }
+    let err=null;
+    for(const t of hs){ const c={id:"x",alumnoId:a.id,fecha:f,hora:hhmm(t),durMin:dur,tipo:r.tipo,profesor:prof,vehiculo:a.vehiculo||"",obs:"",estado:""};
+      const e=validarClase(c,[]).err; if(!e.length){ o[d]={libre:hhmm(t),txt:"hay hueco libre a las "+hhmm(t)}; return; } if(!err) err=(hs.length===1?c.hora:"desde las "+c.hora)+": "+e[0]; }
+    o[d]={libre:null,txt:err}; });
+  return o;
+}
+function incidenciasPlan(lun){
+  if(!semanaGenerada(lun)) return [];
+  const P=planDe(lun);
+  return alumnosPlan().map(a=>{ const r=P.resp[a.id]; if(!r||!r.inc||!(r.n>0)||!Object.keys(r.dias||{}).length) return null;
+    const lleva=llevaPlan(a.id,r,clasesSemana(a.id,lun)); if(lleva>=r.n) return null;
+    return {a,r,lleva,dias:diasPlanAlumno(a,r,lun)}; }).filter(Boolean)
+    .sort((x,y)=>nombreCompleto(x.a).localeCompare(nombreCompleto(y.a),"es"));
+}
+function htmlIncidencias(lun,dondeAgenda){
+  const L=incidenciasPlan(lun); if(!L.length) return "";
+  return `<div class="msgs"><div class="m-warn">⚠️ <b>Alumnos sin todas sus clases</b> · semana del ${fmt(lun)} (${L.length})`
+    +L.map(x=>{ const ks=Object.keys(x.dias).sort();
+      return `<div style="margin-top:6px"><a href="#" onclick="abrirFicha('${x.a.id}');return false"><b>${esc(nombreCompleto(x.a))}</b></a> <span class="tag t-${x.a.permiso}">${x.a.permiso}</span> · pidió ${txtClases(x.r)}, tiene ${x.r.doble?txtClases({n:x.lleva,doble:true}):x.lleva}
+        ${ks.length?`<ul style="margin:3px 0 0;padding-left:20px">${ks.map(d=>`<li>${x.dias[d].libre?"🟢":"🔴"} ${DIAS_LARGOS[d]} ${esc(x.dias[d].txt)}${x.dias[d].libre&&dondeAgenda?` <button class="btn sm" style="padding:1px 8px" onclick="citarIncidencia('${x.a.id}','${addDias(lun,+d)}','${x.dias[d].libre}')">➕ Citar</button>`:""}</li>`).join("")}</ul>`
+          :`<div style="font-size:12px">Ya tiene clase todos los días que pidió: amplía alguna a 1+1 o prográmala a mano en otro día.</div>`}</div>`; }).join("")
+    +`<div style="font-size:12px;margin-top:6px">🔴 ocupado · 🟢 hay hueco. Al darle la cita desaparece de esta lista.</div></div></div>`;
+}
+window.citarIncidencia=(id,f,h)=>{ const a=alumno(id), lun=lunesDe(f), r=planDe(lun).resp[id]||{};
+  abrirClase(null,{alumnoId:id,fecha:f,hora:h,durMin:durPlan(a,r),tipo:r.tipo,profesor:planDe(lun).prof||a.profesor||"",vehiculo:a.vehiculo||""}); };
+function pintarIncidPlan(){ const lun=lunesDe($("plSemana").value||proximoLunes());
+  $("plIncid").innerHTML=(!plProp||plCreadas)?htmlIncidencias(lun,true):""; }
+function pintarIncidAgenda(){ if($("agIncid")) $("agIncid").innerHTML=htmlIncidencias(lunes,true); }
 function filasPorHueco(cl){
   const g={}; cl.forEach(c=>{ const k=c.fecha+" "+c.hora+" "+c.tipo+" "+(compartible(c)?"C":c.id); (g[k]=g[k]||[]).push(c); });
   return Object.keys(g).sort().map(k=>g[k]);
@@ -2312,7 +2359,7 @@ function pintarPropuesta(){
       ||`<tr><td colspan="4" style="color:var(--muted)">No se ha podido citar a nadie con esa disponibilidad.</td></tr>`)+`</table>`
     +`<p style="font-size:12px;color:var(--muted);margin:6px 0 0">${[...new Set(nuevas.map(c=>c.alumnoId))].map(id=>{ const r=planDe(plProp.lun).resp[id]; const tot=llevaPlan(id,r,clasesSemana(id,plProp.lun).concat(nuevas)); return esc(alumno(id).nombre)+": "+(r&&r.doble?txtClases({n:tot,doble:true})+" de "+txtClases(r):tot+" de "+(r?r.n:"?")+" clases"); }).join(" · ")}</p>`
     +((plProp.juntadas||[]).length?`<p style="font-size:12px;color:var(--pri);margin:4px 0 0">🔗 ${plProp.juntadas.length} clase(s) juntada(s) en <b>1+1</b> automáticamente: el alumno pidió más clases que días tenía disponibles.</p>`:"")
-    +(faltan.length?`<div class="msgs"><div class="m-warn">⚠️ Sin hueco suficiente: ${faltan.map(x=>`<b>${esc(nombreCompleto(x.a))}</b> (${x.unica?"solo podía a una hora concreta y ya está ocupada":"pidió "+x.pide+", citadas "+x.citadas})${(x.por||[]).length?`<ul style="margin:4px 0 6px;padding-left:20px">${x.por.map(t=>`<li>${esc(t)}</li>`).join("")}</ul>`:""}`).join("")}Revisa su disponibilidad o prográmalas a mano.</div></div>`:"")
+    +(faltan.length&&!plCreadas?`<div class="msgs"><div class="m-warn">⚠️ Sin hueco suficiente: ${faltan.map(x=>`<b>${esc(nombreCompleto(x.a))}</b> (${x.unica?"solo podía a una hora concreta y ya está ocupada":"pidió "+x.pide+", citadas "+x.citadas})${(x.por||[]).length?`<ul style="margin:4px 0 6px;padding-left:20px">${x.por.map(t=>`<li>${esc(t)}</li>`).join("")}</ul>`:""}`).join("")}Revisa su disponibilidad o prográmalas a mano.</div></div>`:"")
     +(plCreadas?`<p style="color:var(--ok);margin:8px 0 0">✔ Clases creadas. Avísalas en el paso 4.</p>`
       :nuevas.length?`<div class="row" style="margin-top:10px"><button class="btn" id="plCrear">✅ Crear estas clases</button><button class="btn sec" id="plDescartar">Descartar</button></div>`:"");
   if($("plCrear")) $("plCrear").onclick=()=>{
@@ -2324,9 +2371,10 @@ function pintarPropuesta(){
     if(bad.length&&!confirm(bad.length+" clase(s) ya no encajan (alguien ha programado algo mientras tanto). ¿Crear el resto?")) return;
     const ok=nuevas.filter(c=>!bad.includes(c)); db.clases.push(...ok); persistir();
     plCreadas={}; ok.forEach(c=>(plCreadas[c.alumnoId]=plCreadas[c.alumnoId]||[]).push(c));
-    refrescarListas(); pintarAgenda(); pintarLista(); pintarPropuesta(); pintarAvisosPlan(); pintarPlan(); toast(ok.length+" clases creadas.");
+    refrescarListas(); pintarAgenda(); pintarLista(); pintarPropuesta(); pintarAvisosPlan(); pintarPlan(); pintarIncidPlan(); toast(ok.length+" clases creadas.");
   };
-  if($("plDescartar")) $("plDescartar").onclick=()=>{ plProp=null; pintarPropuesta(); };
+  if($("plDescartar")) $("plDescartar").onclick=()=>{ plProp=null; pintarPropuesta(); pintarIncidPlan(); };
+  pintarIncidPlan();
 }
 /* Clases de moto de la semana (lunes–viernes) de un alumno, sin anuladas */
 function clasesSemana(id,lun){ return db.clases.filter(c=>c.alumnoId===id&&c.fecha>=lun&&c.fecha<=addDias(lun,4)&&c.estado!=="anulada").sort((x,y)=>(x.fecha+x.hora).localeCompare(y.fecha+y.hora)); }
