@@ -135,7 +135,8 @@ body.enRafaga .toast{bottom:100px}
 .pldias .pld label{font-weight:600;min-width:26px}
 .pldias .pld.cl{background:#e6f4ec;border-color:#5fb383}
 .pldias .pld.ko{background:#fdecec;border-color:#e39a9a}
-.pldias .pld .koh{font-size:11px;color:#b42318;font-weight:700;white-space:nowrap}
+.pldias .pld .koh{font-size:11px;color:#b42318;font-weight:700;white-space:nowrap;cursor:pointer;padding:2px 4px;border-radius:4px;background:#fff}
+.pldias .pld .clh[role=button]{cursor:pointer;padding:2px 4px;border-radius:4px;background:#fff}
 .plt tbody.plal.inc td{background:#fff6f6}
 .incbox .m-warn li{margin:2px 0}
 .pldias .pld .clh{font-size:11px;color:var(--ok);font-weight:700;white-space:nowrap}
@@ -805,6 +806,12 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
     </div>
   </div>
 </div>
+<div class="modal hidden" id="mPreg" style="z-index:88">
+  <div class="box" style="width:min(460px,100%)">
+    <h3 id="mPregTit"></h3><p id="mPregTxt" style="margin:0;white-space:pre-line"></p>
+    <div class="row" style="justify-content:flex-end;margin-top:16px"><button class="btn sec" id="mPregNo">Ahora no</button><button class="btn" id="mPregSi">➕ Citar</button></div>
+  </div>
+</div>
 <div class="modal hidden" id="mExWa">
   <div class="box" style="width:min(460px,100%)">
     <h3 id="mExWaTit">📲 Avisar del examen</h3>
@@ -828,7 +835,7 @@ window.alert=function(msg){
 };
 /* ================== DATOS ================== */
 const LS_KEY = "agendaAutoescuela_v1";
-const VERSION = "v12.5 NOV26";
+const VERSION = "v12.6 NOV26";
 const HORAS = []; for (let m = 8*60; m < 21*60; m += 30) HORAS.push(String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"));   // filas de 30 min: 08:00 … 20:30 (la última termina a las 21:00)
 const EXAMENES = {
   B:  [["teorico","Teórico"],["practico","Práctico"]],
@@ -1997,7 +2004,7 @@ function pintarPlan(){
         <td><select data-f="tipo">${(a.permiso==="AM"?["Destreza"]:esMoto(a.permiso)?["Destreza","Circulación"]:["Circulación","Destreza","Simulacro examen"]).map(t=>`<option ${r.tipo===t?"selected":""}>${t}</option>`).join("")}</select></td></tr>
         <tr class="plB"><td colspan="2"></td><td colspan="4" class="pldcell"><div class="pldias">${(()=>{ const clD={}; clasesSemana(a.id,lun).forEach(c=>{ const i=Math.round((parse(c.fecha)-parse(lun))/864e5); (clD[i]=clD[i]||[]).push(c.hora); }); return DIAS_PL.map((d,i)=>{ const on=r.dias[i]!=null, m=r.modo[i]||"desde";
           const ko=!clD[i]&&koD[i]&&!koD[i].libre;
-          return `<span class="pld ${clD[i]?"cl":ko?"ko":""}" ${clD[i]?`title="En agenda: ${clD[i].join(", ")}"`:koD[i]?`title="${esc(koD[i].txt)}"`:""}>${clD[i]?`<span class="clh">🗓️ ${clD[i].join(" ")}</span>`:ko?`<span class="koh">⛔ ocupado</span>`:koD[i]&&koD[i].libre?`<span class="clh" style="color:var(--pri)">🟢 libre ${koD[i].libre}</span>`:""}<label><input type="checkbox" data-d="${i}" ${on?"checked":""}> ${d}</label>
+          return `<span class="pld ${clD[i]?"cl":ko?"ko":""}" ${clD[i]?`title="En agenda: ${clD[i].join(", ")}"`:koD[i]?`title="${esc(koD[i].txt)}"`:""}>${clD[i]?`<span class="clh">🗓️ ${clD[i].join(" ")}</span>`:ko?`<span class="koh" role="button" onclick="verMotivoDia('${a.id}',${i})">⛔ ocupado ⓘ</span>`:koD[i]&&koD[i].libre?`<span class="clh" role="button" style="color:var(--pri)" onclick="verMotivoDia('${a.id}',${i})">🟢 libre ${koD[i].libre} ⓘ</span>`:""}<label><input type="checkbox" data-d="${i}" ${on?"checked":""}> ${d}</label>
             <select data-m="${i}" ${on?"":"disabled"}><option value="desde" ${m==="desde"?"selected":""}>desde</option><option value="exacta" ${m==="exacta"?"selected":""}>a las</option><option value="entre" ${m==="entre"?"selected":""}>entre</option></select>
             <input type="time" step="900" data-h="${i}" value="${r.dias[i]||desde}" ${on?"":"disabled"}>
             <input type="time" step="900" class="hh ${m==="entre"&&on?"":"hidden"}" data-hh="${i}" value="${r.hasta[i]||hhmm(FIN_DIA)}"></span>`; }).join(""); })()}</div></td></tr></tbody>`; }).join("")
@@ -2338,6 +2345,13 @@ function htmlIncidencias(lun,dondeAgenda){
           :`<div style="font-size:12px">Ya tiene clase todos los días que pidió: amplía alguna a 1+1 o prográmala a mano en otro día.</div>`}</div>`; }).join("")
     +`<div style="font-size:12px;margin-top:6px">🔴 ocupado · 🟢 hay hueco. Al darle la cita desaparece de esta lista.</div></div></div>`;
 }
+/* v12.6: en tablet no hay ratón: al tocar «⛔ ocupado» / «🟢 libre» se explica el motivo (y si hay hueco, se ofrece citar) */
+window.verMotivoDia=(id,d)=>{ const lun=lunesDe($("plSemana").value||proximoLunes()), a=alumno(id), r=planDe(lun).resp[id]; if(!a||!r) return;
+  const x=diasPlanAlumno(a,r,lun)[d]; if(!x) return;
+  if(x.libre){ $("mPregTit").textContent="🟢 "+nombreCompleto(a)+" · "+DIAS_LARGOS[d]; $("mPregTxt").textContent="Hay hueco libre a las "+x.libre+".\n¿Abrir la clase para citarle?";
+    $("mPreg").classList.remove("hidden"); $("mPregNo").onclick=()=>$("mPreg").classList.add("hidden");
+    $("mPregSi").onclick=()=>{ $("mPreg").classList.add("hidden"); citarIncidencia(id,addDias(lun,d),x.libre); }; }
+  else alert(`⛔ ${nombreCompleto(a)} · ${DIAS_LARGOS[d]}\n\n${x.txt}`); };
 window.citarIncidencia=(id,f,h)=>{ const a=alumno(id), lun=lunesDe(f), r=planDe(lun).resp[id]||{};
   abrirClase(null,{alumnoId:id,fecha:f,hora:h,durMin:durPlan(a,r),tipo:r.tipo,profesor:planDe(lun).prof||a.profesor||"",vehiculo:a.vehiculo||""}); };
 function pintarIncidPlan(){ const lun=lunesDe($("plSemana").value||proximoLunes());
