@@ -836,7 +836,7 @@ window.alert=function(msg){
 };
 /* ================== DATOS ================== */
 const LS_KEY = "agendaAutoescuela_v1";
-const VERSION = "v12.6 NOV26";
+const VERSION = "v12.7 NOV26";
 const HORAS = []; for (let m = 8*60; m < 21*60; m += 30) HORAS.push(String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"));   // filas de 30 min: 08:00 … 20:30 (la última termina a las 21:00)
 const EXAMENES = {
   B:  [["teorico","Teórico"],["practico","Práctico"]],
@@ -2212,6 +2212,19 @@ function huecosDia(r,d,desde,dur){
 /* v11.8: cuánto lleva un alumno esa semana. Si pidió 1+1 se cuentan sesiones; si pidió clases sueltas, CLASES
    (una 1+1 = 2), porque si no hay días suficientes la app junta clases en 1+1. */
 function llevaPlan(id,r,lista){ const l=(lista||[]).filter(c=>c.alumnoId===id); return r&&r.doble?l.length:l.reduce((t,c)=>t+unidades(c),0); }
+/* v12.7: SOLO AM (ciclomotores, todos para destreza): si lo único que impide la clase es el VEHÍCULO (ocupado o con la
+   ITV caducada), se prueba con otro ciclomotor AM activo. En A1/A2 cada moto está asignada a un examen y no se cambia. */
+function esErrVeh(t){ return /^El vehículo /.test(t); }
+function motivoPrincipal(e){ return e.find(t=>!esErrVeh(t))||e[0]; }   // v12.7: lo que de verdad impide la clase (profesor, alumno…) antes que el vehículo
+function probarClase(c,lista){
+  const e=validarClase(c,lista).err; if(!e.length) return true;
+  if(!e.every(esErrVeh)) return false;
+  const al=alumno(c.alumnoId); if(!al||al.permiso!=="AM") return false;
+  const orig=c.vehiculo;
+  for(const v of db.vehiculos.filter(v=>v.activo!==false&&v.permiso===al.permiso&&etiquetaVeh(v)!==orig&&!(v.itv&&v.itv<c.fecha))){
+    c.vehiculo=etiquetaVeh(v); if(!validarClase(c,lista).err.length) return true; }
+  c.vehiculo=orig; return false;
+}
 function opcionUnica(r){ const ks=Object.keys(r.dias); return ks.length===1&&(r.modo[ks[0]]==="exacta"); }
 $("plGenerar").onclick=()=>{
   sincronizarPlan();
@@ -2244,7 +2257,7 @@ $("plGenerar").onclick=()=>{
       for(const t of huecosDia(r,d,desde,dur)){
         const c={id:uid(),alumnoId:a.id,fecha:f,hora:hhmm(t),durMin:dur,tipo:r.tipo,profesor:prof,vehiculo:a.vehiculo||"",obs:"",estado:"",plan:lun};
         if(llevaPlan(a.id,r,creadas.concat(nuevas))>=r.n) return false;                                // tope: las clases que pidió
-        if(!validarClase(c,nuevas).err.length){ nuevas.push(c); citadas[a.id]=(citadas[a.id]||0)+1; if(dur>durPlan(a,r)) juntadas.add(c.id); return true; }
+        if(probarClase(c,nuevas)){ nuevas.push(c); citadas[a.id]=(citadas[a.id]||0)+1; if(dur>durPlan(a,r)) juntadas.add(c.id); return true; }
       }
     }
     return false;
@@ -2269,13 +2282,13 @@ $("plGenerar").onclick=()=>{
       if(nuevas.concat(db.clases.filter(semana)).some(c=>c.alumnoId===a.id&&c.fecha===f)) continue;
       for(const t of huecosDia(r,d,desde,dur)){
         const cand={id:uid(),alumnoId:a.id,fecha:f,hora:hhmm(t),durMin:dur,tipo:r.tipo,profesor:prof,vehiculo:a.vehiculo||"",obs:"",estado:"",plan:lun};
-        if(validarClase(cand,[]).err.length) continue;                               // lo impide una clase ya creada: no se toca
+        if(!probarClase(cand,[])) continue;                                          // lo impide una clase ya creada: no se toca
         const bloq=nuevas.filter(c=>c.fecha===f&&c.alumnoId!==a.id&&solapan(c,cand));
         if(!bloq.length||bloq.some(c=>fijos.has(c.alumnoId))) continue;
         const copia=nuevas.slice(), cit=Object.assign({},citadas);
         const deshacer=()=>{ nuevas.splice(0,nuevas.length,...copia); Object.keys(citadas).forEach(k=>delete citadas[k]); Object.assign(citadas,cit); };
         bloq.forEach(c=>{ nuevas.splice(nuevas.indexOf(c),1); citadas[c.alumnoId]--; });
-        if(validarClase(cand,nuevas).err.length){ deshacer(); continue; }
+        if(!probarClase(cand,nuevas)){ deshacer(); continue; }
         nuevas.push(cand); citadas[a.id]=(citadas[a.id]||0)+1; if(dur>durPlan(a,r)) juntadas.add(cand.id);
         if(bloq.every(c=>{ const y=pend.find(z=>z.a.id===c.alumnoId); return y&&colocar(y); })) return true;
         deshacer();
@@ -2295,7 +2308,7 @@ $("plGenerar").onclick=()=>{
       const hs=huecosDia(r,d,desde,2*ud), horas=(hs.includes(minutos(c.hora))?[minutos(c.hora)]:[]).concat(hs.filter(t=>t!==minutos(c.hora)));
       for(const t of horas){
         const c2=Object.assign({},c,{hora:hhmm(t),durMin:2*ud});
-        if(!validarClase(c2,otras).err.length){ Object.assign(c,{hora:c2.hora,durMin:2*ud}); juntadas.add(c.id); break; }
+        if(probarClase(c2,otras)){ Object.assign(c,{hora:c2.hora,durMin:2*ud,vehiculo:c2.vehiculo}); juntadas.add(c.id); break; }
       }
     }
   });
@@ -2305,7 +2318,8 @@ $("plGenerar").onclick=()=>{
       if(nuevas.concat(db.clases.filter(semana)).some(c=>c.alumnoId===a.id&&c.fecha===f)) return;
       const hs=huecosDia(r,+d,desde,dur); if(!hs.length){ l.push(DIAS_LARGOS[d]+": la hora indicada no cabe en el horario"); return; }
       const c={id:"x",alumnoId:a.id,fecha:f,hora:hhmm(hs[0]),durMin:dur,tipo:r.tipo,profesor:prof,vehiculo:a.vehiculo||"",obs:"",estado:""};
-      const e=validarClase(c,nuevas).err; if(e.length) l.push(DIAS_LARGOS[d]+(hs.length===1?" "+c.hora:" desde las "+c.hora)+": "+e[0]); });
+      if(probarClase(Object.assign({},c),nuevas)) return;
+      const e=validarClase(c,nuevas).err; if(e.length) l.push(DIAS_LARGOS[d]+(hs.length===1?" "+c.hora:" desde las "+c.hora)+": "+motivoPrincipal(e)); });
     return l; };
   plProp={lun,prof,nuevas,unicos:unicos.map(x=>x.a.id),
     juntadas:[...juntadas],
@@ -2325,7 +2339,9 @@ function diasPlanAlumno(a,r,lun){
     if(!hs.length){ o[d]={libre:null,txt:"la hora indicada no cabe en el horario"}; return; }
     let err=null;
     for(const t of hs){ const c={id:"x",alumnoId:a.id,fecha:f,hora:hhmm(t),durMin:dur,tipo:r.tipo,profesor:prof,vehiculo:a.vehiculo||"",obs:"",estado:""};
-      const e=validarClase(c,[]).err; if(!e.length){ o[d]={libre:hhmm(t),txt:"hay hueco libre a las "+hhmm(t)}; return; } if(!err) err=(hs.length===1?c.hora:"desde las "+c.hora)+": "+e[0]; }
+      const e=validarClase(c,[]).err;
+      if(probarClase(c,[])){ const veh=c.vehiculo!==(a.vehiculo||"")?c.vehiculo:null; o[d]={libre:hhmm(t),veh,txt:"hay hueco libre a las "+hhmm(t)+(veh?" con "+veh+" (su vehículo está ocupado)":"")}; return; }
+      if(!err) err=(hs.length===1?c.hora:"desde las "+c.hora)+": "+motivoPrincipal(e); }
     o[d]={libre:null,txt:err}; });
   return o;
 }
@@ -2342,19 +2358,19 @@ function htmlIncidencias(lun,dondeAgenda){
   return `<div class="msgs"><div class="m-warn">⚠️ <b>Alumnos sin todas sus clases</b> · semana del ${fmt(lun)} (${L.length})`
     +L.map(x=>{ const ks=Object.keys(x.dias).sort();
       return `<div style="margin-top:6px"><a href="#" onclick="abrirFicha('${x.a.id}');return false"><b>${esc(nombreCompleto(x.a))}</b></a> <span class="tag t-${x.a.permiso}">${x.a.permiso}</span> · pidió ${txtClases(x.r)}, tiene ${x.r.doble?txtClases({n:x.lleva,doble:true}):x.lleva}
-        ${ks.length?`<ul style="margin:3px 0 0;padding-left:20px">${ks.map(d=>`<li>${x.dias[d].libre?"🟢":"🔴"} ${DIAS_LARGOS[d]} ${esc(x.dias[d].txt)}${x.dias[d].libre&&dondeAgenda?` <button class="btn sm" style="padding:1px 8px" onclick="citarIncidencia('${x.a.id}','${addDias(lun,+d)}','${x.dias[d].libre}')">➕ Citar</button>`:""}</li>`).join("")}</ul>`
+        ${ks.length?`<ul style="margin:3px 0 0;padding-left:20px">${ks.map(d=>`<li>${x.dias[d].libre?"🟢":"🔴"} ${DIAS_LARGOS[d]} ${esc(x.dias[d].txt)}${x.dias[d].libre&&dondeAgenda?` <button class="btn sm" style="padding:1px 8px" onclick="citarIncidencia('${x.a.id}','${addDias(lun,+d)}','${x.dias[d].libre}','${encodeURIComponent(x.dias[d].veh||"")}')">➕ Citar</button>`:""}</li>`).join("")}</ul>`
           :`<div style="font-size:12px">Ya tiene clase todos los días que pidió: amplía alguna a 1+1 o prográmala a mano en otro día.</div>`}</div>`; }).join("")
     +`<div style="font-size:12px;margin-top:6px">🔴 ocupado · 🟢 hay hueco. Al darle la cita desaparece de esta lista.</div></div></div>`;
 }
 /* v12.6: en tablet no hay ratón: al tocar «⛔ ocupado» / «🟢 libre» se explica el motivo (y si hay hueco, se ofrece citar) */
 window.verMotivoDia=(id,d)=>{ const lun=lunesDe($("plSemana").value||proximoLunes()), a=alumno(id), r=planDe(lun).resp[id]; if(!a||!r) return;
   const x=diasPlanAlumno(a,r,lun)[d]; if(!x) return;
-  if(x.libre){ $("mPregTit").textContent="🟢 "+nombreCompleto(a)+" · "+DIAS_LARGOS[d]; $("mPregTxt").textContent="Hay hueco libre a las "+x.libre+".\n¿Abrir la clase para citarle?";
+  if(x.libre){ $("mPregTit").textContent="🟢 "+nombreCompleto(a)+" · "+DIAS_LARGOS[d]; $("mPregTxt").textContent="Hay hueco libre a las "+x.libre+(x.veh?" con "+x.veh+" (su vehículo está ocupado)":"")+".\n¿Abrir la clase para citarle?";
     $("mPreg").classList.remove("hidden"); $("mPregNo").onclick=()=>$("mPreg").classList.add("hidden");
-    $("mPregSi").onclick=()=>{ $("mPreg").classList.add("hidden"); citarIncidencia(id,addDias(lun,d),x.libre); }; }
+    $("mPregSi").onclick=()=>{ $("mPreg").classList.add("hidden"); citarIncidencia(id,addDias(lun,d),x.libre,encodeURIComponent(x.veh||"")); }; }
   else alert(`⛔ ${nombreCompleto(a)} · ${DIAS_LARGOS[d]}\n\n${x.txt}`); };
-window.citarIncidencia=(id,f,h)=>{ const a=alumno(id), lun=lunesDe(f), r=planDe(lun).resp[id]||{};
-  abrirClase(null,{alumnoId:id,fecha:f,hora:h,durMin:durPlan(a,r),tipo:r.tipo,profesor:planDe(lun).prof||a.profesor||"",vehiculo:a.vehiculo||""}); };
+window.citarIncidencia=(id,f,h,veh)=>{ const a=alumno(id), lun=lunesDe(f), r=planDe(lun).resp[id]||{};
+  abrirClase(null,{alumnoId:id,fecha:f,hora:h,durMin:durPlan(a,r),tipo:r.tipo,profesor:planDe(lun).prof||a.profesor||"",vehiculo:(veh&&decodeURIComponent(veh))||a.vehiculo||""}); };
 function pintarIncidPlan(){ const lun=lunesDe($("plSemana").value||proximoLunes());
   $("plIncid").innerHTML=(!plProp||plCreadas)?htmlIncidencias(lun,true):""; }
 function pintarIncidAgenda(){ if($("agIncid")) $("agIncid").innerHTML=htmlIncidencias(lunes,true); }
@@ -2370,7 +2386,7 @@ function pintarPropuesta(){
     <table class="plgrupo"><tr><th>Día</th><th>Hora</th><th>Clase</th><th>Alumnos</th></tr>`+
     (grupos.map(gr=>{ const c=gr[0]; return `<tr><td>${diaSem(c.fecha)} ${fmt(c.fecha)}</td><td>${c.hora}–${finClase(c)}${gr.some(x=>{ const a=alumno(x.alumnoId); return durDe(x)===2*(esMoto(a.permiso)?30:45); })?" <b>1+1</b>":""}</td>
       <td>${esc(TXT_TIPO_CLASE[c.tipo]||c.tipo)}${gr.length>1?` <b>👥 ${gr.length}</b>`:""}</td>
-      <td>${gr.map(x=>{ const a=alumno(x.alumnoId); return `${plCreadas?"":`<button class="btn sec sm" style="padding:2px 7px" title="Cambiar esta cita" onclick="plEditar('${x.id}')">✏️</button> `}${esc(nombreCompleto(a))} <span class="tag t-${a.permiso}">${a.permiso}</span>${a.nuevo?" 🆕":""}${(plProp.unicos||[]).includes(a.id)?' <span title="Solo podía este día y hora">📌</span>':""}`; }).join("<br>")}</td></tr>`; }).join("")
+      <td>${gr.map(x=>{ const a=alumno(x.alumnoId); return `${plCreadas?"":`<button class="btn sec sm" style="padding:2px 7px" title="Cambiar esta cita" onclick="plEditar('${x.id}')">✏️</button> `}${esc(nombreCompleto(a))} <span class="tag t-${a.permiso}">${a.permiso}</span>${a.nuevo?" 🆕":""}${(plProp.unicos||[]).includes(a.id)?' <span title="Solo podía este día y hora">📌</span>':""}${x.vehiculo&&x.vehiculo!==(a.vehiculo||"")?` <small style="color:var(--pri)">· ${icoVeh(a.permiso)} ${esc(x.vehiculo)} (su vehículo estaba ocupado)</small>`:""}`; }).join("<br>")}</td></tr>`; }).join("")
       ||`<tr><td colspan="4" style="color:var(--muted)">No se ha podido citar a nadie con esa disponibilidad.</td></tr>`)+`</table>`
     +`<p style="font-size:12px;color:var(--muted);margin:6px 0 0">${[...new Set(nuevas.map(c=>c.alumnoId))].map(id=>{ const r=planDe(plProp.lun).resp[id]; const tot=llevaPlan(id,r,clasesSemana(id,plProp.lun).concat(nuevas)); return esc(alumno(id).nombre)+": "+(r&&r.doble?txtClases({n:tot,doble:true})+" de "+txtClases(r):tot+" de "+(r?r.n:"?")+" clases"); }).join(" · ")}</p>`
     +((plProp.juntadas||[]).length?`<p style="font-size:12px;color:var(--pri);margin:4px 0 0">🔗 ${plProp.juntadas.length} clase(s) juntada(s) en <b>1+1</b> automáticamente: el alumno pidió más clases que días tenía disponibles.</p>`:"")
