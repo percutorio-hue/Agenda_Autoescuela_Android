@@ -77,6 +77,9 @@ tr:hover td{background:#f8fafd}
 .agenda tr.tgl td{background:#fff8e6;color:#7a5600;font-size:13px;font-weight:600;text-align:left;padding:7px 10px;cursor:pointer;border:1px solid var(--line)}
 .agenda tr.manana.oculta{display:none}
 .agenda td.h.media{font-weight:400;font-size:11px;color:#9aa3b2}
+.agenda td.h .hi{display:block;line-height:1.1}
+.agenda td.h .hf{display:block;font-size:10px;font-weight:400;color:#9aa3b2;line-height:1.1}
+.agenda td.h.media .hi{font-size:12px;color:#7d8696}
 .agenda td.cell:hover{background:#eef4fc}
 .agenda th.today{background:#dce8f8;color:var(--pri)}
 .agenda th .exday{display:block;font-size:11px;font-weight:600;color:var(--warn);margin-top:2px}
@@ -835,7 +838,7 @@ window.alert=function(msg){
 };
 /* ================== DATOS ================== */
 const LS_KEY = "agendaAutoescuela_v1";
-const VERSION = "v12.8 NOV26";
+const VERSION = "v13.0 NOV26";
 const HORAS = []; for (let m = 8*60; m < 21*60; m += 30) HORAS.push(String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"));   // filas de 30 min: 08:00 … 20:30 (la última termina a las 21:00)
 const EXAMENES = {
   B:  [["teorico","Teórico"],["practico","Práctico"]],
@@ -1594,7 +1597,7 @@ function abrirClase(id, pre){
   const sel=$("cAlumno");
   const idCl=id&&(db.clases.find(x=>x.id===id)||{}).alumnoId;
   sel.innerHTML='<option value="">— Selecciona alumno —</option>'+db.alumnos.filter(a=>!a.archivado||a.id===idCl||(pre&&a.id===pre.alumnoId)).sort((a,b)=>nombreCompleto(a).localeCompare(nombreCompleto(b),"es"))
-    .map(a=>`<option value="${a.id}">${esc(nombreCompleto(a))} · ${a.permiso}</option>`).join("");
+    .map(a=>`<option value="${a.id}">${esc(nombreCompleto(a))} · ${a.permiso}${a.nuevo&&esMoto(a.permiso)?" ⭐ NUEVO (va solo)":""}</option>`).join("");   // v13.0
   const c=id?db.clases.find(x=>x.id===id):Object.assign({fecha:hoy(),hora:"15:30",tipo:"Circulación",profesor:"",vehiculo:"",obs:""},pre||{});
   const a=alumno(c.alumnoId);
   if(!c.durMin) c.durMin=a&&esMoto(a.permiso)?30:45;
@@ -1774,7 +1777,7 @@ function pintarAgenda(){
   html+=`<tr class="tgl" id="tglManana"><td colspan="${dias.length+1}">${verManana?"▾":"▸"} ☀️ Mañana (08:00 – 15:30)${nMan?` · ${nMan} clase(s) esta semana`:""} — pulsa para ${verManana?"ocultar":"mostrar"}</td></tr>`;
   const carriles=calcularCarriles(dias,fp,verManana), sinBono=new Set(); db.alumnos.forEach(a=>clasesSinBono(a).forEach(id=>sinBono.add(id)));
   HORAS.forEach(h=>{
-    const media=h.endsWith(":30"), man=minutos(h)<INICIO_TARDE; html+=`<tr data-h="${h}" class="${media?"":"enpunto"} ${man?"manana"+(verManana?"":" oculta"):""}"><td class="h ${media?"media":""}">${h}</td>`;
+    const media=h.endsWith(":30"), man=minutos(h)<INICIO_TARDE; html+=`<tr data-h="${h}" class="${media?"":"enpunto"} ${man?"manana"+(verManana?"":" oculta"):""}"><td class="h ${media?"media":""}"><span class="hi">${h}</span><span class="hf">a ${hhmm(minutos(h)+30)}</span></td>`;   // v12.9: cada fila dice de qué hora a qué hora va
     dias.forEach(x=>{
       const cl=(carriles[x.f]||[]).filter(o=>o.slot===h);
       html+=`<td class="cell" data-f="${x.f}" data-h="${h}">`+cl.map(o=>{ const c=o.c, a=alumno(c.alumnoId);
