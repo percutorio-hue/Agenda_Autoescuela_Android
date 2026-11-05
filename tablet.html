@@ -239,7 +239,7 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
 /* ===== v11.7: MÓVIL (pantallas de hasta 700 px, p. ej. teléfonos de 6") ===== */
 @media (max-width:700px){
   body{font-size:15px}
-  header{padding:6px 8px 4px;gap:6px;padding-right:8px;flex-wrap:wrap}
+  header{padding:6px 8px 4px;gap:6px;padding-right:8px;flex-wrap:wrap;position:relative;top:auto}   /* v12.8: en el móvil la cabecera NO se queda fija */
   header h1{font-size:16px;flex:1 1 auto;white-space:nowrap}
   header .spacer{display:none}
   .hdrbtn{padding:6px 9px;font-size:16px;line-height:1}
@@ -835,7 +835,7 @@ window.alert=function(msg){
 };
 /* ================== DATOS ================== */
 const LS_KEY = "agendaAutoescuela_v1";
-const VERSION = "v12.7 NOV26";
+const VERSION = "v12.8 NOV26";
 const HORAS = []; for (let m = 8*60; m < 21*60; m += 30) HORAS.push(String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"));   // filas de 30 min: 08:00 … 20:30 (la última termina a las 21:00)
 const EXAMENES = {
   B:  [["teorico","Teórico"],["practico","Práctico"]],
@@ -2974,7 +2974,7 @@ function hashPin(pin){ const h=s=>{ let x=0x811c9dc5; for(const c of s){ x^=c.ch
 $("verApp").textContent=VERSION;
 // v11.2: alturas de la cabecera y del bloque fijo del Plan semanal (para que no se solapen al hacer scroll)
 (function(){ const raiz=document.documentElement, hdr=document.querySelector("header"), pf=$("plFijo");
-  const medir=()=>{ raiz.style.setProperty("--hdrH",hdr.offsetHeight+"px"); raiz.style.setProperty("--plH",(pf?pf.offsetHeight:0)+"px"); };
+  const medir=()=>{ raiz.style.setProperty("--hdrH",(MQ_MOVIL.matches?0:hdr.offsetHeight)+"px"); raiz.style.setProperty("--plH",(pf?pf.offsetHeight:0)+"px"); };
   medir(); window.addEventListener("resize",medir);
   if(window.ResizeObserver){ const ro=new ResizeObserver(medir); ro.observe(hdr); if(pf) ro.observe(pf); }
 })();
