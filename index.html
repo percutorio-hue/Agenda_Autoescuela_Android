@@ -82,6 +82,9 @@ tr:hover td{background:#f8fafd}
 .agenda td.h .hf{display:block;font-size:10px;font-weight:400;color:#9aa3b2;line-height:1.1}
 .agenda td.h.media .hi{font-size:12px;color:#7d8696}
 .agenda td.cell:hover{background:#eef4fc}
+.agenda td.cell.dropok{background:#dff3e6!important;outline:2px dashed #2e8b57;outline-offset:-2px}
+.chip.fantasma{position:fixed!important;z-index:200;pointer-events:none;opacity:.9;box-shadow:0 6px 16px rgba(0,0,0,.35)!important;transform:rotate(-2deg)}
+body.arrastrando,body.arrastrando *{user-select:none!important;-webkit-user-select:none!important;cursor:grabbing!important}
 .agenda th.today{background:#dce8f8;color:var(--pri)}
 .agenda th .exday{display:block;font-size:11px;font-weight:600;color:var(--warn);margin-top:2px}
 .chip{display:block;border-radius:5px;padding:3px 5px;margin-bottom:2px;font-size:11px;color:#fff;line-height:1.25;cursor:pointer;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
@@ -239,6 +242,23 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
   #printArea h2{margin:0 0 8px}
   #printArea table td,#printArea table th{border:1px solid #999;padding:5px}
   .pfoto{float:right;width:35mm;height:45mm;border:1px solid #999;object-fit:cover}
+  /* v13.4: semana impresa */
+  #printArea.semana{padding:0;font-size:9px}
+  .psem{-webkit-print-color-adjust:exact;print-color-adjust:exact;font-family:inherit}
+  .psem h2{font-size:14px;margin:0 0 4px;color:#1f4e8c}
+  .psem .pst{display:flex;font-size:9px;color:#555;margin-bottom:3px;justify-content:space-between}
+  .psem .grid{display:grid;border:1px solid #888}
+  .psem .cab{background:#e8edf5;font-weight:700;font-size:10px;text-align:center;padding:2px 1px;border-right:1px solid #aaa;border-bottom:1px solid #888}
+  .psem .cab small{display:block;font-weight:500;font-size:8px;color:#7a5600}
+  .psem .col{position:relative;border-right:1px solid #aaa}
+  .psem .fila{position:absolute;left:0;right:0;border-top:1px solid #ddd}
+  .psem .fila.punto{border-top:1px solid #999}
+  .psem .hr{font-size:9px;text-align:center;color:#333;background:#f3f5f9}
+  .psem .hr b{display:block;font-size:10px}
+  .psem .cl{position:absolute;color:#fff;border-radius:3px;padding:1px 3px;overflow:hidden;font-size:8.5px;line-height:1.15;border:1px solid #fff;box-sizing:border-box}
+  .psem .cl b{display:block;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .psem .cl.nuevo{outline:2px solid #e0b000;outline-offset:-2px}
+  .psem .ley{font-size:8.5px;color:#444;margin-top:3px}
 }
 /* ===== v11.7: MÓVIL (pantallas de hasta 700 px, p. ej. teléfonos de 6") ===== */
 @media (max-width:700px){
@@ -497,6 +517,7 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
         <button class="btn sec" id="semSig">▶</button>
         <button class="btn sec" id="semHoy">Hoy</button>
         <button class="btn sec" id="btnHoja">📋 Hoja del día</button>
+        <button class="btn sec" id="btnSemanaImp" title="Imprime la semana (lunes a sábado) tal como se ve en pantalla, en horizontal">🖨️ Semana</button>
         <select id="filtroProf" style="width:170px"><option value="">Todos los profesores</option></select>
       </div>
     </div>
@@ -839,7 +860,7 @@ window.alert=function(msg){
 };
 /* ================== DATOS ================== */
 const LS_KEY = "agendaAutoescuela_v1";
-const VERSION = "v13.0 NOV26";
+const VERSION = "v13.4 NOV26";
 const HORAS = []; for (let m = 8*60; m < 21*60; m += 30) HORAS.push(String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"));   // filas de 30 min: 08:00 … 20:30 (la última termina a las 21:00)
 const EXAMENES = {
   B:  [["teorico","Teórico"],["practico","Práctico"]],
@@ -1025,12 +1046,13 @@ F.addEventListener("change",e=>{ const k=e.target.dataset&&e.target.dataset.teo;
 /* ---------- Plantillas de mensajes (editables en ⚙️ Autoescuela → ✉️ Textos) ----------
    Marcas: {alumno} {profesor} {tipo} {autoescuela} {lugar} {ubicacion} {dias} {fecha} */
 const PLANTILLAS_DEF={
- bienvenida:`Buenas!
-Soy {profesor}, el profe de {tipo} de {autoescuela}, encantado {alumno}. Te escribo primero para presentarme y para organizar cuándo podemos empezar las clases.
+ bienvenida:`Buenas {alumno}!
+Soy {profesor}, el profe de {tipo} de {autoescuela}, encantado de conocerte. Te escribo primero para presentarme y para organizar cuándo podemos empezar las clases.
 Por favor, necesito que me respondas con tu nombre completo, ya que por este medio te daré información de todo lo que corresponda, y tú me indicarás la disponibilidad que tienes para las clases, teniendo en cuenta que mi horario es de lunes a viernes de 15:30 a 20:00 aproximadamente. Cuanta más disponibilidad me des, más fácil será agendarlas.
 Semanalmente te iré escribiendo para ver tu disponibilidad.
 Una vez tenga tu información te iré indicando dónde hacemos las prácticas y alguna otra información. ¡Muchas gracias!`,
- practicas:`Lugar de prácticas: {lugar} {ubicacion}
+ practicas:`Hola {alumno} 👋
+Lugar de prácticas: {lugar} {ubicacion}
 Para las clases tienes que traer mínimo casco y guantes para ir empezando.
 
 De cara al examen, tienes que llevar obligatoriamente:
@@ -1045,11 +1067,11 @@ Recomiendo llevar también toda esta equipación a las clases. Tienes libertad, 
 Cada clase es de 30 minutos. En las primeras sesiones recomiendo que sean dobles (1 hora), ya que de esta forma alcanzarás más experiencia, y a medida que avances iremos viendo si pasamos a clases simples (30 minutos).
 
 Una vez agendadas las clases y confirmadas por ti, solo se podrán anular con 24 horas de antelación o justificadas por médico; de no ser así, tendrás que abonar el importe de la clase aunque no hayas asistido, tal y como se te ha informado en el contrato.`,
- prev_circuito:`Buenas!
+ prev_circuito:`Buenas {alumno}!
 El próximo examen de Destreza se prevé que nos tocará en los días {dias}, más o menos. Pero con Tráfico nunca se sabe.
 Cuando nos den la fecha definitiva, ahí aún podríamos decidir NO ir.
 ¿Te pido hueco?`,
- conf_circuito:`Buenas,
+ conf_circuito:`Buenas {alumno},
 Examen de Destreza confirmado el día {fecha}; la hora está aún pendiente de confirmar.
 ¿Te apunto? Una vez confirmes ya no podrás echarte para atrás; solo será válida la anulación por estas causas:
 1. Enfermedad que necesite ingreso/reposo
@@ -1057,11 +1079,11 @@ Examen de Destreza confirmado el día {fecha}; la hora está aún pendiente de c
 3. Citación judicial
 4. Robo o pérdida del DNI, acreditada con denuncia
 5. Asistencia a urgencias hospitalarias que coincidan en fecha y hora con el examen`,
- prev_practico:`Buenas!
+ prev_practico:`Buenas {alumno}!
 El próximo examen práctico de coche se prevé que nos tocará en los días {dias}, más o menos. Pero con Tráfico nunca se sabe.
 Cuando nos den la fecha definitiva, ahí aún podríamos decidir NO ir.
 ¿Te pido hueco?`,
- conf_practico:`Buenas,
+ conf_practico:`Buenas {alumno},
 Examen práctico de coche confirmado el día {fecha}; la hora está aún pendiente de confirmar.
 ¿Te apunto? Una vez confirmes ya no podrás echarte para atrás; solo será válida la anulación por estas causas:
 1. Enfermedad que necesite ingreso/reposo
@@ -1069,11 +1091,11 @@ Examen práctico de coche confirmado el día {fecha}; la hora está aún pendien
 3. Citación judicial
 4. Robo o pérdida del DNI, acreditada con denuncia
 5. Asistencia a urgencias hospitalarias que coincidan en fecha y hora con el examen`,
- prev_via:`Buenas!
+ prev_via:`Buenas {alumno}!
 El próximo examen de Circulación se prevé que nos tocará en los días {dias}, más o menos. Pero con Tráfico nunca se sabe.
 Cuando nos den la fecha definitiva, ahí aún podríamos decidir NO ir.
 ¿Te pido hueco?`,
- conf_via:`Buenas,
+ conf_via:`Buenas {alumno},
 Examen de Circulación confirmado el día {fecha}; la hora está aún pendiente de confirmar.
 ¿Te apunto? Una vez confirmes ya no podrás echarte para atrás; solo será válida la anulación por estas causas:
 1. Enfermedad que necesite ingreso/reposo
@@ -1100,7 +1122,7 @@ Te recuerdo que {cuando} tienes el {examen}, a las {hora}.
 No olvides el DNI/NIE original y en vigor{equipo}. ¡Mucha suerte! 🍀
 
 _Este es un WhatsApp recordatorio, por favor no responder si no es necesario._`;
-PLANTILLAS_DEF.resena=`Buenas y enhorabuena por tu aprobado !!!
+PLANTILLAS_DEF.resena=`Buenas {alumno} y enhorabuena por tu aprobado !!!
 
 Si te acuerdas y crees que lo merecemos …😁 :
 
@@ -1380,6 +1402,7 @@ $("btnClaseAlumno").onclick=()=>{ if(actual) abrirClase(null,{alumnoId:actual,fe
 /* Imprimir ficha */
 $("btnImprimir").onclick=()=>{
   if(!actual){ alert("Guarda primero el alumno."); return; }
+  { const x=document.getElementById("pageSemana"); if(x) x.remove(); document.getElementById("printArea").className=""; }
   const a=alumno(actual);
   const ex=EXAMENES[a.permiso].map(([k,n])=>{ const hi=(a.historial||[]).filter(h=>h.k===k).map(h=>fmt(h.fecha)+" "+TXT_RES[h.res]);
     return `<tr><th>${n}</th><td>${esTeorico(k)?"":a.examenes[k]?diaSem(a.examenes[k])+" "+fmt(a.examenes[k])+(horaEx(a,k)?" · "+horaEx(a,k):""):"—"}</td><td>${TXT_RES[(a.resultados||{})[k]]||""}</td><td>${hi.length?"Anteriores: "+hi.join(", "):""}</td></tr>`; }).join("");
@@ -1672,6 +1695,7 @@ function validarClase(c,extra){
     }
     const a=alumno(c.alumnoId);
     if(c.estado!=="anulada"&&c.fecha>=hoy()){ const bl=bloqueoDia(c.fecha,c.profesor,c.alumnoId,c.hora); if(bl) err.push(bl); }
+    if(c.estado!=="anulada"&&!(extra&&extra.length)){ const bq=errBloques(c,extra); if(bq) warn.push(bq); }   // v13.1: solo aviso
     // Bono: clases disponibles (contratadas − consumidas − ya programadas)
     if(a&&c.estado!=="anulada"&&!(extra&&extra.length)){ const b=bonoDe(a,c.id);
       if(b.disponibles-unidades(c)<0) warn.push(b.contratadas?`Al alumno no le quedan clases del bono (contratadas ${b.contratadas}, hechas ${b.consumidas}, ya programadas ${b.programadas}).`:`El alumno no tiene clases compradas (bono o clase suelta): quedará debiendo esta clase.`); }
@@ -1831,6 +1855,53 @@ const MQ_MOVIL=window.matchMedia("(max-width:700px)"); let diaMovil=null;
 $("diasMovil").onclick=e=>{ const b=e.target.closest("button[data-i]"); if(b){ diaMovil=+b.dataset.i; pintarAgenda(); } };
 try{ MQ_MOVIL.addEventListener("change",()=>{ pintarAgenda(); }); }catch(e){ MQ_MOVIL.addListener&&MQ_MOVIL.addListener(()=>pintarAgenda()); }
 const TIPO_CORTO={"Destreza":"DESTR","Circulación":"CIRCU","Simulacro examen":"SIMUL"}; let verMananaMem=null;
+/* v13.3: ARRASTRAR una clase a otro día u hora. Con ratón: pulsar y arrastrar. Con el dedo: mantener pulsado medio segundo
+   (vibra) y arrastrar. Al soltar se guarda como si se hubiera editado a mano: mismas comprobaciones, el Plan semanal se pone
+   al día y, si ya estaba avisada, queda pendiente de avisar el cambio. Si algo no encaja se abre la clase para corregirla. */
+(function(){
+  const ag=$("agenda"); let dr=null, suprimir=false, fant=null, tdSel=null;
+  const tdEn=(x,y)=>{ const el=document.elementFromPoint(x,y); return el&&el.closest?el.closest("#agenda td.cell"):null; };
+  const limpiar=()=>{ if(fant) fant.remove(); fant=null; if(tdSel) tdSel.classList.remove("dropok"); tdSel=null; document.body.classList.remove("arrastrando"); if(dr&&dr.ch) dr.ch.style.opacity=""; };
+  const empezar=()=>{ if(!dr||dr.on) return; dr.on=true;
+    fant=dr.ch.cloneNode(true); fant.classList.add("fantasma"); fant.style.width=dr.ch.offsetWidth+"px"; fant.style.height=dr.ch.offsetHeight+"px";
+    fant.style.left=(dr.x-dr.ox)+"px"; fant.style.top=(dr.y-dr.oy)+"px"; document.body.appendChild(fant);
+    dr.ch.style.opacity=".35"; document.body.classList.add("arrastrando"); try{ navigator.vibrate&&navigator.vibrate(30); }catch(x){} };
+  ag.addEventListener("pointerdown",e=>{
+    const ch=e.target.closest(".chip.blq"); if(!ch||(e.pointerType==="mouse"&&e.button!==0)) return;
+    const c=db.clases.find(x=>x.id===ch.dataset.id); if(!c) return;
+    const r=ch.getBoundingClientRect();
+    dr={ch,c,x:e.clientX,y:e.clientY,ox:e.clientX-r.left,oy:e.clientY-r.top,on:false,touch:e.pointerType!=="mouse",t:null};
+    if(dr.touch) dr.t=setTimeout(empezar,450);
+  });
+  window.addEventListener("pointermove",e=>{ if(!dr) return;
+    const d=Math.hypot(e.clientX-dr.x,e.clientY-dr.y);
+    if(!dr.on){ if(dr.touch){ if(d>10){ clearTimeout(dr.t); dr=null; } return; } if(d<6) return; empezar(); }
+    fant.style.left=(e.clientX-dr.ox)+"px"; fant.style.top=(e.clientY-dr.oy)+"px";
+    const td=tdEn(e.clientX,e.clientY); if(td!==tdSel){ if(tdSel) tdSel.classList.remove("dropok"); tdSel=td; if(td) td.classList.add("dropok"); }
+    e.preventDefault(); },{passive:false});
+  // con el dedo, una vez cogida la clase la página no se desplaza
+  window.addEventListener("touchmove",e=>{ if(dr&&dr.on) e.preventDefault(); },{passive:false});
+  const soltar=e=>{ if(!dr) return; clearTimeout(dr.t); const d=dr; if(!d.on){ dr=null; return; }
+    const td=e&&e.type==="pointerup"?tdEn(e.clientX,e.clientY):null; limpiar(); dr=null; suprimir=true; setTimeout(()=>suprimir=false,80);
+    if(td) moverClase(d.c,td.dataset.f,td.dataset.h); };
+  window.addEventListener("pointerup",soltar); window.addEventListener("pointercancel",soltar);
+  ag.addEventListener("click",e=>{ if(suprimir){ e.stopPropagation(); e.preventDefault(); } },true);
+  ag.addEventListener("contextmenu",e=>{ if(dr) e.preventDefault(); });
+})();
+function moverClase(c,f,h){
+  if(!c||(c.fecha===f&&c.hora===h)) return;
+  if(c.estado==="anulada"){ alert("Es una clase anulada: no se mueve."); return; }
+  if(bloqueada(c)){ alert("🔒 Esta clase empieza en menos de 24 h (o ya ha pasado): no se puede mover."); return; }
+  const [y,m,d]=f.split("-").map(Number), ini=new Date(y,m-1,d,Math.floor(minutos(h)/60),minutos(h)%60).getTime();
+  if(ini<Date.now()){ alert("No se puede mover una clase a un día u hora que ya ha pasado."); return; }
+  abrirClase(c.id);
+  $("cFecha").value=f;
+  if(![...$("cHora").options].some(o=>o.value===h)){ const o=document.createElement("option"); o.value=o.textContent=h; $("cHora").appendChild(o); }
+  $("cHora").value=h; $("cAvisar").checked=false;
+  const antes=JSON.stringify(db.clases.find(x=>x.id===c.id));
+  $("cGuardar").click();
+  if($("mClase").classList.contains("hidden")&&JSON.stringify(db.clases.find(x=>x.id===c.id))!==antes) toast(`Clase movida al ${diaSem(f)} ${fmt(f).slice(0,5)} a las ${h}.`);
+}
 $("agenda").onclick=e=>{
   if(e.target.closest("#tglManana")){ const v=!$("agenda").querySelector("tr.manana:not(.oculta)"); verMananaMem=v;
     try{ localStorage.setItem("agendaVerManana",v?"1":"0"); }catch(x){} pintarAgenda(); return; }
@@ -1929,7 +2000,37 @@ function pintarHoja(){
     :!telWa(p&&p.tel)?`<div class="m-warn">⚠️ ${esc(pf)} no tiene teléfono móvil. Añádelo en «Profesores y vehículos» para poder enviarle la hoja.</div>`:"";
   $("hjVista").innerHTML=(aviso?`<div class="msgs" style="margin:0 0 8px">${aviso}</div>`:"")+`<div class="scroll" style="max-height:50vh">${htmlHoja()}</div>`;
 }
-$("hjImprimir").onclick=()=>{ $("printArea").innerHTML=htmlHoja(); window.print(); };
+/* v13.4: imprimir la semana (lunes a sábado) como se ve en pantalla, en horizontal (A4 apaisado) */
+function htmlSemanaImp(){
+  const fp=$("filtroProf").value, prof=fp?$("filtroProf").selectedOptions[0].textContent:"Todos los profesores";
+  const dias=DIAS.map((d,i)=>({d,f:addDias(lunes,i)}));
+  const enSemana=db.clases.filter(c=>c.fecha>=lunes&&c.fecha<=addDias(lunes,5)&&c.estado!=="anulada"&&(!fp||(c.profesor||"").toLowerCase()===fp));
+  const conManana=enSemana.some(c=>minutos(c.hora)<INICIO_TARDE);
+  const ini=conManana?Math.min(...enSemana.map(c=>minutos(c.hora)),INICIO_TARDE):INICIO_TARDE, ini30=Math.floor(ini/30)*30, fin=FIN_DIA;
+  const nF=(fin-ini30)/30, altoMM=Math.min(15,165/nF), y=m=>((m-ini30)/30*altoMM).toFixed(2)+"mm";
+  const car=calcularCarriles(dias,fp,conManana);
+  let filas=""; for(let m=ini30;m<fin;m+=30) filas+=`<div class="fila ${m%60===0?"punto":""}" style="top:${y(m)}"></div>`;
+  let h=`<div class="psem"><h2>🗓️ Clases prácticas · semana del ${fmt(lunes)} al ${fmt(addDias(lunes,5))}</h2>
+    <div class="pst"><span>${esc(prof)} · ${enSemana.length} clase(s)</span><span>${esc(db.config.nombre||"")} · impreso el ${fmt(hoy())}</span></div>
+    <div class="grid" style="grid-template-columns:16mm repeat(${dias.length},1fr)"><div class="cab">Hora</div>`
+    +dias.map(x=>{ const ex=examenesDelDia(x.f); return `<div class="cab">${DIA_LARGO[parse(x.f).getDay()][0].toUpperCase()+DIA_LARGO[parse(x.f).getDay()].slice(1)} ${fmt(x.f).slice(0,5)}${ex.length?`<small>📝 ${ex.map(e=>esc(e.a.apellidos.split(" ")[0])+" "+EX_CORTO[e.k]+(horaEx(e.a,e.k)?" "+horaEx(e.a,e.k):"")).join(" · ")}</small>`:""}</div>`; }).join("")
+    +`<div class="col hr" style="height:${(nF*altoMM).toFixed(2)}mm">`;
+  for(let m=ini30;m<fin;m+=30) h+=`<div style="position:absolute;left:0;right:0;top:${y(m)};height:${altoMM}mm;padding-top:1px;border-top:1px solid ${m%60===0?"#999":"#ddd"}"><b>${hhmm(m)}</b>a ${hhmm(m+30)}</div>`;
+  h+=`</div>`+dias.map(x=>`<div class="col" style="height:${(nF*altoMM).toFixed(2)}mm">${filas}`+(car[x.f]||[]).filter(o=>o.c.estado!=="anulada").map(o=>{ const c=o.c, a=alumno(c.alumnoId); if(!a) return "";
+      const doble=durDe(c)===2*(esMoto(a.permiso)?30:45), gr=compartible(c)?grupoDe(c).length:0;
+      return `<div class="cl ${a.nuevo&&esMoto(a.permiso)?"nuevo":""}" style="top:${y(Math.max(o.ini,ini30))};height:calc(${y(o.fin)} - ${y(Math.max(o.ini,ini30))});left:${(o.carril*100/o.n).toFixed(2)}%;width:${(100/o.n).toFixed(2)}%;background:${COLOR_PERM[a.permiso]||"#666"}">
+        <b>${gr>1?"👥":""}${esc(a.apellidos.split(" ")[0]+", "+(a.nombre[0]||"")+".")}${a.nuevo&&esMoto(a.permiso)?" ⭐":""}</b>${c.hora}–${finClase(c)} · ${a.permiso} ${TIPO_CORTO[c.tipo]||esc(c.tipo)}${doble?" · 1+1":""}${fp?"":`<br>${esc((c.profesor||"").split(" ")[0])}`}</div>`; }).join("")+`</div>`).join("")
+    +`</div><div class="ley">${["B","AM","A1","A2"].map(k=>`<span style="color:${COLOR_PERM[k]}">■</span> ${k}`).join(" · ")} · ⭐ alumno nuevo (va solo) · 👥 destreza compartida · 1+1 dos clases seguidas</div></div>`;
+  return h;
+}
+$("btnSemanaImp").onclick=()=>{
+  const st=document.createElement("style"); st.id="pageSemana"; st.textContent="@page{size:A4 landscape;margin:8mm}"; document.head.appendChild(st);
+  $("printArea").className="semana"; $("printArea").innerHTML=htmlSemanaImp();
+  const fin=()=>{ const x=$("pageSemana"); if(x) x.remove(); $("printArea").className=""; window.removeEventListener("afterprint",fin); };
+  window.addEventListener("afterprint",fin); window.print();
+};
+function quitarApaisado(){ const x=$("pageSemana"); if(x) x.remove(); $("printArea").className=""; }
+$("hjImprimir").onclick=()=>{ quitarApaisado(); $("printArea").innerHTML=htmlHoja(); window.print(); };
 $("hjWa").onclick=()=>{
   const {f,pf,cl,ex}=datosHoja(), p=db.profesores.find(x=>x.nombre===pf);
   if(!pf){ alert("Elige un profesor en la lista para enviarle su hoja del día."); return; }
@@ -2047,14 +2148,12 @@ $("plNinguno").onclick=()=>{ const P=planDe(lunesDe($("plSemana").value)); alumn
 function txtPregunta(a,lun){
   return `Hola ${a.nombre} 👋\nEstamos organizando las clases prácticas de la semana del lunes ${fmt(lun)} al viernes ${fmt(addDias(lun,4))}.\n\n`
     +`📅 ¿Qué días puedes venir y a qué hora? Las clases son por la tarde, de ${$("plDesde").value||"15:30"} a ${hhmm(FIN_DIA)}.\n`
-    +`${esMoto(a.permiso)?"🏍️":"🚗"} ¿Cuántas clases quieres hacer esa semana?\n`
-    +`⏱️ Si quieres dos clases seguidas el mismo día (${esMoto(a.permiso)?"1 hora":"1 h 30"}), escribe «1+1».\n\n`
-    +`✍️ Contesta así, por favor:\n«lunes desde las 17, jueves a las 18:30, 2 clases»\no si las quieres seguidas:\n«martes desde las 16, 1+1»\n\n¡Gracias!`+firma();
+    +`\n✍️ Contesta así, por favor:\n«lunes desde las 17, jueves a las 18:30»\n\n¡Gracias!`+firma();   // v13.2: el nº de clases lo decide el profesor
 }
 window.plPreguntar=id=>{
   const lun=lunesDe($("plSemana").value), P=planDe(lun), a=alumno(id), n=telWa(a&&a.tel);
   if(!n){ alert("El alumno no tiene un teléfono móvil válido."); return; }
-  window.open("https://api.whatsapp.com/send?phone="+n+"&text="+encodeURIComponent(txtPregunta(a,lun)),"_blank");
+  window.open("https://api.whatsapp.com/send?phone="+n+"&text="+encodeURIComponent(conNombre(txtPregunta(a,lun),a)),"_blank");
   const d=new Date(); P.preg[id]=fmt(iso(d))+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
   respDe(P,a).inc=true; persistir(); pintarPlan(); comprobarMiercoles();
 };
@@ -2217,9 +2316,27 @@ function huecosDia(r,d,desde,dur){
 function llevaPlan(id,r,lista){ const l=(lista||[]).filter(c=>c.alumnoId===id); return r&&r.doble?l.length:l.reduce((t,c)=>t+unidades(c),0); }
 /* v12.7: SOLO AM (ciclomotores, todos para destreza): si lo único que impide la clase es el VEHÍCULO (ocupado o con la
    ITV caducada), se prueba con otro ciclomotor AM activo. En A1/A2 cada moto está asignada a un examen y no se cambia. */
+/* v13.1: en moto, cada profesor da la tarde en DOS BLOQUES: todas las de destreza juntas y todas las de circulación juntas
+   (el orden da igual), con al menos 30 minutos libres entre un bloque y otro para cambiar las motos. Un solo cambio por tarde.
+   El «Simulacro examen» de moto cuenta como circulación. El coche (B) no entra en esta regla. */
+const CAMBIO_MOTO=30;
+function grupoMoto(c){ const a=alumno(c.alumnoId); if(!a||!esMoto(a.permiso)||c.estado==="anulada") return null; return esCircuito(c.tipo)?"D":"C"; }
+function errBloques(c,lista){
+  const g=grupoMoto(c); if(!g||!c.profesor||!c.fecha||!c.hora) return null;
+  const pr=c.profesor.toLowerCase();
+  const todas=db.clases.concat(lista||[]).filter(x=>x!==c&&x.id!==c.id&&x.fecha===c.fecha&&(x.profesor||"").toLowerCase()===pr&&grupoMoto(x)).concat([c]);
+  const spans=l=>{ const sp={}; l.forEach(x=>{ const k=grupoMoto(x), i=minutos(x.hora), f=i+durDe(x); sp[k]=sp[k]?{i:Math.min(sp[k].i,i),f:Math.max(sp[k].f,f)}:{i,f}; }); return sp; };
+  const mal=sp=>!!(sp.D&&sp.C&&!(sp.D.f+CAMBIO_MOTO<=sp.C.i||sp.C.f+CAMBIO_MOTO<=sp.D.i));
+  const sp=spans(todas); if(!mal(sp)) return null;
+  // si ese día ya estaba mezclado (clases antiguas o puestas a mano), solo se rechaza lo que lo empeora (alarga un bloque)
+  const sp0=spans(todas.slice(0,-1)); if(mal(sp0)&&sp0[g]&&sp[g].i===sp0[g].i&&sp[g].f===sp0[g].f) return null;
+  return `Moto: ${c.profesor} da la destreza y la circulación en bloques separados, con ${CAMBIO_MOTO} min libres para cambiar de moto (ese día quedaría destreza ${hhmm(sp.D.i)}–${hhmm(sp.D.f)} y circulación ${hhmm(sp.C.i)}–${hhmm(sp.C.f)}).`;
+}
+function erroresPlan(c,lista){ const e=validarClase(c,lista).err.slice(), b=errBloques(c,lista); if(b) e.push(b); return e; }
 function esErrVeh(t){ return /^El vehículo /.test(t); }
 function motivoPrincipal(e){ return e.find(t=>!esErrVeh(t))||e[0]; }   // v12.7: lo que de verdad impide la clase (profesor, alumno…) antes que el vehículo
 function probarClase(c,lista){
+  if(errBloques(c,lista)) return false;                                   // v13.1: bloques destreza / circulación
   const e=validarClase(c,lista).err; if(!e.length) return true;
   if(!e.every(esErrVeh)) return false;
   const al=alumno(c.alumnoId); if(!al||al.permiso!=="AM") return false;
@@ -2236,6 +2353,10 @@ $("plGenerar").onclick=()=>{
   const porPrio=(x,y)=>(Number(x.r.prio)||999)-(Number(y.r.prio)||999)||nombreCompleto(x.a).localeCompare(nombreCompleto(y.a),"es");
   const lista=alumnosPlan().map(a=>({a,r:respDe(P,a)})).filter(x=>x.r.inc&&x.r.n>0&&Object.keys(x.r.dias).length).sort(porPrio);
   if(!lista.length){ alert("No hay alumnos con respuesta anotada (incluidos, con clases y algún día marcado)."); return; }
+  // v13.1: se prueban 3 órdenes (mezclado / destreza primero / circulación primero) y se queda el que cita a más alumnos
+  const grupoA=x=>!esMoto(x.a.permiso)?1:esCircuito(x.r.tipo)?0:2;
+  const ejecutar=estr=>{
+  const ordG=(x,y)=>estr===1?grupoA(x)-grupoA(y):estr===2?grupoA(y)-grupoA(x):0;
   const nuevas=[], citadas={}, juntadas=new Set();
   // clases ya creadas esa semana (por el plan o a mano): cuentan para lo que pidió cada alumno y no se tocan
   const semana=c=>c.fecha>=lun&&c.fecha<=addDias(lun,4)&&c.estado!=="anulada";
@@ -2267,10 +2388,10 @@ $("plGenerar").onclick=()=>{
   };
   // 1º) los que solo pueden en un día y hora concretos; 2º) el resto por rondas y prioridad (del lunes 15:30 al viernes 21:00)
   const pend=lista.filter(x=>x.falta>0);
-  if(!pend.length){ plProp=null; pintarPropuesta(); alert("Todos los alumnos elegidos ya tienen sus clases de esa semana.\nSi has cambiado la respuesta de alguno, pulsa «🔄 Recolocar» en su fila y vuelve a generar."); return; }
+  if(!pend.length) return null;
   // v11.3: a igual prioridad, primero los que tienen MENOS opciones («a las 17» antes que «desde las 17»)
   pend.forEach(x=>{ const dur=durSig(x); x.flex=Object.keys(x.r.dias).reduce((s,d)=>s+huecosDia(x.r,+d,desde,dur).length,0); });
-  const porFlex=(x,y)=>(Number(x.r.prio)||999)-(Number(y.r.prio)||999)||x.flex-y.flex||nombreCompleto(x.a).localeCompare(nombreCompleto(y.a),"es");
+  const porFlex=(x,y)=>(Number(x.r.prio)||999)-(Number(y.r.prio)||999)||ordG(x,y)||x.flex-y.flex||nombreCompleto(x.a).localeCompare(nombreCompleto(y.a),"es");
   const unicos=pend.filter(x=>opcionUnica(x.r)).sort(porFlex), resto=pend.filter(x=>!opcionUnica(x.r)).sort(porFlex);
   unicos.forEach(x=>colocar(x));
   const maxN=Math.max(0,...resto.map(x=>x.falta));
@@ -2322,11 +2443,17 @@ $("plGenerar").onclick=()=>{
       const hs=huecosDia(r,+d,desde,dur); if(!hs.length){ l.push(DIAS_LARGOS[d]+": la hora indicada no cabe en el horario"); return; }
       const c={id:"x",alumnoId:a.id,fecha:f,hora:hhmm(hs[0]),durMin:dur,tipo:r.tipo,profesor:prof,vehiculo:a.vehiculo||"",obs:"",estado:""};
       if(probarClase(Object.assign({},c),nuevas)) return;
-      const e=validarClase(c,nuevas).err; if(e.length) l.push(DIAS_LARGOS[d]+(hs.length===1?" "+c.hora:" desde las "+c.hora)+": "+motivoPrincipal(e)); });
+      const e=erroresPlan(c,nuevas); if(e.length) l.push(DIAS_LARGOS[d]+(hs.length===1?" "+c.hora:" desde las "+c.hora)+": "+motivoPrincipal(e)); });
     return l; };
-  plProp={lun,prof,nuevas,unicos:unicos.map(x=>x.a.id),
+  return {nuevas,unicos:unicos.map(x=>x.a.id),
     juntadas:[...juntadas],
     faltan:pend.filter(faltaX).map(x=>({a:x.a,pide:txtClases(x.r),citadas:lleva(x),unica:opcionUnica(x.r),por:motivo(x)}))};
+  };
+  const res=[0,1,2].map(ejecutar);
+  if(!res[0]){ plProp=null; pintarPropuesta(); alert("Todos los alumnos elegidos ya tienen sus clases de esa semana.\nSi has cambiado la respuesta de alguno, pulsa «🔄 Recolocar» en su fila y vuelve a generar."); return; }
+  const unid=r=>r.nuevas.reduce((t,c)=>t+unidades(c),0);
+  const mejor=res.reduce((b,r)=>(r.faltan.length<b.faltan.length||(r.faltan.length===b.faltan.length&&unid(r)>unid(b)))?r:b);
+  plProp=Object.assign({lun,prof},mejor);
   P.generado=true; P.prof=prof; P.desde=$("plDesde").value||"15:30"; persistir();
   plCreadas=null; pintarPropuesta();
 };
@@ -2342,7 +2469,7 @@ function diasPlanAlumno(a,r,lun){
     if(!hs.length){ o[d]={libre:null,txt:"la hora indicada no cabe en el horario"}; return; }
     let err=null;
     for(const t of hs){ const c={id:"x",alumnoId:a.id,fecha:f,hora:hhmm(t),durMin:dur,tipo:r.tipo,profesor:prof,vehiculo:a.vehiculo||"",obs:"",estado:""};
-      const e=validarClase(c,[]).err;
+      const e=erroresPlan(c,[]);
       if(probarClase(c,[])){ const veh=c.vehiculo!==(a.vehiculo||"")?c.vehiculo:null; o[d]={libre:hhmm(t),veh,txt:"hay hueco libre a las "+hhmm(t)+(veh?" con "+veh+" (su vehículo está ocupado)":"")}; return; }
       if(!err) err=(hs.length===1?c.hora:"desde las "+c.hora)+": "+motivoPrincipal(e); }
     o[d]={libre:null,txt:err}; });
@@ -2360,7 +2487,7 @@ function htmlIncidencias(lun,dondeAgenda){
   const L=incidenciasPlan(lun); if(!L.length) return "";
   return `<div class="msgs"><div class="m-warn">⚠️ <b>Alumnos sin todas sus clases</b> · semana del ${fmt(lun)} (${L.length})`
     +L.map(x=>{ const ks=Object.keys(x.dias).sort();
-      return `<div style="margin-top:6px"><a href="#" onclick="abrirFicha('${x.a.id}');return false"><b>${esc(nombreCompleto(x.a))}</b></a> <span class="tag t-${x.a.permiso}">${x.a.permiso}</span> · pidió ${txtClases(x.r)}, tiene ${x.r.doble?txtClases({n:x.lleva,doble:true}):x.lleva}
+      return `<div style="margin-top:6px"><a href="#" onclick="abrirFicha('${x.a.id}');return false"><b>${esc(nombreCompleto(x.a))}</b></a> <span class="tag t-${x.a.permiso}">${x.a.permiso}</span>${["A1","A2"].includes(x.a.permiso)?` · <b>${esc(x.r.tipo||"")}</b>`:""} · pidió ${txtClases(x.r)}, tiene ${x.r.doble?txtClases({n:x.lleva,doble:true}):x.lleva}
         ${ks.length?`<ul style="margin:3px 0 0;padding-left:20px">${ks.map(d=>`<li>${x.dias[d].libre?"🟢":"🔴"} ${DIAS_LARGOS[d]} ${esc(x.dias[d].txt)}${x.dias[d].libre&&dondeAgenda?` <button class="btn sm" style="padding:1px 8px" onclick="citarIncidencia('${x.a.id}','${addDias(lun,+d)}','${x.dias[d].libre}','${encodeURIComponent(x.dias[d].veh||"")}')">➕ Citar</button>`:""}</li>`).join("")}</ul>`
           :`<div style="font-size:12px">Ya tiene clase todos los días que pidió: amplía alguna a 1+1 o prográmala a mano en otro día.</div>`}</div>`; }).join("")
     +`<div style="font-size:12px;margin-top:6px">🔴 ocupado · 🟢 hay hueco. Al darle la cita desaparece de esta lista.</div></div></div>`;
@@ -2783,7 +2910,18 @@ function txtExamen(a,k){
 function keyClase(c){ return "c:"+c.id+":"+c.fecha+":"+c.hora+":"+durDe(c); }   // si cambia fecha u hora, vuelve a quedar pendiente
 function keyEx(a,k){ return "e:"+a.id+":"+k+":"+a.examenes[k]+(horaEx(a,k)?":"+horaEx(a,k):""); }
 function estadoAviso(key){ const t=db.avisos[key]; return t?`<span class="sent" title="Enviado el ${t}">✔ avisado</span>`:`<span class="pend">pendiente</span>`; }
+/* v13.2: todo WhatsApp a un alumno lleva su nombre. Si el texto (por ejemplo, uno editado en ✉️ Textos) no lo incluye,
+   se añade tras el saludo inicial («Buenas!» → «Buenas IRENE!», «Hola,» → «Hola IRENE,») o, si no hay saludo, se pone «Hola IRENE 👋» delante. */
+function conNombre(texto,a){
+  const nom=String(a&&a.nombre||"").trim(); texto=String(texto||""); if(!nom) return texto;
+  const norm=x=>x.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  if(norm(texto).includes(norm(nom))) return texto;
+  const m=texto.match(/^\s*(buenas tardes|buenas noches|buenos d[ií]as|buenas|hola)\b/i);
+  if(m) return texto.slice(0,m.index+m[0].length)+" "+nom+texto.slice(m.index+m[0].length);
+  return "Hola "+nom+" 👋\n"+texto;
+}
 function waAbrir(a,texto,key){
+  texto=conNombre(texto,a);
   const n=telWa(a&&a.tel);
   if(!n){ alert("El alumno no tiene un teléfono móvil válido en su ficha."); return; }
   if(db.ejemplo && !confirm("Son datos de EJEMPLO con un teléfono ficticio.\nPara probar, pon tu propio móvil en la ficha de ese alumno.\n\n¿Abrir WhatsApp igualmente?")) return;
