@@ -81,6 +81,13 @@ tr:hover td{background:#f8fafd}
 .agenda td.h .hf{display:block;font-size:10px;font-weight:400;color:#9aa3b2;line-height:1.1}
 .agenda td.h.media .hi{font-size:12px;color:#7d8696}
 .agenda td.cell:hover{background:#eef4fc}
+.navFicha{display:inline-flex;align-items:center;gap:4px}
+.navFicha small{font-size:11px;color:var(--muted);min-width:34px;text-align:center}
+.navLado{position:fixed;top:50%;transform:translateY(-50%);z-index:30;width:46px;height:90px;border:none;border-radius:12px;background:rgba(31,78,140,.12);color:var(--pri);font-size:46px;line-height:1;cursor:pointer}
+.navLado:hover{background:rgba(31,78,140,.25)}
+.navLado.izq{left:10px}.navLado.der{right:10px}
+@media print{.navLado{display:none!important}}
+@media (max-width:1100px){.navLado{display:none!important}}
 .agenda td.cell.dropok{background:#dff3e6!important;outline:2px dashed #2e8b57;outline-offset:-2px}
 .chip.fantasma{position:fixed!important;z-index:200;pointer-events:none;opacity:.9;box-shadow:0 6px 16px rgba(0,0,0,.35)!important;transform:rotate(-2deg)}
 body.arrastrando,body.arrastrando *{user-select:none!important;-webkit-user-select:none!important;cursor:grabbing!important}
@@ -391,7 +398,7 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
 <section id="v-ficha">
   <div class="panel">
     <div class="row" style="justify-content:space-between;margin-bottom:10px">
-      <div class="row" style="gap:10px"><h2 id="fichaTitulo" style="margin:0">Nuevo alumno</h2>
+      <div class="row" style="gap:10px"><span class="navFicha"><button type="button" class="btn sec sm" id="fichaAnt" title="Alumno anterior">◀</button><small id="fichaPos"></small><button type="button" class="btn sec sm" id="fichaSig" title="Alumno siguiente">▶</button></span><h2 id="fichaTitulo" style="margin:0">Nuevo alumno</h2>
         <label style="margin:0;font-size:13px;color:var(--ink);display:flex;gap:6px;align-items:center">Autoescuela:
           <select id="selSede" style="width:auto;padding:5px 8px;font-weight:600"></select></label></div>
       <div class="row">
@@ -776,6 +783,7 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
     <div style="margin-top:12px">
       <label>Mañana de un examen práctico</label>
       <label class="chk"><input type="radio" name="cfBloq" value="todos"> No hay clases de mañana para nadie</label>
+      <label style="display:block;margin-top:10px">Profesor por defecto</label><select id="cfProfDef" style="max-width:260px"></select>
       <label class="chk"><input type="radio" name="cfBloq" value="profesor"> Solo no da clases de mañana el profesor de ese alumno</label>
     </div>
     <div class="row" style="justify-content:flex-end;margin-top:16px">
@@ -848,6 +856,8 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
   </div>
 </div>
 <div id="printArea"></div>
+<button type="button" class="navLado izq hidden" id="navIzq" title="Alumno anterior">‹</button>
+<button type="button" class="navLado der hidden" id="navDer" title="Alumno siguiente">›</button>
 
 <script>
 "use strict";
@@ -859,7 +869,7 @@ window.alert=function(msg){
 };
 /* ================== DATOS ================== */
 const LS_KEY = "agendaAutoescuela_v1";
-const VERSION = "v13.4 NOV26";
+const VERSION = "v13.5 NOV26";
 const HORAS = []; for (let m = 8*60; m < 21*60; m += 30) HORAS.push(String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"));   // filas de 30 min: 08:00 … 20:30 (la última termina a las 21:00)
 const EXAMENES = {
   B:  [["teorico","Teórico"],["practico","Práctico"]],
@@ -993,6 +1003,7 @@ function ver(v,forzar){
   vista=v;
   document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
   ["ficha","lista","agenda","examenes","medios","plan","avisos"].forEach(x=>$("v-"+x).classList.toggle("hidden",x!==v));
+  pintarNavFicha();
   if(v==="plan") pintarPlan();
   if(v==="medios") pintarMedios();
   if(v==="ficha") rellenarSelectsFicha(F.profesor.value,F.vehiculo.value);   // recoge profesores/vehículos dados de alta después
@@ -1003,7 +1014,7 @@ function ver(v,forzar){
 const F=$("fAlumno");
 $("selPermiso").onchange=()=>{
   // al cambiar de permiso solo se ofrecen profesores y vehículos de ese permiso
-  const p=F.profesor.value, v=F.vehiculo.value; rellenarSelectsFicha("","");
+  const p=F.profesor.value||(actual?"":profDefecto()), v=F.vehiculo.value; rellenarSelectsFicha("","");
   if([...F.profesor.options].some(o=>o.value===p)) F.profesor.value=p;
   if([...F.vehiculo.options].some(o=>o.value===v)) F.vehiculo.value=v;
   mostrarBloqueExamen(); validarFicha();
@@ -1279,9 +1290,28 @@ function pintarFoto(){
 
 function nuevaFicha(){
   actual=null; F.reset(); fotoData=""; pintarFoto();
-  F.alta.value=hoy(); rellenarSelectsFicha("",""); mostrarBloqueExamen(); $("exMsgs").innerHTML=""; pintarSelRes(); pintarHistorial();
-  pintarSedes(""); $("fichaTitulo").textContent="Nuevo alumno"; pintarClasesAlumno(); pintarPagos(); pintarBienvenida(); cambiosFicha=false;
+  F.alta.value=hoy(); rellenarSelectsFicha(profDefecto(),""); mostrarBloqueExamen(); $("exMsgs").innerHTML=""; pintarSelRes(); pintarHistorial();
+  pintarSedes(""); $("fichaTitulo").textContent="Nuevo alumno"; pintarClasesAlumno(); pintarPagos(); pintarBienvenida(); cambiosFicha=false; pintarNavFicha();
 }
+/* v13.5: pasar de un alumno a otro desde la ficha, en el mismo orden y con los mismos filtros que el Listado */
+function listaFiltrada(){
+  const q=$("buscar").value.toLowerCase().trim(), fp=$("filtroPermiso").value, verArch=$("filtroArch").value==="arch";
+  return db.alumnos.filter(a=>!!a.archivado===verArch&&(!fp||a.permiso===fp)&&(!q||[a.nombre,a.apellidos,a.dni,a.tel,a.email,a.profesor].join(" ").toLowerCase().includes(q)))
+    .sort((a,b)=>nombreCompleto(a).localeCompare(nombreCompleto(b),"es"));
+}
+function pintarNavFicha(){
+  const L=listaFiltrada(), i=L.findIndex(a=>a.id===actual), hay=L.length>(i>=0?1:0);
+  $("fichaPos").textContent=i>=0?`${i+1} / ${L.length}`:(L.length?`– / ${L.length}`:"");
+  $("fichaAnt").disabled=$("fichaSig").disabled=!hay;
+  const lado=vista==="ficha"&&hay; $("navIzq").classList.toggle("hidden",!lado); $("navDer").classList.toggle("hidden",!lado);
+}
+function irAlumno(d){
+  const L=listaFiltrada(); if(!L.length) return;
+  const i=L.findIndex(a=>a.id===actual), j=i<0?(d>0?0:L.length-1):(i+d+L.length)%L.length;
+  abrirFicha(L[j].id);
+}
+$("fichaAnt").onclick=$("navIzq").onclick=()=>irAlumno(-1);
+$("fichaSig").onclick=$("navDer").onclick=()=>irAlumno(1);
 function cargarFicha(id){
   const a=alumno(id); if(!a) return;
   actual=id; F.reset();
@@ -1290,7 +1320,7 @@ function cargarFicha(id){
   Object.keys(NOMBRE_EX).forEach(k=>{ F["ex_"+k].value=(a.examenes&&a.examenes[k])||""; F["res_"+k].value=(a.resultados&&a.resultados[k])||""; F["hora_"+k].value=horaEx(a,k); });
   F.nuevo.checked=!!a.nuevo; pintarSedes(a.sede||"");
   fotoData=a.foto||""; pintarFoto(); mostrarBloqueExamen(); pintarSelRes(); pintarHistorial(); validarFicha();
-  $("fichaTitulo").textContent=nombreCompleto(a)+(a.archivado?" · 📦 archivado":""); pintarClasesAlumno(); pintarPagos(); pintarBienvenida(); cambiosFicha=false;
+  $("fichaTitulo").textContent=nombreCompleto(a)+(a.archivado?" · 📦 archivado":""); pintarNavFicha(); pintarClasesAlumno(); pintarPagos(); pintarBienvenida(); cambiosFicha=false;
 }
 function abrirFicha(id){
   if(!alumno(id)) return;
@@ -1625,6 +1655,7 @@ function abrirClase(id, pre){
   const a=alumno(c.alumnoId);
   if(!c.durMin) c.durMin=a&&esMoto(a.permiso)?30:45;
   if(!id&&a){ c.profesor=c.profesor||a.profesor; c.vehiculo=c.vehiculo||a.vehiculo; }
+  if(!id&&!c.profesor) c.profesor=profDefecto();   // v13.5
   sel.value=c.alumnoId||""; $("cFecha").value=c.fecha; $("cHora").value=c.hora; rellenarDur(a?a.permiso:"",durDe(c));
   rellenarTipos(a?a.permiso:"",id?c.tipo:(c.tipoPre||(a?tipoPorDefecto(a):"Circulación"))); rellenarSelectsClase(a?a.permiso:"",c.profesor,c.vehiculo); $("cObs").value=c.obs||"";
   $("cEstado").value=c.estado||"";
@@ -1968,7 +1999,7 @@ $("btnHoja").onclick=()=>{
   $("hjFecha").value=hoy();
   // por defecto: el profesor filtrado en la agenda, o el primero que tenga clases ese día, o el primero de la lista
   const fp=$("filtroProf").value, conClase=ps.find(n=>db.clases.some(c=>c.fecha===hoy()&&c.profesor===n&&c.estado!=="anulada"));
-  $("hjProf").value=(fp&&ps.find(n=>n.toLowerCase()===fp))||conClase||ps[0]||"";
+  $("hjProf").value=(fp&&ps.find(n=>n.toLowerCase()===fp))||conClase||(ps.includes(profDefecto())?profDefecto():"")||ps[0]||"";
   $("mHoja").classList.remove("hidden"); pintarHoja();
 };
 $("hjFecha").onchange=pintarHoja; $("hjProf").onchange=pintarHoja;
@@ -2088,7 +2119,7 @@ function pintarPlan(){
   const ps=db.profesores.filter(p=>p.activo!==false).map(p=>p.nombre).sort((a,b)=>a.localeCompare(b,"es"));
   const cur=$("plProf").value;
   $("plProf").innerHTML=(ps.length?"":'<option value="">— Da de alta un profesor —</option>')+ps.map(n=>`<option>${esc(n)}</option>`).join("");
-  if(ps.includes(cur)) $("plProf").value=cur;
+  if(ps.includes(cur)) $("plProf").value=cur; else if(ps.includes(profDefecto())) $("plProf").value=profDefecto();
   const P=planDe(lun), L=alumnosPlan(), desde=$("plDesde").value||"15:30";
   { const antes=JSON.stringify(P.resp); L.forEach(a=>{ if(clasesSemana(a.id,lun).length){ respDe(P,a); sincronizarPlanAlumno(a.id,lun); } }); if(JSON.stringify(P.resp)!==antes) persistir(); }   // v12.2
   const inc=L.filter(a=>respDe(P,a).inc), preg=inc.filter(a=>P.preg[a.id]).length;
@@ -2662,6 +2693,7 @@ function refrescarListas(){
   const fp=$("filtroProf"), cur=fp.value;
   fp.innerHTML='<option value="">Todos los profesores</option>'+P.map(p=>`<option value="${esc(p.toLowerCase())}">${esc(p)}</option>`).join("");
   fp.value=cur;
+  if(!window.__filtroIni&&datosListos&&db.profesores.length){ window.__filtroIni=true; const d=profDefecto(); if(d) fp.value=d.toLowerCase(); }   // v13.5
 }
 function refrescarTodo(){ refrescarListas(); rellenarSelectsFicha(F.profesor.value,F.vehiculo.value); pintarLista(); pintarAgenda(); pintarExamenes(); pintarAvisos(); pintarRecordatorios(); actualizarBadge(); comprobarCopia(); comprobarMiercoles(); }
 function refrescarVistas(){ pintarClasesAlumno(); pintarExamenes(); pintarAvisos(); if($("recBox").open) pintarRecordatorios(); }
@@ -2705,6 +2737,12 @@ function normalizar(){
 function etiquetaVeh(v){ return v.matricula?v.modelo+" · "+v.matricula:v.modelo; }
 function vehiculoPorEtiqueta(et){ return db.vehiculos.find(v=>etiquetaVeh(v)===et); }
 function icoVeh(p){ return p==="B"?"🚗":p==="AM"?"🛵":"🏍️"; }
+/* v13.5: profesor por defecto (⚙️ Autoescuela). Si no se ha elegido, el primer profesor activo. Se usa en el filtro
+   de la agenda, la hoja del día, el plan semanal, las clases nuevas y los alumnos nuevos. */
+function profDefecto(){
+  const act=db.profesores.filter(p=>p.activo!==false).map(p=>p.nombre).sort((a,b)=>a.localeCompare(b,"es"));
+  return (db.config.profDefecto&&act.includes(db.config.profDefecto))?db.config.profDefecto:(act[0]||"");
+}
 function opcionesProf(permiso,actualVal){
   const l=db.profesores.filter(p=>p.activo!==false&&(!permiso||p.permisos.includes(permiso))).map(p=>p.nombre).sort((a,b)=>a.localeCompare(b,"es"));
   if(actualVal&&!l.includes(actualVal)) l.push(actualVal);
@@ -3023,6 +3061,7 @@ $("avSig").onclick=()=>{ const x=avItems.find(x=>!db.avisos[x.key]); if(x) x.run
 $("btnConfig").onclick=()=>{
   pintarCfSedes(sedes());
   $("cfNombre").value=db.config.nombre||""; $("cfTel").value=db.config.tel||""; $("cfLugar").value=db.config.lugar||""; $("cfUbi").value=db.config.ubicacion||"";
+  $("cfProfDef").innerHTML=db.profesores.filter(p=>p.activo!==false).map(p=>p.nombre).sort((a,b)=>a.localeCompare(b,"es")).map(n=>`<option>${esc(n)}</option>`).join("")||'<option value="">— Sin profesores —</option>'; $("cfProfDef").value=profDefecto();
   document.querySelector(`input[name=cfBloq][value=${db.config.bloqueoExamen==="profesor"?"profesor":"todos"}]`).checked=true;
   ["cfPinAct","cfPinNue","cfPinRep"].forEach(i=>$(i).value="");
   $("cfEspacio").textContent=""; espacioUsado().then(t=>{ if(t) $("cfEspacio").textContent="💾 Datos de la app en esta tablet: "+t+(idb?"":" (modo antiguo)"); });
@@ -3053,7 +3092,7 @@ $("cfGuardar").onclick=()=>{
   }
   db.config.sedes=leerCfSedes(); if(actual) pintarSedes($("selSede").value);
   db.config=Object.assign(db.config,{nombre:$("cfNombre").value.trim()||"Autoescuela",tel:$("cfTel").value.trim(),lugar:$("cfLugar").value.trim(),ubicacion:$("cfUbi").value.trim(),
-    bloqueoExamen:document.querySelector("input[name=cfBloq]:checked").value});
+    bloqueoExamen:document.querySelector("input[name=cfBloq]:checked").value, profDefecto:$("cfProfDef").value||db.config.profDefecto||""});
   $("mConfig").classList.add("hidden"); persistir(); pintarPagos(); pintarLista(); pintarAgenda(); toast(pinCambiado?"Guardado. PIN cambiado: úsalo la próxima vez que abras la app.":"Datos de la autoescuela guardados.");
 };
 /* v11.5: quitado el botón «Vaciar todo» del Listado (peligroso) */
