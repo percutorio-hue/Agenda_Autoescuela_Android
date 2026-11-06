@@ -197,6 +197,12 @@ body.enRafaga .toast{bottom:100px}
 .kpi.mal b{color:var(--err)}.kpi.bien b{color:var(--ok)}
 @media (max-width:900px){.pagos2{grid-template-columns:1fr}.gpago.c,.gpago.p{grid-template-columns:1fr 1fr}}
 /* Pantalla de PIN */
+#actGate{position:fixed;inset:0;z-index:110;background:linear-gradient(160deg,#163a69,#0f2747);display:flex;align-items:center;justify-content:center;padding:16px}
+#actGate.hidden{display:none}
+#actGate .pbox{background:#fff;border-radius:16px;padding:26px 22px;width:min(340px,100%);text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.3)}
+#actGate h2{margin:6px 0 2px;color:var(--pri);font-size:20px}
+#actGate p{margin:0 0 14px;color:var(--muted);font-size:13px}
+@media print{#actGate{display:none!important}}
 #pinGate{position:fixed;inset:0;z-index:100;background:linear-gradient(160deg,#1f4e8c,#163a69);display:flex;align-items:center;justify-content:center;padding:16px}
 #pinGate .pbox{background:#fff;border-radius:16px;padding:26px 22px;width:min(340px,100%);text-align:center;box-shadow:0 12px 40px rgba(0,0,0,.3)}
 #pinGate h2{margin:6px 0 2px;color:var(--pri);font-size:20px}
@@ -343,6 +349,17 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
 </style>
 </head>
 <body>
+<div id="actGate" class="hidden">
+  <div class="pbox">
+    <div style="font-size:34px">🔐</div>
+    <h2>Activar este dispositivo</h2>
+    <p>Es la primera vez que se abre la agenda en este dispositivo.<br>Introduce el código de activación.</p>
+    <input id="actCod" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Código de activación" style="text-align:center;font-size:18px;margin-bottom:10px">
+    <button class="btn" id="actOk" style="width:100%;padding:12px;font-size:16px">Activar</button>
+    <div id="actMsg" style="color:var(--err);font-size:13px;min-height:18px;margin-top:8px"></div>
+    <div class="pfirma">Creado por Antonio ML+IA</div>
+  </div>
+</div>
 <div id="pinGate">
   <div class="pbox">
     <div style="font-size:34px">🚗</div>
@@ -870,7 +887,7 @@ window.alert=function(msg){
 };
 /* ================== DATOS ================== */
 const LS_KEY = "agendaAutoescuela_v1";
-const VERSION = "v13.5 NOV26";
+const VERSION = "v13.7 NOV26 · libre";
 const HORAS = []; for (let m = 8*60; m < 21*60; m += 30) HORAS.push(String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"));   // filas de 30 min: 08:00 … 20:30 (la última termina a las 21:00)
 const EXAMENES = {
   B:  [["teorico","Teórico"],["practico","Práctico"]],
@@ -2853,7 +2870,11 @@ function pintarSedes(val){
   if(val&&!l.some(x=>x.nombre===val)) $("selSede").innerHTML+=`<option>${esc(val)}</option>`;
   $("selSede").value=val||"";
 }
-$("selSede").onchange=()=>{ cambiosFicha=true; };
+/* v13.6: la autoescuela (Sector B / Pueblo) se guarda en el alumno AL MOMENTO de elegirla, sin tener que pulsar «Guardar alumno» */
+$("selSede").onchange=()=>{ const a=actual&&alumno(actual);
+  if(!a){ cambiosFicha=true; return; }               // alumno nuevo aún sin guardar: se guarda con «Guardar alumno»
+  a.sede=$("selSede").value; persistir(); pintarLista(); pintarBienvenida();
+  toast(a.sede?"Autoescuela guardada: "+a.sede:"Autoescuela quitada"); };
 function ofrecerResena(id){
   const a=alumno(id); if(!a) return;
   preguntaWa("🎉 ¡Carnet aprobado!",`${esc(nombreCompleto(a))} ha aprobado ${esc(TXT_EXAMEN[EXAMENES[a.permiso].slice(-1)[0][0]].toLowerCase())}.<br>¿Enviarle la enhorabuena con el enlace de reseñas${a.sede?" de <b>"+esc(a.sede)+"</b>":""}?`,()=>enviarResena(id));
@@ -3134,6 +3155,21 @@ const PIN_HASH="fb3b8d00", PIN_LARGO=4;   // PIN de fábrica: 5555 (se puede cam
 function pinGuardado(){ let h=""; try{ h=localStorage.getItem("agendaPin")||""; }catch(e){} return h||(db.config&&db.config.pinHash)||PIN_HASH; }
 function hashPin(pin){ const h=s=>{ let x=0x811c9dc5; for(const c of s){ x^=c.charCodeAt(0); x=Math.imul(x,16777619)>>>0; } return x.toString(16); };
   let v="AML·agenda·"+pin; for(let i=0;i<500;i++) v=h(v+i); return v; }
+/* v13.7: ACTIVACIÓN POR DISPOSITIVO. La primera vez en cada dispositivo (tablet, móvil, PC/navegador) pide el código de
+   activación (no distingue mayúsculas). Una vez activado, solo pide el PIN. Si se borran los datos de Chrome, vuelve a pedirlo. */
+const PEDIR_ACTIVACION=false;   // true = versión BLOQUEADA (pide código de activación) · false = versión DESBLOQUEADA (solo PIN)
+const ACT_HASH="177b52a", ACT_KEY="agendaActivada";
+function dispositivoActivado(){ try{ return localStorage.getItem(ACT_KEY)===ACT_HASH; }catch(e){ return false; } }
+(function(){
+  if(!PEDIR_ACTIVACION||dispositivoActivado()) return;
+  $("actGate").classList.remove("hidden"); setTimeout(()=>$("actCod").focus(),100);
+  let fallos=0;
+  const probar=()=>{ const v=$("actCod").value.trim().toLowerCase();
+    if(v&&hashPin("ACT:"+v)===ACT_HASH){ try{ localStorage.setItem(ACT_KEY,ACT_HASH); }catch(e){}
+      $("actGate").remove(); toast("Dispositivo activado."); }
+    else{ fallos++; $("actMsg").textContent="Código incorrecto"+(fallos>2?" ("+fallos+" intentos)":""); $("actCod").value=""; $("actCod").focus(); } };
+  $("actOk").onclick=probar; $("actCod").addEventListener("keydown",e=>{ if(e.key==="Enter") probar(); });
+})();
 (function(){
   let pin="", fallos=0;
   const dots=[...$("pinDots").children];
@@ -3148,7 +3184,8 @@ function hashPin(pin){ const h=s=>{ let x=0x811c9dc5; for(const c of s){ x^=c.ch
     }
   }
   $("pinPad").onclick=e=>{ const b=e.target.closest("button"); if(b) tecla(b.dataset.k||b.textContent); };
-  function teclado(e){ if(/^[0-9]$/.test(e.key)) tecla(e.key); else if(e.key==="Backspace") tecla("borrar"); else if(e.key==="Escape") tecla("limpiar"); }
+  function teclado(e){ if(document.getElementById("actGate")&&!$("actGate").classList.contains("hidden")) return;   // primero la activación
+    if(/^[0-9]$/.test(e.key)) tecla(e.key); else if(e.key==="Backspace") tecla("borrar"); else if(e.key==="Escape") tecla("limpiar"); }
   document.addEventListener("keydown",teclado);
 })();
 
