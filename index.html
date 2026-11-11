@@ -369,7 +369,12 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
   <div class="pbox">
     <div style="font-size:34px">🔐</div>
     <h2>Activar este dispositivo</h2>
-    <p>Es la primera vez que se abre la agenda en este dispositivo.<br>Introduce el código de activación.</p>
+    <p>Es la primera vez que se abre la agenda en este dispositivo.<br>Pide el código de activación a Antonio enviándole este número:</p>
+    <div style="background:#eef3fb;border:1px solid #9cb6dc;border-radius:10px;padding:10px;margin-bottom:10px">
+      <div style="font-size:12px;color:var(--muted)">Número de este dispositivo</div>
+      <div id="actDisp" style="font:700 26px/1.2 ui-monospace,Consolas,monospace;letter-spacing:2px;color:var(--pri);user-select:all"></div>
+      <div class="row" style="justify-content:center;margin-top:6px;gap:6px"><button type="button" class="btn wa sm" id="actWa">📲 Enviar por WhatsApp</button><button type="button" class="btn sec sm" id="actCopiar">📋 Copiar</button></div>
+    </div>
     <input id="actCod" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Código de activación" style="text-align:center;font-size:18px;margin-bottom:10px">
     <button class="btn" id="actOk" style="width:100%;padding:12px;font-size:16px">Activar</button>
     <div id="actMsg" style="color:var(--err);font-size:13px;min-height:18px;margin-top:8px"></div>
@@ -969,7 +974,7 @@ window.alert=function(msg){
 };
 /* ================== DATOS ================== */
 const LS_KEY = "agendaAutoescuela_v1";
-const VERSION = "v15.3 NOV26";
+const VERSION = "v15.4 NOV26";
 const HORAS = []; for (let m = 8*60; m < 21*60; m += 30) HORAS.push(String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"));   // filas de 30 min: 08:00 … 20:30 (la última termina a las 21:00)
 const EXAMENES = {
   B:  [["teorico","Teórico"],["practico","Práctico"]],
@@ -3384,13 +3389,31 @@ function hashPin(pin){ const h=s=>{ let x=0x811c9dc5; for(const c of s){ x^=c.ch
    activación (no distingue mayúsculas). Una vez activado, solo pide el PIN. Si se borran los datos de Chrome, vuelve a pedirlo. */
 const PEDIR_ACTIVACION=true;   // true = versión BLOQUEADA (pide código de activación) · false = versión DESBLOQUEADA (solo PIN)
 const ACT_HASH="177b52a", ACT_KEY="agendaActivada";
-function dispositivoActivado(){ try{ return localStorage.getItem(ACT_KEY)===ACT_HASH; }catch(e){ return false; } }
+/* v15.4: CÓDIGO POR DISPOSITIVO. Cada dispositivo tiene un número propio (p. ej. 7K3Q-9TZM); Antonio calcula con su
+   generador el código que solo vale para ese número. La clave maestra sigue valiendo en cualquier dispositivo. */
+const DISP_KEY="agendaDispositivo";
+function numDispositivo(){
+  let d=""; try{ d=localStorage.getItem(DISP_KEY)||""; }catch(e){}
+  if(!/^[A-Z0-9]{4}-[A-Z0-9]{4}$/.test(d)){ const A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789", r=new Uint32Array(8);
+    try{ crypto.getRandomValues(r); }catch(e){ for(let i=0;i<8;i++) r[i]=Math.floor(Math.random()*1e9); }
+    d=[...r].map(x=>A[x%A.length]).join(""); d=d.slice(0,4)+"-"+d.slice(4); try{ localStorage.setItem(DISP_KEY,d); }catch(e){} }
+  return d;
+}
+function codigoDispositivo(d){   // el mismo cálculo está en el «Generador de códigos» de Antonio
+  const a=parseInt(hashPin("DISP·"+d+"·k7"),16)%10000, b=parseInt(hashPin("DISP·k7·"+d),16)%10000;
+  return String(a).padStart(4,"0")+"-"+String(b).padStart(4,"0");
+}
+function dispositivoActivado(){ try{ const v=localStorage.getItem(ACT_KEY); return v===ACT_HASH||v==="D:"+codigoDispositivo(numDispositivo()); }catch(e){ return false; } }
 (function(){
   if(!PEDIR_ACTIVACION||dispositivoActivado()) return;
+  const disp=numDispositivo(); $("actDisp").textContent=disp;
   $("actGate").classList.remove("hidden"); setTimeout(()=>$("actCod").focus(),100);
+  $("actWa").onclick=()=>window.open("https://api.whatsapp.com/send?text="+encodeURIComponent("Hola Antonio, necesito el código de activación de la Agenda Autoescuela.\nNúmero de este dispositivo: "+disp),"_blank");
+  $("actCopiar").onclick=()=>{ (navigator.clipboard?navigator.clipboard.writeText(disp):Promise.reject()).then(()=>toast("Número copiado."),()=>prompt("Copia el número:",disp)); };
   let fallos=0;
-  const probar=()=>{ const v=$("actCod").value.trim().toLowerCase();
-    if(v&&hashPin("ACT:"+v)===ACT_HASH){ try{ localStorage.setItem(ACT_KEY,ACT_HASH); }catch(e){}
+  const probar=()=>{ const v=$("actCod").value.trim().toLowerCase(), dig=v.replace(/\D/g,"");
+    const porDisp=dig.length===8&&(dig.slice(0,4)+"-"+dig.slice(4))===codigoDispositivo(disp);
+    if(v&&(hashPin("ACT:"+v)===ACT_HASH||porDisp)){ try{ localStorage.setItem(ACT_KEY,porDisp?"D:"+codigoDispositivo(disp):ACT_HASH); }catch(e){}
       $("actGate").remove(); toast("Dispositivo activado."); }
     else{ fallos++; $("actMsg").textContent="Código incorrecto"+(fallos>2?" ("+fallos+" intentos)":""); $("actCod").value=""; $("actCod").focus(); } };
   $("actOk").onclick=probar; $("actCod").addEventListener("keydown",e=>{ if(e.key==="Enter") probar(); });
