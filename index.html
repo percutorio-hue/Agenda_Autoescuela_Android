@@ -976,7 +976,7 @@ window.alert=function(msg){
 };
 /* ================== DATOS ================== */
 const LS_KEY = "agendaAutoescuela_v1";
-const VERSION = "v15.5 NOV26";
+const VERSION = "v15.6 NOV26";
 const HORAS = []; for (let m = 8*60; m < 21*60; m += 30) HORAS.push(String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"));   // filas de 30 min: 08:00 … 20:30 (la última termina a las 21:00)
 const EXAMENES = {
   B:  [["teorico","Teórico"],["practico","Práctico"]],
@@ -2309,15 +2309,37 @@ function cambioPlan(e){
     const nd=Object.keys(r.dias||{}).length;
     if((e instanceof Event)) r.nMan=r.n>nd;            // v14.6: más clases que días = decisión del profesor (se juntan en 1+1)
     if(r.n<nd&&r.n>0&&(e instanceof Event)){
-      // v15.5: el profesor manda: se quitan los días sobrantes empezando por el final de la semana (como sus prioridades: lunes 15:30 primero, viernes 20:00 último)
-      const orden=Object.keys(r.dias).map(Number).sort((x,y)=>x-y||minutos(r.dias[x])-minutos(r.dias[y])), quitar=orden.slice(r.n);
+      // v15.5/15.6: el profesor manda: se quitan los días sobrantes empezando por el final de la semana (lunes 15:30 primero, viernes 20:00 último).
+      // Los días con una clase ya dada o con menos de 24 h no se pueden quitar: se quedan y se quitan otros.
+      const lun=lunesDe($("plSemana").value), sc=clasesSemana(a.id,lun), diaDe=c=>Math.round((parse(c.fecha)-parse(lun))/864e5);
+      const fijos=new Set(sc.filter(c=>c.estado||bloqueada(c)).map(diaDe));
+      const orden=Object.keys(r.dias).map(Number).sort((x,y)=>x-y||minutos(r.dias[x])-minutos(r.dias[y]));
+      const quedan=[...orden.filter(i=>fijos.has(i)),...orden.filter(i=>!fijos.has(i))].slice(0,Math.max(r.n,[...fijos].filter(i=>orden.includes(i)).length));
+      const quitar=orden.filter(i=>!quedan.includes(i));
+      // clases ya citadas en los días que se quitan → se quitan de la agenda (si no, el plan las volvería a marcar)
+      const conClase=sc.filter(c=>quitar.includes(diaDe(c))&&!c.estado&&!bloqueada(c));
+      // si pasa a 1+1 y los días que quedan tienen clases sueltas, se quitan para volver a colocarlas como 1+1
+      const sueltas=r.doble?sc.filter(c=>quedan.includes(diaDe(c))&&!c.estado&&!bloqueada(c)&&!esDoble(c)):[];
+      const borrar=conClase.concat(sueltas);
+      if(borrar.length&&!confirm(`${nombreCompleto(a)} ya tiene clases citadas en la agenda esa semana.\n\nSe quitarán ${conClase.length?"las de "+[...new Set(conClase.map(diaDe))].map(i=>DIAS_LARGOS[i].toLowerCase()).join(" y "):""}${conClase.length&&sueltas.length?", y ":""}${sueltas.length?"las sueltas de "+[...new Set(sueltas.map(diaDe))].map(i=>DIAS_LARGOS[i].toLowerCase()).join(" y ")+" para colocarlas como 1+1":""}.\n\n¿Continuar?`)){
+        setTimeout(()=>pintarPlan(),0); return; }
+      if(borrar.length){ const ids=new Set(borrar.map(c=>c.id)); db.clases=db.clases.filter(c=>!ids.has(c.id));
+        Object.keys(db.avisos||{}).forEach(k=>{ if(k.startsWith("c:")&&ids.has(k.split(":")[1])) delete db.avisos[k]; }); }
       r.quitados=r.quitados||{};
       quitar.forEach(i=>{ r.quitados[i]={h:r.dias[i],m:r.modo[i]||"desde",hh:r.hasta[i]||""}; delete r.dias[i]; delete r.modo[i]; delete r.hasta[i]; });
-      r.nMan=false; toast("Quitado"+(quitar.length>1?"s":"")+": "+quitar.map(i=>DIAS_LARGOS[i].toLowerCase()).join(", ")+". Puedes volver a marcarlo si prefieres otro día.");
-      setTimeout(()=>{ pintarPlan(); pintarIncidAgenda(); },0); }
+      r.n=Math.max(r.n,quedan.length); r.nMan=false; r.nAuto=false;
+      toast((quitar.length?"Quitado"+(quitar.length>1?"s":"")+": "+quitar.map(i=>DIAS_LARGOS[i].toLowerCase()).join(", ")+".":"")
+        +(borrar.length?` ${borrar.length} clase(s) quitada(s) de la agenda.`+(sueltas.length||r.doble?" Pulsa «Generar y citar» para colocar lo que falte.":""):" Puedes volver a marcar otro día si lo prefieres."));
+      persistir(); setTimeout(()=>{ pintarPlan(); pintarAgenda(); pintarIncidAgenda(); },0); return; }
     else if(r.n<nd){ r.n=nd; setTimeout(pintarPlan,50); } else if((e instanceof Event)) setTimeout(()=>{ pintarPlan(); pintarIncidAgenda(); },0); }
   else if(t.dataset.f==="tipo") r.tipo=t.value;
   else if(t.dataset.d!=null){ const i=t.dataset.d, h=tr.querySelector(`input[data-h="${i}"]`), sm=tr.querySelector(`select[data-m="${i}"]`), hh=tr.querySelector(`input[data-hh="${i}"]`);
+    if(!t.checked&&(e instanceof Event)){
+      const lun=lunesDe($("plSemana").value), cd=clasesSemana(a.id,lun).filter(c=>Math.round((parse(c.fecha)-parse(lun))/864e5)===+i);
+      if(cd.some(c=>c.estado||bloqueada(c))){ alert("Ese día ya tiene una clase dada o con menos de 24 h: no se puede quitar."); t.checked=true; return; }
+      if(cd.length){ if(!confirm(`${nombreCompleto(a)} ya tiene clase el ${DIAS_LARGOS[i].toLowerCase()} (${cd.map(c=>c.hora).join(", ")}).\n\n¿Quitarla de la agenda?`)){ t.checked=true; return; }
+        const ids=new Set(cd.map(c=>c.id)); db.clases=db.clases.filter(c=>!ids.has(c.id));
+        Object.keys(db.avisos||{}).forEach(k=>{ if(k.startsWith("c:")&&ids.has(k.split(":")[1])) delete db.avisos[k]; }); setTimeout(pintarAgenda,0); } }
     if(t.checked){ const q=r.quitados&&r.quitados[i]; r.dias[i]=h.value||(q&&q.h)||$("plDesde").value||"15:30"; if(q){ r.modo[i]=q.m; if(q.hh) r.hasta[i]=q.hh; delete r.quitados[i]; } r.inc=true; tr.querySelector('input[data-f="inc"]').checked=true; } else { delete r.dias[i]; delete r.modo[i]; delete r.hasta[i]; }
     h.disabled=sm.disabled=!t.checked; hh.classList.toggle("hidden",!(t.checked&&sm.value==="entre"));
     // v14.6: al marcar/desmarcar un día (a mano), «Clases» = nº de días marcados, salvo que el profesor haya puesto más a propósito
