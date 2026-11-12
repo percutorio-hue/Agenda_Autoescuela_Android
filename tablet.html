@@ -160,6 +160,8 @@ body.enRafaga .toast{bottom:100px}
 .pldias{display:flex;flex-wrap:wrap;gap:6px 8px}
 .pldias .pld{flex-direction:row;align-items:center;gap:4px;margin:0;padding:3px 6px;border:1px solid var(--line);border-radius:8px;background:#f7f9fc}
 .pldias .pld label{font-weight:600;min-width:26px}
+.pldias .pld label.pl11{min-width:0;font-size:11px;font-weight:700;color:var(--muted);padding:1px 5px;border:1px dashed #b8c3d3;border-radius:6px}
+.pldias .pld label.pl11.on{color:#fff;background:var(--pri);border:1px solid var(--pri)}
 .pldias .pld.cl{background:#e6f4ec;border-color:#5fb383}
 .pldias .pld.ko{background:#fdecec;border-color:#e39a9a}
 .pldias .pld .koh{font-size:11px;color:#b42318;font-weight:700;white-space:nowrap;cursor:pointer;padding:2px 4px;border-radius:4px;background:#fff}
@@ -977,7 +979,7 @@ window.alert=function(msg){
 };
 /* ================== DATOS ================== */
 const LS_KEY = "agendaAutoescuela_v1";
-const VERSION = "v15.8 NOV26";
+const VERSION = "v15.9 NOV26";
 const HORAS = []; for (let m = 8*60; m < 21*60; m += 30) HORAS.push(String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"));   // filas de 30 min: 08:00 … 20:30 (la última termina a las 21:00)
 const EXAMENES = {
   B:  [["teorico","Teórico"],["practico","Práctico"]],
@@ -1764,7 +1766,10 @@ function sincronizarPlanAlumno(id,fecha){
   r.modo=r.modo||{}; r.hasta=r.hasta||{}; r.dias=r.dias||{}; r.inc=true;
   sc.forEach(c=>{ const i=Math.round((parse(c.fecha)-parse(lun))/864e5); if(i<0||i>4||r.dias[i]!=null) return; r.dias[i]=c.hora; r.modo[i]="exacta"; delete r.hasta[i]; });
   const antes=r.doble?(Number(r.n)||0)*2:(Number(r.n)||0), uds=sc.reduce((t,c)=>t+unidades(c),0);   // en clases
-  r.doble=sc.every(esDoble); r.n=r.doble?Math.max(sc.length,Math.ceil(antes/2)):Math.max(antes,uds);
+  const todosCon=Object.keys(r.dias).every(d=>sc.some(c=>Math.round((parse(c.fecha)-parse(lun))/864e5)===+d));
+  r.doble=sc.every(esDoble)&&(r.doble||todosCon); r.n=r.doble?Math.max(sc.length,Math.ceil(antes/2)):Math.max(antes,uds);
+  if(!r.doble&&sc.some(esDoble)){ r.dd=r.dd||{}; sc.forEach(c=>{ if(esDoble(c)) r.dd[Math.round((parse(c.fecha)-parse(lun))/864e5)]=true; }); }   // v15.9
+  if(mixto(r)) recalcMixto(r);
 }
 function finClase(c){ return hhmm(minutos(c.hora)+durDe(c)); }
 function ocupaHora(c,h){ const i=minutos(c.hora), f=i+durDe(c), hi=minutos(h); return i<hi+30 && f>hi; }
@@ -2248,12 +2253,23 @@ function alumnosPlan(){ const f=($("plFiltro")&&$("plFiltro").value)||"todos";
     .sort((a,b)=>(a.permiso==="B")-(b.permiso==="B")||nombreCompleto(a).localeCompare(nombreCompleto(b),"es")); }
 function tipoPorDefecto(a){ return a.permiso==="B"?"Circulación":a.permiso==="AM"?"Destreza":(a.resultados||{}).circuito==="apto"?"Circulación":"Destreza"; }
 function durPlan(a,r){ return esMoto(a.permiso)?(r.doble?60:30):(r.doble?90:45); }
+/* v15.9: 1+1 por día. r.dd = {día:true} días sueltos en 1+1 (modo mixto: r.doble=false y r.n = clases totales) */
+function dobleDia(r,d){ return !!(r&&(r.doble||(r.dd&&r.dd[d]))); }
+function durDia(a,r,d){ const ud=esMoto(a.permiso)?30:45; return dobleDia(r,d)?2*ud:ud; }
+function mixto(r){ return !!(r&&!r.doble&&r.dd&&Object.keys(r.dd).some(d=>r.dd[d]&&r.dias&&r.dias[d]!=null)); }
+function recalcMixto(r){ r.dd=r.dd||{}; Object.keys(r.dd).forEach(d=>{ if(!r.dd[d]||!r.dias||r.dias[d]==null) delete r.dd[d]; });
+  const dias=Object.keys(r.dias||{}), nd=dias.length, nDd=dias.filter(d=>r.dd[d]).length;
+  if(nd&&nDd===nd){ r.doble=true; r.n=nd; r.dd={}; }
+  else if(nDd){ r.doble=false; r.n=nd+nDd; }
+  r.nMan=false; r.nAuto=false; }
 function respDe(P,a){ P.resp[a.id]=P.resp[a.id]||{inc:false,prio:"",n:1,tipo:tipoPorDefecto(a),doble:false,dias:{}};
   const r=P.resp[a.id]; r.modo=r.modo||{}; r.hasta=r.hasta||{}; return r; }
 const TXT_MODO={desde:"desde",exacta:"a las",entre:"entre"};
 /* v11.3: el campo «Clases» admite 1+1 (dos clases seguidas el mismo día). r.n = sesiones; r.doble = cada sesión es 1+1 */
 function txtClases(r){ return !r.doble?String(r.n):r.n===1?"1+1":r.n+" × (1+1)"; }
 function opcionesClases(r){
+  if(mixto(r)){ const dd=Object.keys(r.dd).filter(d=>r.dd[d]&&r.dias[d]!=null).sort();   // v15.9: 1+1 solo algunos días
+    return `<option value="mix" selected>${r.n} (${dd.map(d=>DIAS_PL[d]).join(",")} 1+1)</option>`+opcionesClases(Object.assign({},r,{dd:{}})).replace(/ selected/g,""); }
   const l=[[0,false],[1,false],[1,true],[2,false],[3,false],[2,true],[4,false],[5,false],[3,true],[6,false],[7,false],[8,false],[9,false],[10,false]];
   if(!l.some(([n,d])=>n===r.n&&d===!!r.doble)) l.push([r.n,!!r.doble]);
   return l.map(([n,d])=>`<option value="${n}|${d?1:0}" ${n===r.n&&d===!!r.doble?"selected":""}>${txtClases({n,doble:d})}</option>`).join("");
@@ -2293,7 +2309,8 @@ function pintarPlan(){
           return `<span class="pld ${clD[i]?"cl":ko?"ko":""}" ${clD[i]?`title="En agenda: ${clD[i].join(", ")}"`:koD[i]?`title="${esc(koD[i].txt)}"`:""}>${clD[i]?`<span class="clh">🗓️ ${clD[i].join(" ")}</span>`:ko?`<span class="koh" role="button" onclick="verMotivoDia('${a.id}',${i})">⛔ ocupado ⓘ</span>`:koD[i]&&koD[i].libre?`<span class="clh" role="button" style="color:var(--pri)" onclick="verMotivoDia('${a.id}',${i})">🟢 libre ${koD[i].libre} ⓘ</span>`:""}<label><input type="checkbox" data-d="${i}" ${on?"checked":""}> ${d}</label>
             <select data-m="${i}" ${on?"":"disabled"}><option value="desde" ${m==="desde"?"selected":""}>desde</option><option value="exacta" ${m==="exacta"?"selected":""}>a las</option><option value="entre" ${m==="entre"?"selected":""}>entre</option></select>
             <input type="time" step="900" data-h="${i}" value="${r.dias[i]||(r.quitados&&r.quitados[i]&&r.quitados[i].h)||desde}" ${on?"":"disabled"}>
-            <input type="time" step="900" class="hh ${m==="entre"&&on?"":"hidden"}" data-hh="${i}" value="${r.hasta[i]||hhmm(finPlan())}"></span>`; }).join(""); })()}</div></td></tr></tbody>`; }).join("")
+            <input type="time" step="900" class="hh ${m==="entre"&&on?"":"hidden"}" data-hh="${i}" value="${r.hasta[i]||hhmm(finPlan())}">
+            <label class="pl11 ${on&&dobleDia(r,i)?"on":""}" title="Ese día, dos clases seguidas (1+1)"><input type="checkbox" data-dd="${i}" ${on&&dobleDia(r,i)?"checked":""} ${on?"":"disabled"}>1+1</label></span>`; }).join(""); })()}</div></td></tr></tbody>`; }).join("")
     :`<tbody><tr><td style="color:var(--muted);padding:16px">No hay alumnos con ese filtro.</td></tr></tbody>`;
   pintarAvisosPlan(); pintarIncidPlan();
 }
@@ -2306,7 +2323,8 @@ function cambioPlan(e){
   const a=alumno(tr.dataset.al), r=respDe(planDe(lunesDe($("plSemana").value)),a), t=e.target;
   if(t.dataset.f==="inc") r.inc=t.checked;
   else if(t.dataset.f==="prio") r.prio=t.value?Math.max(1,parseInt(t.value,10)):"";
-  else if(t.dataset.f==="cl"){ const [n,d]=t.value.split("|"), nn=parseInt(n,10)||0; if(nn!==r.n||(d==="1")!==!!r.doble) r.nAuto=false; r.n=nn; r.doble=d==="1";
+  else if(t.dataset.f==="cl"&&t.value==="mix"){ /* modo mixto: se mantiene */ }
+  else if(t.dataset.f==="cl"){ if((e instanceof Event)) r.dd={}; const [n,d]=t.value.split("|"), nn=parseInt(n,10)||0; if(nn!==r.n||(d==="1")!==!!r.doble) r.nAuto=false; r.n=nn; r.doble=d==="1";
     const nd=Object.keys(r.dias||{}).length;
     if((e instanceof Event)) r.nMan=r.n>nd;            // v14.6: más clases que días = decisión del profesor (se juntan en 1+1)
     if(r.n<nd&&r.n>0&&(e instanceof Event)){
@@ -2323,9 +2341,9 @@ function cambioPlan(e){
       // clases ya citadas en los días que se quitan → se quitan de la agenda (si no, el plan las volvería a marcar)
       const conClase=sc.filter(c=>quitar.includes(diaDe(c))&&!c.estado&&!bloqueada(c));
       // si pasa a 1+1 y los días que quedan tienen clases sueltas, se quitan para volver a colocarlas como 1+1
-      const sueltas=r.doble?sc.filter(c=>quedan.includes(diaDe(c))&&!c.estado&&!bloqueada(c)&&!esDoble(c)):[];
+      const sueltas=sc.filter(c=>quedan.includes(diaDe(c))&&!c.estado&&!bloqueada(c)&&durDe(c)!==durDia(a,r,diaDe(c)));   // v15.9: duración distinta a la elegida
       const borrar=conClase.concat(sueltas);
-      if(borrar.length&&!confirm(`${nombreCompleto(a)} ya tiene clases citadas en la agenda esa semana.\n\nSe quitarán ${conClase.length?"las de "+[...new Set(conClase.map(diaDe))].map(i=>DIAS_LARGOS[i].toLowerCase()).join(" y "):""}${conClase.length&&sueltas.length?", y ":""}${sueltas.length?"las sueltas de "+[...new Set(sueltas.map(diaDe))].map(i=>DIAS_LARGOS[i].toLowerCase()).join(" y ")+" para colocarlas como 1+1":""}.\n\n¿Continuar?`)){
+      if(borrar.length&&!confirm(`${nombreCompleto(a)} ya tiene clases citadas en la agenda esa semana.\n\nSe quitarán ${conClase.length?"las de "+[...new Set(conClase.map(diaDe))].map(i=>DIAS_LARGOS[i].toLowerCase()).join(" y "):""}${conClase.length&&sueltas.length?", y ":""}${sueltas.length?"las de "+[...new Set(sueltas.map(diaDe))].map(i=>DIAS_LARGOS[i].toLowerCase()).join(" y ")+" para colocarlas "+(r.doble?"como 1+1":"como clase sencilla"):""}.\n\n¿Continuar?`)){
         setTimeout(()=>pintarPlan(),0); return; }
       if(borrar.length){ const ids=new Set(borrar.map(c=>c.id)); db.clases=db.clases.filter(c=>!ids.has(c.id));
         Object.keys(db.avisos||{}).forEach(k=>{ if(k.startsWith("c:")&&ids.has(k.split(":")[1])) delete db.avisos[k]; }); }
@@ -2335,7 +2353,15 @@ function cambioPlan(e){
       toast((quitar.length?"Quitado"+(quitar.length>1?"s":"")+": "+quitar.map(i=>DIAS_LARGOS[i].toLowerCase()).join(", ")+".":"")
         +(borrar.length?` ${borrar.length} clase(s) quitada(s) de la agenda.`+(sueltas.length||r.doble?" Pulsa «Generar y citar» para colocar lo que falte.":""):" Puedes volver a marcar otro día si lo prefieres."));
       persistir(); setTimeout(()=>{ pintarPlan(); pintarAgenda(); pintarIncidAgenda(); },0); return; }
-    else if(r.n<nd){ r.n=nd; setTimeout(pintarPlan,50); } else if((e instanceof Event)) setTimeout(()=>{ pintarPlan(); pintarIncidAgenda(); },0); }
+    else if(r.n<nd){ r.n=nd; setTimeout(pintarPlan,50); }
+    else if((e instanceof Event)){
+      // v15.9: clases ya citadas con otra duración (1+1 ↔ sencilla) → se quitan para volver a colocarlas con «Generar y citar»
+      const lun=lunesDe($("plSemana").value), diaDe=c=>Math.round((parse(c.fecha)-parse(lun))/864e5);
+      const dist=clasesSemana(a.id,lun).filter(c=>!c.estado&&!bloqueada(c)&&r.dias[diaDe(c)]!=null&&durDe(c)!==durDia(a,r,diaDe(c)));
+      if(dist.length&&confirm(`${nombreCompleto(a)} ya tiene clase el ${[...new Set(dist.map(diaDe))].map(i=>DIAS_LARGOS[i].toLowerCase()).join(" y ")} con otra duración.\n\n¿Quitarla para volver a colocarla ${r.doble?"como 1+1":"como clase sencilla"} con «Generar y citar»?`)){
+        const ids=new Set(dist.map(c=>c.id)); db.clases=db.clases.filter(c=>!ids.has(c.id)); Object.keys(db.avisos||{}).forEach(k=>{ if(k.startsWith("c:")&&ids.has(k.split(":")[1])) delete db.avisos[k]; });
+        persistir(); setTimeout(pintarAgenda,0); }
+      setTimeout(()=>{ pintarPlan(); pintarIncidAgenda(); },0); } }
   else if(t.dataset.f==="tipo") r.tipo=t.value;
   else if(t.dataset.d!=null){ const i=t.dataset.d, h=tr.querySelector(`input[data-h="${i}"]`), sm=tr.querySelector(`select[data-m="${i}"]`), hh=tr.querySelector(`input[data-hh="${i}"]`);
     if(!t.checked&&(e instanceof Event)){
@@ -2347,10 +2373,23 @@ function cambioPlan(e){
     if(t.checked){ const q=r.quitados&&r.quitados[i]; r.dias[i]=h.value||(q&&q.h)||$("plDesde").value||"15:30"; if(q){ r.modo[i]=q.m; if(q.hh) r.hasta[i]=q.hh; delete r.quitados[i]; } r.inc=true; tr.querySelector('input[data-f="inc"]').checked=true; } else { delete r.dias[i]; delete r.modo[i]; delete r.hasta[i]; }
     h.disabled=sm.disabled=!t.checked; hh.classList.toggle("hidden",!(t.checked&&sm.value==="entre"));
     // v14.6: al marcar/desmarcar un día (a mano), «Clases» = nº de días marcados, salvo que el profesor haya puesto más a propósito
-    if((e instanceof Event)){ const nd=Object.keys(r.dias).length; if(!r.nMan) r.n=nd; else if(r.n<nd) r.n=nd; if(r.nAuto) r.doble=false; setTimeout(()=>{ pintarPlan(); pintarIncidAgenda(); },0); }
+    if(!t.checked&&r.dd) delete r.dd[i];
+    if((e instanceof Event)){ const nd=Object.keys(r.dias).length; if(mixto(r)) recalcMixto(r); else if(!r.nMan) r.n=nd; else if(r.n<nd) r.n=nd; if(r.nAuto) r.doble=false; setTimeout(()=>{ pintarPlan(); pintarIncidAgenda(); },0); }
     const sel=tr.querySelector('select[data-f="cl"]');
     if(true){
-      if(sel){ const v=r.n+"|"+(r.doble?1:0); if(![...sel.options].some(o=>o.value===v)){ const o=document.createElement("option"); o.value=v; o.textContent=String(r.n); sel.appendChild(o); } sel.value=v; } } }
+      if(sel&&!mixto(r)){ const v=r.n+"|"+(r.doble?1:0); if(![...sel.options].some(o=>o.value===v)){ const o=document.createElement("option"); o.value=v; o.textContent=String(r.n); sel.appendChild(o); } sel.value=v; } } }
+  else if(t.dataset.dd!=null){ const i=t.dataset.dd;
+    if(r.dias[i]==null){ t.checked=false; return; }
+    const ef={}; Object.keys(r.dias).forEach(d=>{ if(dobleDia(r,d)) ef[d]=true; });
+    if(t.checked) ef[i]=true; else delete ef[i];
+    r.doble=false; r.dd=ef; const antes=r.n; recalcMixto(r); if(!Object.keys(r.dd).length&&!r.doble) r.n=Object.keys(r.dias).length;
+    if((e instanceof Event)){
+      // si ese día ya tiene clase citada de otra duración, se quita para volver a colocarla bien
+      const lun=lunesDe($("plSemana").value), cd=clasesSemana(a.id,lun).filter(c=>Math.round((parse(c.fecha)-parse(lun))/864e5)===+i&&!c.estado&&!bloqueada(c)&&durDe(c)!==durDia(a,r,i));
+      if(cd.length){ if(confirm(`${nombreCompleto(a)} ya tiene clase el ${DIAS_LARGOS[i].toLowerCase()} (${cd.map(c=>c.hora+"–"+finClase(c)).join(", ")}).\n\n¿Quitarla para volver a colocarla ${t.checked?"como 1+1":"como clase sencilla"} con «Generar y citar»?`)){
+          const ids=new Set(cd.map(c=>c.id)); db.clases=db.clases.filter(c=>!ids.has(c.id)); Object.keys(db.avisos||{}).forEach(k=>{ if(k.startsWith("c:")&&ids.has(k.split(":")[1])) delete db.avisos[k]; }); setTimeout(pintarAgenda,0); } }
+      toast(`${DIAS_LARGOS[i]}: ${t.checked?"1+1 (dos clases seguidas)":"una clase"}. Total: ${r.doble?r.n+" × (1+1)":r.n+" clase(s)"}.`);
+      setTimeout(()=>{ pintarPlan(); pintarIncidAgenda(); },0); } }
   else if(t.dataset.m!=null){ const i=t.dataset.m; r.modo[i]=t.value; const hh=tr.querySelector(`input[data-hh="${i}"]`);
     hh.classList.toggle("hidden",t.value!=="entre"); if(t.value==="entre") r.hasta[i]=hh.value||hhmm(finPlan()); else delete r.hasta[i]; }
   else if(t.dataset.hh!=null){ r.hasta[t.dataset.hh]=t.value||hhmm(finPlan()); }
@@ -2526,7 +2565,7 @@ $("pgPortapapeles").onclick=async()=>{ try{ const x=await navigator.clipboard.re
 $("pgCancelar").onclick=()=>$("mPegar").classList.add("hidden");
 $("pgAplicar").onclick=()=>{
   const res=vistaPegar(), r=respDe(planDe(lunesDe($("plSemana").value)),alumno(pgAlumno));
-  r.texto=$("pgTexto").value.trim(); r.dias=res.dias; r.modo=res.modo; r.hasta=res.hasta; r.quitados={};
+  r.texto=$("pgTexto").value.trim(); r.dias=res.dias; r.modo=res.modo; r.hasta=res.hasta; r.quitados={}; r.dd={};
   // v13.9: si el alumno no dice cuántas clases, se reserva UNA por cada día que da (el profesor puede cambiarlo luego en «Clases»)
   if(res.n!=null){ r.n=Math.max(res.n,Object.keys(res.dias).length); r.nAuto=false; r.nMan=res.n>Object.keys(res.dias).length; if(res.doble!=null) r.doble=res.doble; }
   else { r.n=Object.keys(res.dias).length; r.doble=false; r.nAuto=true; r.nMan=false; }
@@ -2616,6 +2655,7 @@ $("plGenerar").onclick=()=>{
       const dobles=Math.min(libres,x.falta-libres); x.durs=Array.from({length:libres},(_,i)=>i<dobles?2*ud:ud); }
   });
   const durSig=x=>x.durs?x.durs[citadas[x.a.id]||0]:durPlan(x.a,x.r);
+  const durEn=(x,d)=>x.durs?x.durs[citadas[x.a.id]||0]:durDia(x.a,x.r,d);   // v15.9: 1+1 por día
   // v14.5: bloque de un tipo (D/C) que el profesor ya tiene ese día, para pegar a él las clases del mismo tipo
   const bloqueDia=(f,g)=>{ const l=nuevas.concat(db.clases.filter(semana)).filter(c=>c.fecha===f&&(c.profesor||"").toLowerCase()===String(prof).toLowerCase()&&grupoMoto(c)===g);
     return l.length?{i:Math.min(...l.map(c=>minutos(c.hora))),f:Math.max(...l.map(c=>minutos(c.hora)+durDe(c)))}:null; };
@@ -2628,14 +2668,14 @@ $("plGenerar").onclick=()=>{
       .sort((x,y)=>(g==="C"?(bloqueDia(addDias(lun,x),"C")?0:1)-(bloqueDia(addDias(lun,y),"C")?0:1):0)   // v14.5: circulación, primero los días que ya tienen circulación
         ||(usados.some(u=>Math.abs(u-x)<2)?1:0)-(usados.some(u=>Math.abs(u-y)<2)?1:0)||x-y);
     for(const d of orden){
-      const f=addDias(lun,d);
+      const f=addDias(lun,d), dur=durEn(x,d);
       if(nuevas.concat(db.clases.filter(semana)).some(c=>c.alumnoId===a.id&&c.fecha===f)) continue;   // una clase al día por alumno
       // v14.5: las horas pegadas al bloque del mismo tipo primero (circulación una detrás de otra; destreza compartida), y si no, la más temprana
       const b=g?bloqueDia(f,g):null, dist=t=>!b?0:t>=b.f?t-b.f:(t+dur<=b.i?b.i-(t+dur):0);
       for(const t of huecosDia(r,d,desde,dur).sort((p,q)=>dist(p)-dist(q)||p-q)){
         const c={id:uid(),alumnoId:a.id,fecha:f,hora:hhmm(t),durMin:dur,tipo:r.tipo,profesor:prof,vehiculo:a.vehiculo||"",obs:"",estado:"",plan:lun};
         if(llevaPlan(a.id,r,creadas.concat(nuevas))>=r.n) return false;                                // tope: las clases que pidió
-        if(probarClase(c,nuevas)){ nuevas.push(c); citadas[a.id]=(citadas[a.id]||0)+1; if(dur>durPlan(a,r)) juntadas.add(c.id); return true; }
+        if(probarClase(c,nuevas)){ nuevas.push(c); citadas[a.id]=(citadas[a.id]||0)+1; if(dur>durDia(a,r,d)) juntadas.add(c.id); return true; }
       }
     }
     return false;
@@ -2656,7 +2696,7 @@ $("plGenerar").onclick=()=>{
   const reparar=x=>{
     const {a,r}=x, dur=durSig(x); if(!dur) return false;
     for(const d of Object.keys(r.dias).map(Number)){
-      const f=addDias(lun,d);
+      const f=addDias(lun,d), dur=durEn(x,d);
       if(nuevas.concat(db.clases.filter(semana)).some(c=>c.alumnoId===a.id&&c.fecha===f)) continue;
       for(const t of huecosDia(r,d,desde,dur)){
         const cand={id:uid(),alumnoId:a.id,fecha:f,hora:hhmm(t),durMin:dur,tipo:r.tipo,profesor:prof,vehiculo:a.vehiculo||"",obs:"",estado:"",plan:lun};
@@ -2667,7 +2707,7 @@ $("plGenerar").onclick=()=>{
         const deshacer=()=>{ nuevas.splice(0,nuevas.length,...copia); Object.keys(citadas).forEach(k=>delete citadas[k]); Object.assign(citadas,cit); };
         bloq.forEach(c=>{ nuevas.splice(nuevas.indexOf(c),1); citadas[c.alumnoId]--; });
         if(!probarClase(cand,nuevas)){ deshacer(); continue; }
-        nuevas.push(cand); citadas[a.id]=(citadas[a.id]||0)+1; if(dur>durPlan(a,r)) juntadas.add(cand.id);
+        nuevas.push(cand); citadas[a.id]=(citadas[a.id]||0)+1; if(dur>durDia(a,r,d)) juntadas.add(cand.id);
         if(bloq.every(c=>{ const y=pend.find(z=>z.a.id===c.alumnoId); return y&&colocar(y); })) return true;
         deshacer();
       }
@@ -2691,8 +2731,8 @@ $("plGenerar").onclick=()=>{
     }
   });
   // v11.3: por qué no hay hueco (primer motivo de cada día que podía)
-  const motivo=({a,r})=>{ const dur=durPlan(a,r), l=[];
-    Object.keys(r.dias).sort().forEach(d=>{ const f=addDias(lun,+d);
+  const motivo=({a,r})=>{ const l=[];
+    Object.keys(r.dias).sort().forEach(d=>{ const f=addDias(lun,+d), dur=durDia(a,r,+d);
       if(nuevas.concat(db.clases.filter(semana)).some(c=>c.alumnoId===a.id&&c.fecha===f)) return;
       const hs=huecosDia(r,+d,desde,dur); if(!hs.length){ l.push(DIAS_LARGOS[d]+": la hora indicada no cabe en el horario"); return; }
       const c={id:"x",alumnoId:a.id,fecha:f,hora:hhmm(hs[0]),durMin:dur,tipo:r.tipo,profesor:prof,vehiculo:a.vehiculo||"",obs:"",estado:""};
@@ -2717,8 +2757,8 @@ $("plGenerar").onclick=()=>{
    (en el plan o a mano en la agenda) desaparece solo de la lista. */
 function semanaGenerada(lun){ const P=db.planes&&db.planes[lun]; return !!(P&&(P.generado||db.clases.some(c=>c.plan===lun))); }
 function diasPlanAlumno(a,r,lun){
-  const P=planDe(lun), desde=minutos(P.desde||$("plDesde").value||"15:30"), prof=P.prof||a.profesor||"", dur=durPlan(a,r), o={};
-  Object.keys(r.dias||{}).forEach(d=>{ const f=addDias(lun,+d);
+  const P=planDe(lun), desde=minutos(P.desde||$("plDesde").value||"15:30"), prof=P.prof||a.profesor||"", o={};
+  Object.keys(r.dias||{}).forEach(d=>{ const f=addDias(lun,+d), dur=durDia(a,r,+d);
     if(db.clases.some(c=>c.alumnoId===a.id&&c.fecha===f&&c.estado!=="anulada")) return;
     const hs=huecosDia(r,+d,desde,dur);
     if(!hs.length){ o[d]={libre:null,txt:"la hora indicada no cabe en el horario"}; return; }
@@ -2783,7 +2823,7 @@ window.citarLibresTodos=lun=>{
     for(const x of incidenciasPlan(lun)){
       const d=Object.keys(x.dias).sort().find(k=>x.dias[k].libre); if(d==null) continue;
       const a=x.a, r=x.r, P=planDe(lun);
-      const c={id:uid(),alumnoId:a.id,fecha:addDias(lun,+d),hora:x.dias[d].libre,durMin:durPlan(a,r),tipo:r.tipo,profesor:P.prof||a.profesor||profDefecto(),vehiculo:x.dias[d].veh||a.vehiculo||"",obs:"",estado:"",plan:lun};
+      const c={id:uid(),alumnoId:a.id,fecha:addDias(lun,+d),hora:x.dias[d].libre,durMin:durDia(a,r,+d),tipo:r.tipo,profesor:P.prof||a.profesor||profDefecto(),vehiculo:x.dias[d].veh||a.vehiculo||"",obs:"",estado:"",plan:lun};
       if(!probarClase(c,[])) continue;
       db.clases.push(c); sincronizarPlanAlumno(a.id,c.fecha); n++; hubo=true;
     } }
@@ -2791,7 +2831,7 @@ window.citarLibresTodos=lun=>{
   toast(n?"✔ "+n+" clase(s) citadas en los huecos libres.":"No quedaba ningún hueco libre que citar.");
 };
 window.citarIncidencia=(id,f,h,veh)=>{ const a=alumno(id), lun=lunesDe(f), r=planDe(lun).resp[id]||{};
-  abrirClase(null,{alumnoId:id,fecha:f,hora:h,durMin:durPlan(a,r),tipo:r.tipo,profesor:planDe(lun).prof||a.profesor||"",vehiculo:(veh&&decodeURIComponent(veh))||a.vehiculo||""}); };
+  abrirClase(null,{alumnoId:id,fecha:f,hora:h,durMin:durDia(a,r,Math.round((parse(f)-parse(lun))/864e5)),tipo:r.tipo,profesor:planDe(lun).prof||a.profesor||"",vehiculo:(veh&&decodeURIComponent(veh))||a.vehiculo||""}); };
 function pintarIncidPlan(){ const lun=lunesDe($("plSemana").value||proximoLunes());
   $("plIncid").innerHTML=(!plProp||plCreadas)?htmlIncidencias(lun,true):""; }
 function pintarIncidAgenda(){ if($("agIncid")) $("agIncid").innerHTML=htmlIncidencias(lunes,true); }
