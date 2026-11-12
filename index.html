@@ -129,6 +129,8 @@ body.enRafaga .toast{bottom:100px}
 .kpi b{display:block;font-size:20px;color:var(--pri)}
 .kpi span{font-size:12px;color:var(--muted)}
 #printArea{display:none}
+.pltel{display:inline-block;margin-top:3px;font-size:16px;font-weight:700;color:#128c4a;text-decoration:none;white-space:nowrap;padding:2px 8px;border-radius:14px;background:#e7f7ec;border:1px solid #9fd3a8}
+.pltel:hover{background:#d3f0dc}
 /* v14.9 */
 #secPanel details{border:1px solid var(--line,#dde3ea);border-radius:8px;padding:8px 12px;margin-top:10px}
 #secPanel summary{cursor:pointer;font-weight:600}
@@ -976,7 +978,7 @@ window.alert=function(msg){
 };
 /* ================== DATOS ================== */
 const LS_KEY = "agendaAutoescuela_v1";
-const VERSION = "v15.7 NOV26";
+const VERSION = "v15.8 NOV26";
 const HORAS = []; for (let m = 8*60; m < 21*60; m += 30) HORAS.push(String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"));   // filas de 30 min: 08:00 … 20:30 (la última termina a las 21:00)
 const EXAMENES = {
   B:  [["teorico","Teórico"],["practico","Práctico"]],
@@ -2279,7 +2281,7 @@ function pintarPlan(){
       const inc=semanaGenerada(lun)&&r.inc&&r.n>0&&Object.keys(r.dias||{}).length&&llevaPlan(a.id,r,clasesSemana(a.id,lun))<r.n, koD=inc?diasPlanAlumno(a,r,lun):{};
       return `<tbody class="plal ${inc?"inc":""}" data-al="${a.id}" style="${r.inc?"":"opacity:.55"}"><tr class="plA">
         <td><input type="checkbox" data-f="inc" ${r.inc?"checked":""} style="width:auto"></td>
-        <td><a href="#" onclick="abrirFicha('${a.id}');return false">${esc(nombreCompleto(a))}</a> <span class="tag t-${a.permiso}">${a.permiso}</span>${a.tel?`<br><small style="color:var(--muted);white-space:nowrap">📞 ${esc(a.tel)}</small>`:'<br><small style="color:var(--warn)">📞 sin teléfono</small>'}${a.nuevo&&esMoto(a.permiso)?` <span title="Alumno ${esc(txtNuevo(a))}: va solo">⭐${a.nuevoHasta?`<small style="color:var(--muted)"> hasta ${fmt(addDias(a.nuevoHasta,-1)).slice(0,5)}</small>`:""}</span>`:""}</td>
+        <td><a href="#" onclick="abrirFicha('${a.id}');return false">${esc(nombreCompleto(a))}</a> <span class="tag t-${a.permiso}">${a.permiso}</span>${a.tel?`<br>${telWa(a.tel)?`<a href="https://api.whatsapp.com/send?phone=${telWa(a.tel)}" target="_blank" rel="noopener" class="pltel" title="Abrir su chat de WhatsApp">📞 ${esc(a.tel)}</a>`:`<span class="pltel" style="color:var(--muted)">📞 ${esc(a.tel)}</span>`}`:'<br><small style="color:var(--warn)">📞 sin teléfono</small>'}${a.nuevo&&esMoto(a.permiso)?` <span title="Alumno ${esc(txtNuevo(a))}: va solo">⭐${a.nuevoHasta?`<small style="color:var(--muted)"> hasta ${fmt(addDias(a.nuevoHasta,-1)).slice(0,5)}</small>`:""}</span>`:""}</td>
         <td>${P.preg[a.id]?`<span class="sent" title="${esc(P.preg[a.id])}">✔ preguntado</span>`:""} <button class="btn wa sm" onclick="plPreguntar('${a.id}')" ${a.tel?"":"disabled title=\"Sin teléfono\""}>📲</button>
           <button class="btn sm" onclick="plPegar('${a.id}')" title="Pegar su respuesta de WhatsApp">📋 Respuesta</button>
           ${clasesSemana(a.id,lun).length?`<button class="btn sec sm" onclick="plRecolocar('${a.id}')" title="Quitar sus clases de esta semana para volver a colocarlas">🔄 Recolocar</button> <small style="color:var(--ok)" title="Clases que ya están en la agenda esta semana">En agenda: ${clasesSemana(a.id,lun).map(c=>diaSem(c.fecha)+" "+c.hora+"–"+finClase(c)+(esDoble(c)?" (1+1)":"")).join(" · ")}</small>`:""}
@@ -2313,7 +2315,10 @@ function cambioPlan(e){
       // Los días con una clase ya dada o con menos de 24 h no se pueden quitar: se quedan y se quitan otros.
       const lun=lunesDe($("plSemana").value), sc=clasesSemana(a.id,lun), diaDe=c=>Math.round((parse(c.fecha)-parse(lun))/864e5);
       const fijos=new Set(sc.filter(c=>c.estado||bloqueada(c)).map(diaDe));
-      const orden=Object.keys(r.dias).map(Number).sort((x,y)=>x-y||minutos(r.dias[x])-minutos(r.dias[y]));
+      // v15.8: orden de preferencia para QUEDARSE: con clase ya citada > sin clase pero con hueco > en rojo (⛔ conflicto); y dentro, lunes 15:30 antes que viernes 20:00
+      const koD=semanaGenerada(lun)?diasPlanAlumno(a,r,lun):{}, conCl=new Set(sc.map(diaDe));
+      const peso=i=>conCl.has(i)?0:(koD[i]&&!koD[i].libre)?2:1;
+      const orden=Object.keys(r.dias).map(Number).sort((x,y)=>peso(x)-peso(y)||x-y||minutos(r.dias[x])-minutos(r.dias[y]));
       const quedan=[...orden.filter(i=>fijos.has(i)),...orden.filter(i=>!fijos.has(i))].slice(0,Math.max(r.n,[...fijos].filter(i=>orden.includes(i)).length));
       const quitar=orden.filter(i=>!quedan.includes(i));
       // clases ya citadas en los días que se quitan → se quitan de la agenda (si no, el plan las volvería a marcar)
