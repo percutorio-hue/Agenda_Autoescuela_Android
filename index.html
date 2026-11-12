@@ -976,7 +976,7 @@ window.alert=function(msg){
 };
 /* ================== DATOS ================== */
 const LS_KEY = "agendaAutoescuela_v1";
-const VERSION = "v15.6 NOV26";
+const VERSION = "v15.7 NOV26";
 const HORAS = []; for (let m = 8*60; m < 21*60; m += 30) HORAS.push(String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"));   // filas de 30 min: 08:00 … 20:30 (la última termina a las 21:00)
 const EXAMENES = {
   B:  [["teorico","Teórico"],["practico","Práctico"]],
@@ -1800,7 +1800,7 @@ function abrirClase(id, pre){
   $("cAvisar").checked=false;   // v12.3: desmarcado por defecto (el aviso queda pendiente en Plan semanal / Avisos)
   claseOriginal=id?JSON.stringify([c.fecha,c.hora,durDe(c)]):null;
   const lock=!!id&&bloqueada(c)&&forzar24!==id;
-  ["cAlumno","cFecha","cHora","cDur","cTipo","cProf","cVeh"].forEach(i=>$(i).disabled=lock||(forzar24===id&&i!=="cHora"));
+  ["cAlumno","cFecha","cHora","cDur","cTipo","cProf","cVeh"].forEach(i=>$(i).disabled=lock||(!!id&&forzar24===id&&i!=="cHora"));
   $("cForzarHora").classList.toggle("hidden",!(lock&&c.estado!=="anulada"&&inicioClase(c)>Date.now()));
   $("cLock").classList.toggle("hidden",!lock); if(lock) $("cAvisar").checked=false;
   [...$("cEstado").options].forEach(o=>{ if(o.value==="anulada") o.textContent=lock?"⊘ Anulada (con justificante médico)":"⊘ Anulada"; });
