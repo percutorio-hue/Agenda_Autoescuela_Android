@@ -227,6 +227,8 @@ body.enRafaga .toast{bottom:100px}
 .pindots span{width:16px;height:16px;border-radius:50%;border:2px solid var(--pri);transition:background .1s}
 .pindots span.on{background:var(--pri)}
 .pindots.mal{animation:temblor .35s}.pindots.mal span{border-color:var(--err)}
+@keyframes plflash{0%,60%{box-shadow:0 0 0 3px #f5a623 inset;background:#fff6dd}100%{box-shadow:none}}
+tbody.plFlash>tr>td{animation:plflash 2.5s ease-out}
 @keyframes temblor{20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
 .pinpad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .pinpad button{font:600 22px Segoe UI,Arial,sans-serif;padding:14px 0;border-radius:12px;border:1px solid var(--line);background:#f3f6fb;color:var(--ink);cursor:pointer}
@@ -980,7 +982,7 @@ window.alert=function(msg){
 };
 /* ================== DATOS ================== */
 const LS_KEY = "agendaAutoescuela_v1";
-const VERSION = "v15.9 NOV26";
+const VERSION = "v16.0 NOV26";
 const HORAS = []; for (let m = 8*60; m < 21*60; m += 30) HORAS.push(String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"));   // filas de 30 min: 08:00 … 20:30 (la última termina a las 21:00)
 const EXAMENES = {
   B:  [["teorico","Teórico"],["practico","Práctico"]],
@@ -2804,7 +2806,7 @@ function htmlIncidencias(lun,dondeAgenda){
   const L=incidenciasPlan(lun); if(!L.length) return htmlMezclados(lun);
   return `<div class="msgs"><div class="m-warn">⚠️ <b>Alumnos sin todas sus clases</b> · semana del ${fmt(lun)} (${L.length})`
     +L.map(x=>{ const ks=Object.keys(x.dias).sort();
-      return `<div style="margin-top:6px"><a href="#" onclick="abrirFicha('${x.a.id}');return false"><b>${esc(nombreCompleto(x.a))}</b></a> <span class="tag t-${x.a.permiso}">${x.a.permiso}</span>${["A1","A2"].includes(x.a.permiso)?` · <b>${esc(x.r.tipo||"")}</b>`:""} · pidió ${txtClases(x.r)}, tiene ${x.r.doble?txtClases({n:x.lleva,doble:true}):x.lleva}
+      return `<div style="margin-top:6px"><a href="#" onclick="irAlumnoPlan('${x.a.id}','${lun}');return false" title="Ir a su fila del Plan semanal para corregirlo"><b>${esc(nombreCompleto(x.a))}</b> ↑</a> <span class="tag t-${x.a.permiso}">${x.a.permiso}</span>${["A1","A2"].includes(x.a.permiso)?` · <b>${esc(x.r.tipo||"")}</b>`:""} · pidió ${txtClases(x.r)}, tiene ${x.r.doble?txtClases({n:x.lleva,doble:true}):x.lleva}
         ${ks.length?`<ul style="margin:3px 0 0;padding-left:20px">${ks.map(d=>`<li>${x.dias[d].libre?"🟢":"🔴"} ${DIAS_LARGOS[d]} ${esc(x.dias[d].txt)}${x.dias[d].libre&&dondeAgenda?` <button class="btn sm" style="padding:1px 8px" onclick="citarIncidencia('${x.a.id}','${addDias(lun,+d)}','${x.dias[d].libre}','${encodeURIComponent(x.dias[d].veh||"")}')">➕ Citar</button>`:""}</li>`).join("")}</ul>`
           :`<div style="font-size:12px">Ya tiene clase todos los días que pidió: amplía alguna a 1+1 o prográmala a mano en otro día.</div>`}</div>`; }).join("")
     +`<div style="font-size:12px;margin-top:6px">🔴 ocupado · 🟢 hay hueco. Al darle la cita desaparece de esta lista.</div>`
@@ -2835,6 +2837,17 @@ window.citarIncidencia=(id,f,h,veh)=>{ const a=alumno(id), lun=lunesDe(f), r=pla
   abrirClase(null,{alumnoId:id,fecha:f,hora:h,durMin:durDia(a,r,Math.round((parse(f)-parse(lun))/864e5)),tipo:r.tipo,profesor:planDe(lun).prof||a.profesor||"",vehiculo:(veh&&decodeURIComponent(veh))||a.vehiculo||""}); };
 function pintarIncidPlan(){ const lun=lunesDe($("plSemana").value||proximoLunes());
   $("plIncid").innerHTML=(!plProp||plCreadas)?htmlIncidencias(lun,true):""; }
+/* v16.0: el nombre en «Alumnos sin todas sus clases» lleva a su fila del Plan semanal (resaltada) para corregirlo */
+window.irAlumnoPlan=(id,lun)=>{
+  if(vista!=="plan"){ ver("plan"); if(vista!=="plan") return; }
+  if(lun&&lunesDe($("plSemana").value||proximoLunes())!==lun){ $("plSemana").value=lun; pintarPlan(); }
+  let tb=$("plTabla").querySelector(`tbody[data-al="${id}"]`);
+  if(!tb){ $("plFiltro").value="todos"; pintarPlan(); tb=$("plTabla").querySelector(`tbody[data-al="${id}"]`); }
+  if(!tb) return;
+  tb.scrollIntoView({behavior:"smooth",block:"center"});
+  tb.classList.remove("plFlash"); void tb.offsetWidth; tb.classList.add("plFlash");
+  setTimeout(()=>tb.classList.remove("plFlash"),2600);
+};
 function pintarIncidAgenda(){ if($("agIncid")) $("agIncid").innerHTML=htmlIncidencias(lunes,true); }
 function filasPorHueco(cl){
   const g={}; cl.forEach(c=>{ const k=c.fecha+" "+c.hora+" "+c.tipo+" "+(compartible(c)?"C":c.id); (g[k]=g[k]||[]).push(c); });
