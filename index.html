@@ -982,7 +982,7 @@ window.alert=function(msg){
 };
 /* ================== DATOS ================== */
 const LS_KEY = "agendaAutoescuela_v1";
-const VERSION = "v16.1 NOV26";
+const VERSION = "v16.2 NOV26";
 const HORAS = []; for (let m = 8*60; m < 21*60; m += 30) HORAS.push(String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"));   // filas de 30 min: 08:00 … 20:30 (la última termina a las 21:00)
 const EXAMENES = {
   B:  [["teorico","Teórico"],["practico","Práctico"]],
@@ -1500,7 +1500,7 @@ function guardarAlumno(){
   $("fichaTitulo").textContent=nombreCompleto(o); pintarClasesAlumno(); pintarPagos(); pintarHistorial();
   cambiosFicha=false; pintarBienvenida(); toast(esNuevo?"Alumno guardado. Puedes enviarle la bienvenida 👋":"Alumno guardado.");
   anularBloqueadas(Object.values(o.examenes).filter(f=>f&&f>=hoy()));
-  if(aprobadoFinal(o)&&!(o.msgs&&o.msgs.resena)&&!(prev&&aprobadoFinal(prev))) setTimeout(()=>ofrecerResena(o.id),300);
+  if(aprobadoFinal(o)&&!(prev&&aprobadoFinal(prev))) setTimeout(()=>ofrecerResena(o.id),300);   // v16.2: también si ya se envió alguna vez
   else if(teoriaAprobada(o)&&!(o.msgs&&o.msgs.practicas)&&!(prev&&teoriaAprobada(prev)))
     setTimeout(()=>preguntaWa("🏍️ Teórico aprobado",`${esc(nombreCompleto(o))} ya tiene el teórico de moto aprobado.<br>¿Enviarle ahora la información para empezar las prácticas de destreza?`,()=>enviarPracticas(o.id)),300);
   return true;
@@ -2139,7 +2139,7 @@ function pintarExamenes(){
         :(()=>{ const r=(x.a.resultados||{})[x.k]||""; return `<select class="selmini" onchange="ponerResultado('${x.a.id}','${x.k}',this.value)" style="${r?"":"background:#fff3e0"}">
             <option value="" ${!r?"selected":""}>⏳ Falta resultado</option><option value="apto" ${r==="apto"?"selected":""}>✔ Apto</option>
             <option value="noapto" ${r==="noapto"?"selected":""}>✖ No apto</option><option value="nopres" ${r==="nopres"?"selected":""}>No presentado</option></select>`
-            +(r==="apto"&&EXAMENES[x.a.permiso].slice(-1)[0][0]===x.k?` <b style="color:var(--ok);white-space:nowrap">🎓 Carnet</b> `+((x.a.msgs||{}).resena?`<span class="sent" title="Enhorabuena y reseña enviadas">✔ reseña ${esc(x.a.msgs.resena.slice(0,5))}</span>`
+            +(r==="apto"&&EXAMENES[x.a.permiso].slice(-1)[0][0]===x.k?` <b style="color:var(--ok);white-space:nowrap">🎓 Carnet</b> `+((x.a.msgs||{}).resena?`<span class="sent" title="Enhorabuena y reseña enviadas el ${esc(x.a.msgs.resena)}">✔ reseña ${esc(x.a.msgs.resena.slice(0,5))}</span> <button class="btn sec sm" style="padding:2px 7px" title="Volver a enviar la enhorabuena con el enlace de reseñas" onclick="enviarResena('${x.a.id}')">↻ Reenviar</button>`
               :`<button class="btn wa sm" title="Enhorabuena y enlace de reseñas de ${esc(x.a.sede||"su sede")}" onclick="enviarResena('${x.a.id}')">🎉 Reseña</button>`):""); })()}</td></tr>`; }).join("")
     :`<tr><td colspan="8" style="color:var(--muted);text-align:center;padding:20px">No hay exámenes en esta vista.</td></tr>`);
   pintarSec();
@@ -2150,7 +2150,7 @@ window.ponerResultado=(id,k,v)=>{
   a.resultados=a.resultados||{}; a.resultados[k]=v; persistir();
   if(actual===id&&!cambiosFicha) cargarFicha(id);
   pintarExamenes(); pintarLista();
-  if(v==="apto"&&aprobadoFinal(a)&&!(a.msgs&&a.msgs.resena)){ ofrecerResena(id); return; }
+  if(v==="apto"&&aprobadoFinal(a)){ ofrecerResena(id); return; }
   if(v==="apto"&&teoriaAprobada(a)&&!(a.msgs&&a.msgs.practicas)){
     preguntaWa("🏍️ Teórico aprobado",`${esc(nombreCompleto(a))} ya tiene el teórico de moto aprobado.<br>¿Enviarle ahora la información para empezar las prácticas de destreza?`,()=>enviarPracticas(id)); return; }
   if((v==="noapto"||v==="nopres")&&confirm(`${nombreCompleto(a)}: ${TXT_EXAMEN[k]} – ${TXT_RES[v]}.\n\n¿Abrir su ficha para poner la nueva fecha?`)) abrirFicha(id);
@@ -3187,7 +3187,7 @@ $("selSede").onchange=()=>{ const a=actual&&alumno(actual);
   toast(a.sede?"Autoescuela guardada: "+a.sede:"Autoescuela quitada"); };
 function ofrecerResena(id){
   const a=alumno(id); if(!a) return;
-  preguntaWa("🎉 ¡Carnet aprobado!",`${esc(nombreCompleto(a))} ha aprobado ${esc(TXT_EXAMEN[EXAMENES[a.permiso].slice(-1)[0][0]].toLowerCase())}.<br>¿Enviarle la enhorabuena con el enlace de reseñas${a.sede?" de <b>"+esc(a.sede)+"</b>":""}?`,()=>enviarResena(id));
+  preguntaWa("🎉 ¡Carnet aprobado!",`${esc(nombreCompleto(a))} ha aprobado ${esc(TXT_EXAMEN[EXAMENES[a.permiso].slice(-1)[0][0]].toLowerCase())}.<br>¿Enviarle la enhorabuena con el enlace de reseñas${a.sede?" de <b>"+esc(a.sede)+"</b>":""}?${a.msgs&&a.msgs.resena?`<br><small style="color:var(--muted)">Ya se le envió el ${esc(a.msgs.resena)}; se volverá a enviar.</small>`:""}`,()=>enviarResena(id));
 }
 $("btnResena").onclick=()=>enviarResena(actual);
 function enviarResena(id){
@@ -3210,7 +3210,9 @@ function pintarBienvenida(){
   $("btnPracticas").classList.toggle("hidden",!verP);
   $("btnUbicacion").classList.toggle("hidden",!(a&&esMoto(a.permiso)&&m.practicas&&!enCirculacion(a)));
   if(a&&m.ubicacion) $("btnUbicacion").title="Último reenvío: "+m.ubicacion+". Vuelve a enviar el lugar y la ubicación de las prácticas de destreza";
-  $("btnResena").classList.toggle("hidden",!(a&&aprobadoFinal(a)&&!m.resena));
+  $("btnResena").classList.toggle("hidden",!(a&&aprobadoFinal(a)));
+  if(a) $("btnResena").textContent=m.resena?"🎉 Reenviar enhorabuena":"🎉 Enviar enhorabuena";
+  if(a&&m.resena) $("btnResena").title="Ya enviada el "+m.resena+". Pulsa para volver a enviarla";
   pintarMsgsEx();
 }
 /* Inicio de prácticas de destreza: una sola vez, cuando aprueba el teórico (común y específico) de moto */
