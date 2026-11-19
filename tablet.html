@@ -275,6 +275,7 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
   /* v13.4: semana impresa */
   #printArea.semana{padding:0;font-size:9px}
   #printArea.autoriz{padding:0}
+  #rafaga{display:none!important}
   .banner{display:none!important}
   .psem{-webkit-print-color-adjust:exact;print-color-adjust:exact;font-family:inherit}
   .psem h2{font-size:14px;margin:0 0 4px;color:#1f4e8c}
@@ -291,6 +292,11 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
   .psem .cl b{display:block;font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .psem .cl.nuevo{outline:2px solid #e0b000;outline-offset:-2px}
   .psem .ley{font-size:8.5px;color:#444;margin-top:3px}
+  .psem{break-inside:avoid;page-break-inside:avoid}
+  .pex .pext{width:100%;border-collapse:collapse;font-size:11px}
+  .pex .pext th{background:#e8edf5;text-align:left;border:1px solid #999;padding:4px}
+  .pex .pext td{border:1px solid #bbb;padding:4px}
+  .pex .pext tr.nd td{border-top:2px solid #555}
 }
 /* v14.8: MÓVIL EN HORIZONTAL (pantalla baja): la cabecera tampoco se queda fija, para dejar sitio a los datos */
 @media (max-height:500px){ header{position:relative!important;top:auto!important} .plFijo{position:static!important;margin:0 0 6px!important;box-shadow:none!important} }
@@ -981,7 +987,7 @@ window.alert=function(msg){
 };
 /* ================== DATOS ================== */
 const LS_KEY = "agendaAutoescuela_v1";
-const VERSION = "v16.2 NOV26";
+const VERSION = "v16.3 NOV26";
 const HORAS = []; for (let m = 8*60; m < 21*60; m += 30) HORAS.push(String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"));   // filas de 30 min: 08:00 … 20:30 (la última termina a las 21:00)
 const EXAMENES = {
   B:  [["teorico","Teórico"],["practico","Práctico"]],
@@ -1010,6 +1016,11 @@ function diaSem(s){ return ["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"][parse(s
 function esc(s){ return String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 function $(id){ return document.getElementById(id); }
 function nombreCompleto(a){ return (a.apellidos||"")+", "+(a.nombre||""); }
+/* v16.3: «Nombre Apellidos» y nombre corto para los globos de la agenda */
+function tCase(s){ return String(s||"").toLocaleLowerCase("es").replace(/(^|[\s\-])(\p{L})/gu,(m,a,b)=>a+b.toLocaleUpperCase("es")); }
+function nombreApe(a){ return a?tCase(((a.nombre||"")+" "+(a.apellidos||"")).trim()):""; }
+function nomChip(a,estrecho){ if(!a) return ""; const n=tCase((a.nombre||"").split(" ")[0]), ap=tCase((a.apellidos||"").split(" ")[0]);
+  return estrecho?n+(ap?" "+ap[0]+".":""):(n+(ap?" "+ap:"")); }
 function alumno(id){ return db.alumnos.find(a=>a.id===id); }
 function toast(t){ const e=document.createElement("div"); e.className="toast"; e.textContent=t; document.body.appendChild(e); setTimeout(()=>e.remove(),2600); }
 
@@ -1959,7 +1970,7 @@ function cabeceraExamenes(ex){
   if(!ex.length) return "";
   const max=4, vis=ex.slice(0,max);
   return `<div class="exlist">`+vis.map(e=>`<span class="exchip" data-al="${e.a.id}" style="--c:${COLOR_PERM[e.a.permiso]||"#999"}"
-      title="${esc(nombreCompleto(e.a)+" · "+e.a.permiso+" · "+TXT_EXAMEN[e.k])}">📝 ${esc(e.a.apellidos.split(" ")[0]+", "+(e.a.nombre[0]||"")+".")}<small>${esc(EX_CORTO[e.k])}${horaEx(e.a,e.k)?" · "+horaEx(e.a,e.k):""}</small></span>`).join("")
+      title="${esc(nombreCompleto(e.a)+" · "+e.a.permiso+" · "+TXT_EXAMEN[e.k])}">📝 ${esc(nomChip(e.a,true))}<small>${esc(EX_CORTO[e.k])}${horaEx(e.a,e.k)?" · "+horaEx(e.a,e.k):""}</small></span>`).join("")
     +(ex.length>max?`<span class="exmas" title="${esc(ex.slice(max).map(e=>nombreCompleto(e.a)+" – "+TXT_EXAMEN[e.k]).join("\n"))}">+${ex.length-max} más</span>`:"")+`</div>`;
 }
 function pintarAgenda(){
@@ -1989,7 +2000,7 @@ function pintarAgenda(){
       html+=`<td class="cell" data-f="${x.f}" data-h="${h}">`+cl.map(o=>{ const c=o.c, a=alumno(c.alumnoId);
         const est=c.estado?"est-"+c.estado:(c.fecha<hoy()?"est-sinmarcar":""), gr=c.estado!=="anulada"&&compartible(c)?grupoDe(c).length:0;
         const ud=esMoto(a.permiso)?30:45, doble=durDe(c)===2*ud, cont=o.ini>minutos(c.hora);
-        return `<span class="chip blq ${a.permiso} ${est}${esNuevoEn(a,c.fecha)?" nuevo":""}${sinBono.has(c.id)?" debe":""}" data-id="${c.id}" data-ini="${o.ini}" data-fin="${o.fin}" style="left:calc(${o.carril*100/o.n}% + 2px);width:calc(${100/o.n}% - 4px)" title="${esc(c.estado?TXT_EST[c.estado]+" · ":c.fecha<hoy()?"Asistencia sin marcar · ":"")}${esc(nombreCompleto(a)+" · "+c.hora+"–"+finClase(c)+(doble?" · 1+1 (dos clases seguidas)":"")+(a.nuevo?" · ALUMNO NUEVO (va solo)":"")+(sinBono.has(c.id)?" · SIN BONO: debe "+deudaDe(a)+" clase(s)":"")+" · "+c.tipo+(c.profesor?" · "+c.profesor:"")+(c.vehiculo?" · "+c.vehiculo:""))}"><b>${!c.estado&&bloqueada(c)&&c.fecha>=hoy()?"🔒":""}${gr>1?"👥":""}${cont?"↳ ":""}${esc(a.apellidos.split(" ")[0]+", "+(a.nombre[0]||"")+".")}</b><small>${c.hora}–${finClase(c)} · ${a.permiso} ${TIPO_CORTO[c.tipo]||esc(c.tipo)}${doble?' <span class="d11">1+1</span>':""}</small></span>`;
+        return `<span class="chip blq ${a.permiso} ${est}${esNuevoEn(a,c.fecha)?" nuevo":""}${sinBono.has(c.id)?" debe":""}" data-id="${c.id}" data-ini="${o.ini}" data-fin="${o.fin}" style="left:calc(${o.carril*100/o.n}% + 2px);width:calc(${100/o.n}% - 4px)" title="${esc(c.estado?TXT_EST[c.estado]+" · ":c.fecha<hoy()?"Asistencia sin marcar · ":"")}${esc(nombreCompleto(a)+" · "+c.hora+"–"+finClase(c)+(doble?" · 1+1 (dos clases seguidas)":"")+(a.nuevo?" · ALUMNO NUEVO (va solo)":"")+(sinBono.has(c.id)?" · SIN BONO: debe "+deudaDe(a)+" clase(s)":"")+" · "+c.tipo+(c.profesor?" · "+c.profesor:"")+(c.vehiculo?" · "+c.vehiculo:""))}"><b>${!c.estado&&bloqueada(c)&&c.fecha>=hoy()?"🔒":""}${gr>1?"👥":""}${cont?"↳ ":""}${esc(nomChip(a,o.n>1))}</b><small>${c.hora}–${finClase(c)} · ${a.permiso} ${TIPO_CORTO[c.tipo]||esc(c.tipo)}${doble?' <span class="d11">1+1</span>':""}</small></span>`;
       }).join("")+"</td>";
     });
     html+="</tr>";
@@ -2201,20 +2212,26 @@ function htmlSemanaImp(){
   const enSemana=db.clases.filter(c=>c.fecha>=lunes&&c.fecha<=addDias(lunes,5)&&c.estado!=="anulada"&&(!fp||(c.profesor||"").toLowerCase()===fp));
   const conManana=enSemana.some(c=>minutos(c.hora)<INICIO_TARDE);
   const ini=conManana?Math.min(...enSemana.map(c=>minutos(c.hora)),INICIO_TARDE):INICIO_TARDE, ini30=Math.floor(ini/30)*30, fin=FIN_DIA;
-  const nF=(fin-ini30)/30, altoMM=Math.min(15,165/nF), y=m=>((m-ini30)/30*altoMM).toFixed(2)+"mm";
+  const nF=(fin-ini30)/30, altoMM=Math.min(15,158/nF), y=m=>((m-ini30)/30*altoMM).toFixed(2)+"mm";
   const car=calcularCarriles(dias,fp,conManana);
   let filas=""; for(let m=ini30;m<fin;m+=30) filas+=`<div class="fila ${m%60===0?"punto":""}" style="top:${y(m)}"></div>`;
   let h=`<div class="psem"><h2>🗓️ Clases prácticas · semana del ${fmt(lunes)} al ${fmt(addDias(lunes,5))}</h2>
     <div class="pst"><span>${esc(prof)} · ${enSemana.length} clase(s)</span><span>${esc(db.config.nombre||"")} · impreso el ${fmt(hoy())}</span></div>
     <div class="grid" style="grid-template-columns:16mm repeat(${dias.length},1fr)"><div class="cab">Hora</div>`
-    +dias.map(x=>{ const ex=examenesDelDia(x.f); return `<div class="cab">${DIA_LARGO[parse(x.f).getDay()][0].toUpperCase()+DIA_LARGO[parse(x.f).getDay()].slice(1)} ${fmt(x.f).slice(0,5)}${ex.length?`<small>📝 ${ex.map(e=>esc(e.a.apellidos.split(" ")[0])+" "+EX_CORTO[e.k]+(horaEx(e.a,e.k)?" "+horaEx(e.a,e.k):"")).join(" · ")}</small>`:""}</div>`; }).join("")
+    +dias.map(x=>{ const ex=examenesDelDia(x.f); return `<div class="cab">${DIA_LARGO[parse(x.f).getDay()][0].toUpperCase()+DIA_LARGO[parse(x.f).getDay()].slice(1)} ${fmt(x.f).slice(0,5)}${ex.length?`<small>📝 ${ex.length} examen${ex.length>1?"es":""} (hoja 2)</small>`:""}</div>`; }).join("")
     +`<div class="col hr" style="height:${(nF*altoMM).toFixed(2)}mm">`;
   for(let m=ini30;m<fin;m+=30) h+=`<div style="position:absolute;left:0;right:0;top:${y(m)};height:${altoMM}mm;padding-top:1px;border-top:1px solid ${m%60===0?"#999":"#ddd"}"><b>${hhmm(m)}</b>a ${hhmm(m+30)}</div>`;
   h+=`</div>`+dias.map(x=>`<div class="col" style="height:${(nF*altoMM).toFixed(2)}mm">${filas}`+(car[x.f]||[]).filter(o=>o.c.estado!=="anulada").map(o=>{ const c=o.c, a=alumno(c.alumnoId); if(!a) return "";
       const doble=durDe(c)===2*(esMoto(a.permiso)?30:45), gr=compartible(c)?grupoDe(c).length:0;
       return `<div class="cl ${esNuevoEn(a,c.fecha)?"nuevo":""}" style="top:${y(Math.max(o.ini,ini30))};height:calc(${y(o.fin)} - ${y(Math.max(o.ini,ini30))});left:${(o.carril*100/o.n).toFixed(2)}%;width:${(100/o.n).toFixed(2)}%;background:${COLOR_PERM[a.permiso]||"#666"}">
-        <b>${gr>1?"👥":""}${esc(a.apellidos.split(" ")[0]+", "+(a.nombre[0]||"")+".")}${esNuevoEn(a,c.fecha)?" ⭐":""}</b>${c.hora}–${finClase(c)} · ${a.permiso} ${TIPO_CORTO[c.tipo]||esc(c.tipo)}${doble?" · 1+1":""}${fp?"":`<br>${esc((c.profesor||"").split(" ")[0])}`}</div>`; }).join("")+`</div>`).join("")
+        <b>${gr>1?"👥":""}${esc(nomChip(a,o.n>1))}${esNuevoEn(a,c.fecha)?" ⭐":""}</b>${c.hora}–${finClase(c)} · ${a.permiso} ${TIPO_CORTO[c.tipo]||esc(c.tipo)}${doble?" · 1+1":""}${fp?"":`<br>${esc((c.profesor||"").split(" ")[0])}`}</div>`; }).join("")+`</div>`).join("")
     +`</div><div class="ley">${["B","AM","A1","A2"].map(k=>`<span style="color:${COLOR_PERM[k]}">■</span> ${k}`).join(" · ")} · ⭐ alumno nuevo (va solo) · 👥 destreza compartida · 1+1 dos clases seguidas</div></div>`;
+  // v16.3: hoja 2 con los exámenes de la semana
+  const exs=dias.flatMap(x=>examenesDelDia(x.f).map(e=>Object.assign({f:x.f},e))).filter(e=>!fp||(e.a.profesor||"").toLowerCase()===fp);
+  if(exs.length) h+=`<div class="psem pex" style="break-before:page;page-break-before:always"><h2>📝 Exámenes · semana del ${fmt(lunes)} al ${fmt(addDias(lunes,5))}</h2>
+    <div class="pst"><span>${esc(prof)} · ${exs.length} examen(es)</span><span>${esc(db.config.nombre||"")} · impreso el ${fmt(hoy())}</span></div>
+    <table class="pext"><tr><th>Día</th><th>Hora</th><th>Alumno</th><th>Permiso</th><th>Examen</th><th>DNI/NIE</th><th>Profesor</th><th>Resultado</th></tr>`
+    +exs.map((e,i)=>`<tr${i&&exs[i-1].f!==e.f?' class="nd"':""}><td>${i&&exs[i-1].f===e.f?"":`<b>${mayus1(DIA_LARGO[parse(e.f).getDay()])} ${fmt(e.f).slice(0,5)}</b>`}</td><td>${esc(horaEx(e.a,e.k)||"—")}</td><td>${esc(nombreApe(e.a))}</td><td>${e.a.permiso}</td><td>${esc(TXT_EXAMEN[e.k])}</td><td>${esc(e.a.dni||"")}</td><td>${esc(e.a.profesor||"")}</td><td>${(e.a.resultados||{})[e.k]?esc(TXT_RES[e.a.resultados[e.k]]):""}</td></tr>`).join("")+`</table></div>`;
   return h;
 }
 $("btnSemanaImp").onclick=()=>{
@@ -2433,7 +2450,7 @@ $("plPreguntar").onclick=()=>{
   const P=planDe(lunesDe($("plSemana").value)), elegidos=alumnosPlan().filter(a=>respDe(P,a).inc&&!P.preg[a.id]);
   const cola=elegidos.filter(a=>telWa(a.tel)).map(a=>a.id), sinTel=elegidos.filter(a=>!telWa(a.tel));
   if(!cola.length){ alert(sinTel.length?"Los alumnos marcados que faltan no tienen un móvil válido:\n"+sinTel.map(nombreCompleto).join("\n"):"No queda ningún alumno marcado sin preguntar.\n\nMarca con ✔ (columna «Incluir») a quién quieres preguntar."); return; }
-  iniciarRafaga(cola.map(id=>{ const a=alumno(id); return {nombre:a.nombre+" "+(a.apellidos||"").split(" ")[0],abrir:()=>plPreguntar(id)}; }),sinTel.map(nombreCompleto),"Envío en ráfaga");
+  iniciarRafaga(cola.map(id=>{ const a=alumno(id); return {nombre:nombreApe(a),abrir:()=>plPreguntar(id)}; }),sinTel.map(nombreApe),"Envío en ráfaga");
 };
 function iniciarRafaga(items,sinTel,titulo){ RF={cola:items,pos:0,env:0,salt:0,sinTel:sinTel||[],titulo:titulo||"Envío en ráfaga"}; pintarRafaga(); }
 function pintarRafaga(){
@@ -2900,14 +2917,15 @@ function pintarAvisosPlan(){
   const ids=[...new Set(db.clases.filter(c=>c.fecha>=lun&&c.fecha<=addDias(lun,4)&&c.estado!=="anulada").map(c=>c.alumnoId))].filter(id=>!!alumno(id))
     .sort((x,y)=>nombreCompleto(alumno(x)).localeCompare(nombreCompleto(alumno(y)),"es"));
   const borradas=Object.keys(P.avisados).filter(id=>!ids.includes(id)&&alumno(id)&&P.avisados[id]!=="sin clases");
-  { const np=pendientesAvisoPlan(lun).length; $("plAvRes").textContent=np?np+" alumno(s) con citas pendientes de avisar":(ids.length?"✔ Todas las citas avisadas":""); $("plAvRafaga").disabled=!np; }
-  $("plAvisos").innerHTML=(ids.length||borradas.length)?`<table><tr><th>Alumno</th><th>Clases de la semana</th><th>Aviso</th><th></th></tr>`+
+  { const pl=pendientesAvisoPlan(lun), np=pl.length, nt=pl.filter(id=>!avisoExcluido(lun,id)).length; $("plAvRes").textContent=np?np+" alumno(s) con citas pendientes de avisar"+(nt<np?` · ${nt} con tic para la ráfaga`:""):(ids.length?"✔ Todas las citas avisadas":""); $("plAvRafaga").disabled=!nt; }
+  P.noAvisar=P.noAvisar||{};
+  $("plAvisos").innerHTML=(ids.length||borradas.length)?`<table><tr><th title="Quita el tic a quien no quieras enviar en la ráfaga">Ráfaga</th><th>Alumno</th><th>Clases de la semana</th><th>Aviso</th><th></th></tr>`+
     ids.map(id=>{ const a=alumno(id), cl=clasesAvisar(id,lun), ok=cl.every(c=>db.avisos[keyClase(c)]), cambio=!ok&&!!P.avisados[id];
-      return `<tr><td>${esc(nombreCompleto(a))} <span class="tag t-${a.permiso}">${a.permiso}</span>${a.nuevo&&esMoto(a.permiso)?' <span title="Alumno nuevo: va solo">⭐</span>':""}</td>
+      return `<tr style="${!ok&&avisoExcluido(lun,id)?"opacity:.55":""}"><td>${ok?"":`<input type="checkbox" style="width:auto" ${avisoExcluido(lun,id)?"":"checked"} onchange="plAvTic('${id}',this.checked)" title="Incluir en la ráfaga">`}</td><td>${esc(nombreCompleto(a))} <span class="tag t-${a.permiso}">${a.permiso}</span>${a.nuevo&&esMoto(a.permiso)?' <span title="Alumno nuevo: va solo">⭐</span>':""}</td>
         <td>${cl.map(c=>`${diaSem(c.fecha)} ${fmt(c.fecha).slice(0,5)} ${c.hora}–${finClase(c)}${esDoble(c)?" <b>1+1</b>":""}${compartible(c)&&grupoDe(c).length>1?" 👥":""}`).join(" · ")}</td>
         <td>${ok?'<span class="sent">✔ avisado</span>':cambio?'<span class="pend">🔁 cambio pendiente de avisar</span>':'<span class="pend">pendiente</span>'}</td>
-        <td><button class="btn wa sm" onclick="plAvisar('${id}')">📲 WhatsApp</button></td></tr>`; }).join("")
-    +borradas.map(id=>{ const a=alumno(id); return `<tr><td>${esc(nombreCompleto(a))} <span class="tag t-${a.permiso}">${a.permiso}</span></td><td style="color:var(--err)">Ya no tiene clases esta semana</td>
+        <td><button class="btn wa sm" onclick="plAvisar('${id}')">📲 WhatsApp</button>${ok?"":` <button class="btn sec sm" style="padding:2px 7px" title="Ya se lo has mandado por otro lado: márcalo como avisado sin abrir WhatsApp" onclick="plYaAvisado('${id}')">✔ Ya enviado</button>`}</td></tr>`; }).join("")
+    +borradas.map(id=>{ const a=alumno(id); return `<tr><td><input type="checkbox" style="width:auto" ${avisoExcluido(lun,id)?"":"checked"} onchange="plAvTic('${id}',this.checked)"></td><td>${esc(nombreCompleto(a))} <span class="tag t-${a.permiso}">${a.permiso}</span></td><td style="color:var(--err)">Ya no tiene clases esta semana</td>
         <td><span class="pend">🔁 cambio pendiente de avisar</span></td><td><button class="btn wa sm" onclick="plAvisar('${id}')">📲 WhatsApp</button></td></tr>`; }).join("")+`</table>`
     :'<p style="color:var(--muted);margin:0">Todavía no hay clases creadas esa semana.</p>';
 }
@@ -2937,11 +2955,17 @@ function pendientesAvisoPlan(lun){
   const borradas=Object.keys(P.avisados).filter(id=>!ids.includes(id)&&alumno(id)&&P.avisados[id]!=="sin clases");
   return pend.concat(borradas).sort((x,y)=>nombreCompleto(alumno(x)).localeCompare(nombreCompleto(alumno(y)),"es"));
 }
+/* v16.3: tic de la ráfaga. Por defecto marcado; sin marcar si se le quitó el tic azul «Incluir» del plan o a mano aquí */
+function avisoExcluido(lun,id){ const P=planDe(lun); if(P.noAvisar&&P.noAvisar[id]!=null) return !!P.noAvisar[id]; const r=P.resp&&P.resp[id]; return !!(r&&r.inc===false); }
+window.plAvTic=(id,v)=>{ const lun=lunesDe($("plSemana").value||proximoLunes()), P=planDe(lun); P.noAvisar=P.noAvisar||{}; P.noAvisar[id]=!v; persistir(); pintarAvisosPlan(); };
+window.plYaAvisado=id=>{ const lun=lunesDe($("plSemana").value||proximoLunes()), P=planDe(lun), cl=clasesAvisar(id,lun);
+  if(!confirm(`¿Marcar las citas de ${nombreApe(alumno(id))} como ya avisadas (sin abrir WhatsApp)?`)) return;
+  const t=sello(); cl.forEach(c=>{ db.avisos[keyClase(c)]=t; c.cambio=false; }); P.avisados=P.avisados||{}; P.avisados[id]=t; persistir(); pintarAvisosPlan(); pintarAvisos(); };
 $("plAvRafaga").onclick=()=>{
-  const lun=lunesDe($("plSemana").value||proximoLunes()), l=pendientesAvisoPlan(lun);
-  const cola=l.filter(id=>telWa(alumno(id).tel)), sinTel=l.filter(id=>!telWa(alumno(id).tel)).map(id=>nombreCompleto(alumno(id)));
-  if(!cola.length){ alert(sinTel.length?"Los alumnos pendientes no tienen un móvil válido:\n"+sinTel.join("\n"):"No hay citas pendientes de avisar esta semana."); return; }
-  iniciarRafaga(cola.map(id=>{ const a=alumno(id); return {nombre:a.nombre+" "+(a.apellidos||"").split(" ")[0],abrir:()=>avisarSemana(id,lun)}; }),sinTel,"Envío de citas en ráfaga");
+  const lun=lunesDe($("plSemana").value||proximoLunes()), todos=pendientesAvisoPlan(lun), l=todos.filter(id=>!avisoExcluido(lun,id));
+  const cola=l.filter(id=>telWa(alumno(id).tel)), sinTel=l.filter(id=>!telWa(alumno(id).tel)).map(id=>nombreApe(alumno(id)));
+  if(!cola.length){ alert(sinTel.length?"Los alumnos pendientes no tienen un móvil válido:\n"+sinTel.join("\n"):todos.length?"Todos los pendientes están sin el tic de la ráfaga.":"No hay citas pendientes de avisar esta semana."); return; }
+  iniciarRafaga(cola.map(id=>{ const a=alumno(id); return {nombre:nombreApe(a),abrir:()=>avisarSemana(id,lun)}; }),sinTel,"Envío de citas en ráfaga"+(todos.length>l.length?` (${todos.length-l.length} sin tic, no se envían)`:""));
 };
 /* El profesor puede proponer otra cita para un alumno antes de crear las clases */
 window.plEditar=cid=>{
@@ -3390,8 +3414,8 @@ $("recBox").addEventListener("toggle",pintarRecordatorios);
 $("recRafaga").onclick=()=>{
   const cola=recItems.filter(x=>!db.recordados[x.key]&&!recQuitar.has(x.key)&&telWa(x.a.tel));
   if(!cola.length) return;
-  iniciarRafaga(cola.map(x=>({nombre:x.a.nombre+" "+(x.a.apellidos||"").split(" ")[0],abrir:()=>{ const i=recItems.findIndex(y=>y.key===x.key); if(i>=0) recEnviar(i); else { waAbrir(x.a,x.texto(),null); db.recordados[x.key]=sello(); persistir(); } }})),
-    recItems.filter(x=>!db.recordados[x.key]&&!recQuitar.has(x.key)&&!telWa(x.a.tel)).map(x=>nombreCompleto(x.a)),"Recordatorios");
+  iniciarRafaga(cola.map(x=>({nombre:nombreApe(x.a),abrir:()=>{ const i=recItems.findIndex(y=>y.key===x.key); if(i>=0) recEnviar(i); else { waAbrir(x.a,x.texto(),null); db.recordados[x.key]=sello(); persistir(); } }})),
+    recItems.filter(x=>!db.recordados[x.key]&&!recQuitar.has(x.key)&&!telWa(x.a.tel)).map(x=>nombreApe(x.a)),"Recordatorios");
 };
 $("avSig").onclick=()=>{ const x=avItems.find(x=>!db.avisos[x.key]); if(x) x.run(); };
 
