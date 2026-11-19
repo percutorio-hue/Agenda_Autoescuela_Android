@@ -445,6 +445,10 @@ tr.inactivo td{color:var(--muted);background:#fafafa}
   <span id="avisoInformeTxt"></span><span class="spacer"></span>
   <button class="btn sm" id="aiIr">📊 Preparar informe</button><button class="btn sm sec" id="aiLuego">Más tarde</button>
 </div>
+<div class="banner hidden" id="avisoVersion" style="background:#e8f7ee;border-color:#7fc79a;color:#14522d;font-weight:600">
+  <span id="avisoVersionTxt"></span><span class="spacer"></span>
+  <button class="btn sm wa" id="avVerAct">🔄 Actualizar ahora</button>
+</div>
 <div class="banner hidden" id="avisoCopia">
   <span id="avisoCopiaTxt"></span><span class="spacer"></span>
   <button class="btn sm wa" id="acEnviar">📤 Enviar copia</button>
@@ -988,7 +992,7 @@ window.alert=function(msg){
 };
 /* ================== DATOS ================== */
 const LS_KEY = "agendaAutoescuela_v1";
-const VERSION = "v16.7 NOV26";
+const VERSION = "v16.8 NOV26";
 const HORAS = []; for (let m = 8*60; m < 21*60; m += 30) HORAS.push(String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"));   // filas de 30 min: 08:00 … 20:30 (la última termina a las 21:00)
 const EXAMENES = {
   B:  [["teorico","Teórico"],["practico","Práctico"]],
@@ -3838,6 +3842,30 @@ $("btnLimpiarSem").onclick=()=>{
 /* Acceso directo al informe del mes desde Clases prácticas */
 $("btnInfMes").onclick=()=>{ ver("examenes"); if(vista!=="examenes") return; $("secInf").open=true; pintarInforme(); setTimeout(()=>$("secInf").scrollIntoView({behavior:"smooth",block:"start"}),50); };
 
+/* v16.8: AVISO DE VERSIÓN NUEVA. Al abrir la app, al volver a ella y cada 20 min mira si en la web hay otra versión;
+   si la hay, ofrece «Actualizar ahora» (recarga). Así no hace falta desinstalar la app en la tablet. */
+function versionBase(v){ return String(v||"").replace(/\s*·.*$/,"").trim(); }
+let buscandoVersion=false;
+async function comprobarVersionNueva(){
+  if(buscandoVersion||!/^https?:/.test(location.protocol)||!navigator.onLine) return;
+  buscandoVersion=true;
+  try{
+    const r=await fetch(location.pathname+"?nv="+Date.now(),{cache:"no-store"}); if(!r.ok) return;
+    const m=/const VERSION = "([^"]+)"/.exec(await r.text()); if(!m) return;
+    const nueva=versionBase(m[1]);
+    if(nueva&&nueva!==versionBase(VERSION)){ $("avisoVersionTxt").textContent=`🆕 Hay una versión nueva de la agenda (${nueva}). Tienes la ${versionBase(VERSION)}.`; $("avisoVersion").classList.remove("hidden"); }
+  }catch(e){} finally{ buscandoVersion=false; }
+}
+$("avVerAct").onclick=async()=>{
+  try{ if(typeof guardarYa==="function") await guardarYa(); }catch(e){}
+  try{ const rs=navigator.serviceWorker?await navigator.serviceWorker.getRegistrations():[]; await Promise.all(rs.map(r=>r.update().catch(()=>{}))); }catch(e){}
+  try{ if(window.caches){ const ks=await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))); } }catch(e){}
+  location.replace(location.pathname+"?v="+Date.now());
+};
+setTimeout(comprobarVersionNueva,4000);
+setInterval(comprobarVersionNueva,20*60*1000);
+document.addEventListener("visibilitychange",()=>{ if(!document.hidden) comprobarVersionNueva(); });
+window.addEventListener("online",comprobarVersionNueva);
 $("verApp").textContent=VERSION; aplicarConsulta();
 // v11.2: alturas de la cabecera y del bloque fijo del Plan semanal (para que no se solapen al hacer scroll)
 (function(){ const raiz=document.documentElement, hdr=document.querySelector("header"), pf=$("plFijo");
