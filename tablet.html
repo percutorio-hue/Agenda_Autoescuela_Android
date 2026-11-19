@@ -987,7 +987,7 @@ window.alert=function(msg){
 };
 /* ================== DATOS ================== */
 const LS_KEY = "agendaAutoescuela_v1";
-const VERSION = "v16.5 NOV26";
+const VERSION = "v16.6 NOV26";
 const HORAS = []; for (let m = 8*60; m < 21*60; m += 30) HORAS.push(String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"));   // filas de 30 min: 08:00 … 20:30 (la última termina a las 21:00)
 const EXAMENES = {
   B:  [["teorico","Teórico"],["practico","Práctico"]],
@@ -1805,7 +1805,7 @@ function abrirClase(id, pre){
   const sel=$("cAlumno");
   const idCl=id&&(db.clases.find(x=>x.id===id)||{}).alumnoId;
   sel.innerHTML='<option value="">— Selecciona alumno —</option>'+db.alumnos.filter(a=>!a.archivado||a.id===idCl||(pre&&a.id===pre.alumnoId)).sort((a,b)=>nombreCompleto(a).localeCompare(nombreCompleto(b),"es"))
-    .map(a=>`<option value="${a.id}">${esc(nombreCompleto(a))} · ${a.permiso}${a.nuevo&&esMoto(a.permiso)?" ⭐ NUEVO (va solo"+(a.nuevoHasta?" hasta el "+fmt(addDias(a.nuevoHasta,-1)).slice(0,5):"")+")":""}</option>`).join("");   // v13.0
+    .map(a=>`<option value="${a.id}">${esc(nombreCompleto(a))} · ${a.permiso}${a.nuevo&&esMoto(a.permiso)?" ⭐ NUEVO (va solo"+(a.nuevoHasta?" hasta el "+fmt(addDias(a.nuevoHasta,-1)).slice(0,5):"")+")":""}   ➜ ${tipoPorDefecto(a)==="Destreza"?"🔶 Destreza":"🛣️ Circulación"}</option>`).join("");   // v13.0 · v16.6: tipo de práctica que le toca
   const c=id?db.clases.find(x=>x.id===id):Object.assign({fecha:hoy(),hora:"15:30",tipo:"Circulación",profesor:"",vehiculo:"",obs:""},pre||{});
   const a=alumno(c.alumnoId);
   if(!c.durMin) c.durMin=a&&esMoto(a.permiso)?30:45;
